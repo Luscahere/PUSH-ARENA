@@ -2,444 +2,450 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- viewport-fit=cover est crucial pour s'adapter aux écrans d'iPhone (encoches) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a1a">
     <title>Clash of Pushups</title>
     
-    <!-- Bibliothèques MediaPipe pour le tracking corporel (Plus précis que l'ancien modèle) -->
+    <!-- Polices Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&family=Permanent+Marker&family=Pacifico&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+
+    <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&display=swap');
-
         :root {
             --cr-blue: #2b78e4;
-            --cr-dark-blue: #0f3460;
             --cr-gold: #ffcc00;
             --cr-gold-dark: #cc9900;
-            --cr-grey: #555555;
-            --cr-bg: #4a6fa5;
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: 'Roboto', sans-serif;
-            background-color: #1a1a1a;
+            background-color: #000;
             color: white;
-            display: flex;
-            justify-content: center;
-            overflow: hidden;
-            height: 100vh;
+            display: flex; justify-content: center;
+            height: 100vh; overflow: hidden;
+            background-image: radial-gradient(circle at top, #2a4c73, #0a1128);
         }
 
         .screen {
             display: none;
-            width: 100%;
-            max-width: 450px;
-            height: 100%;
-            background: linear-gradient(to bottom, #5b8db8, #2a4c73);
-            flex-direction: column;
-            position: relative;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            width: 100%; max-width: 500px; height: 100%;
+            flex-direction: column; position: relative;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(0,0,0,0.8));
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
         }
+        .active-screen { display: flex; }
 
-        .active-screen {
-            display: flex;
-        }
-
-        /* ----- UI ELEMENTS COMMUNS (Style Clash) ----- */
+        /* ----- BOUTONS & UI ----- */
         .cr-button {
             background: linear-gradient(to bottom, var(--cr-gold), var(--cr-gold-dark));
-            border: 2px solid #333;
-            border-radius: 8px;
-            color: white;
-            font-family: 'Anton', sans-serif;
-            font-size: 1.5rem;
-            padding: 15px 30px;
-            text-transform: uppercase;
-            text-shadow: 2px 2px 0px #000;
-            box-shadow: inset 0 3px 0 rgba(255,255,255,0.4), inset 0 -4px 0 rgba(0,0,0,0.3), 0 4px 6px rgba(0,0,0,0.5);
-            cursor: pointer;
-            transition: transform 0.1s;
+            border: 2px solid #333; border-radius: 12px;
+            color: white; font-family: 'Anton', sans-serif; font-size: 1.5rem;
+            padding: 15px 30px; text-transform: uppercase; text-shadow: 2px 2px 0px #000;
+            box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), inset 0 -4px 0 rgba(0,0,0,0.3), 0 6px 10px rgba(0,0,0,0.5);
+            cursor: pointer; transition: all 0.1s; margin: 10px 0; width: 100%;
         }
-        .cr-button:active { transform: scale(0.95); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.3); }
+        .cr-button:active { transform: translateY(4px); box-shadow: inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.5); }
         .cr-button.blue { background: linear-gradient(to bottom, #4287f5, #195ac2); }
-        .cr-button.red { background: linear-gradient(to bottom, #f54242, #c21919); }
 
-        .top-bar {
-            background: #111;
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 3px solid #333;
-            font-family: 'Anton', sans-serif;
-        }
-        .top-stats { display: flex; gap: 10px; }
-        .stat-box { background: #333; padding: 5px 10px; border-radius: 15px; border: 2px solid #555; display: flex; align-items: center; gap: 5px; }
-        
         /* ----- ECRAN LOGIN ----- */
-        #login-screen { justify-content: center; align-items: center; background: #111; }
-        #login-screen h1 { font-family: 'Anton', sans-serif; font-size: 3rem; color: var(--cr-gold); text-shadow: 3px 3px 0 #000; text-align: center;}
-        #username-input { padding: 15px; font-size: 1.2rem; border-radius: 5px; border: 2px solid #555; margin-bottom: 20px; width: 80%; text-align: center; font-weight: bold; }
+        #login-screen { padding: 20px; align-items: center; justify-content: center; overflow-y: auto;}
+        .profile-pic-container {
+            width: 120px; height: 120px; border-radius: 20px;
+            background: #333; border: 4px solid var(--cr-gold);
+            margin-bottom: 20px; position: relative; overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .profile-pic-container img { width: 100%; height: 100%; object-fit: cover; }
+        .upload-btn {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(0,0,0,0.7); color: white; text-align: center;
+            font-size: 0.8rem; padding: 5px 0; cursor: pointer;
+        }
+        input[type="file"] { display: none; }
+        input[type="text"], select {
+            width: 100%; padding: 15px; font-size: 1.2rem;
+            border-radius: 10px; border: 2px solid #555; background: #222; color: white;
+            margin-bottom: 15px; text-align: center; font-weight: bold;
+        }
 
-        /* ----- ECRAN MENU ----- */
-        .player-info { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); }
-        .player-name { font-family: 'Anton', sans-serif; font-size: 1.5rem; }
-        .trophy-count { font-size: 1.5rem; color: var(--cr-gold); font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        /* ----- ECRAN MENU & 3D ARENA ----- */
+        .top-bar { display: flex; justify-content: space-between; padding: 10px 20px; background: rgba(0,0,0,0.5); border-bottom: 2px solid #444; }
+        .player-profile-small { display: flex; align-items: center; gap: 10px; }
+        .player-profile-small img { width: 40px; height: 40px; border-radius: 10px; border: 2px solid var(--cr-gold); object-fit: cover; }
+        .menu-username-display { font-size: 1.2rem; text-shadow: 2px 2px #000; }
         
-        .arena-display { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .arena-title { font-family: 'Anton', sans-serif; font-size: 2.5rem; text-shadow: 2px 2px #000; text-align: center; }
-        .arena-img-placeholder { width: 150px; height: 150px; background: url('https://cdn-icons-png.flaticon.com/512/3593/3593988.png') no-size/contain center; background-size: cover; margin: 20px 0; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
-        
-        .chest-slots { display: flex; justify-content: space-around; padding: 10px; background: rgba(0,0,0,0.3); }
-        .chest { width: 70px; height: 90px; background: #333; border: 2px solid #555; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; text-align: center; font-weight: bold; color: #888; box-shadow: inset 0px 5px 10px rgba(0,0,0,0.5); }
-        .chest.active { background: linear-gradient(to bottom, #5bc0eb, #1e7ba8); border-color: white; color: white; }
+        /* Conteneur 3D */
+        .arena-3d-container {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            perspective: 1000px; /* Profondeur 3D */
+            overflow: hidden;
+        }
+        .arena-island {
+            width: 250px; height: 250px;
+            position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(60deg) rotateZ(-45deg);
+            transition: transform 0.5s ease;
+            box-shadow: 20px 20px 50px rgba(0,0,0,0.8);
+            border-radius: 20px;
+        }
+        /* Base de l'île */
+        .arena-base {
+            position: absolute; width: 100%; height: 100%;
+            background: #4a3b2c; border-radius: 20px;
+            transform: translateZ(-30px);
+            box-shadow: inset 0 0 20px #000;
+        }
+        /* Surface de l'île */
+        .arena-surface {
+            position: absolute; width: 100%; height: 100%;
+            border-radius: 20px; border: 4px solid rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 4rem; text-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            background-size: cover; background-position: center;
+        }
+        .arena-name-badge {
+            position: absolute; top: 10%; z-index: 10;
+            background: rgba(0,0,0,0.7); padding: 5px 20px;
+            border-radius: 20px; font-family: 'Anton'; font-size: 1.5rem;
+            border: 2px solid var(--cr-gold); text-shadow: 2px 2px #000;
+        }
+        .trophy-tracker { font-size: 1.8rem; font-weight: bold; color: var(--cr-gold); margin-top: -20px; margin-bottom: 20px; text-shadow: 2px 2px #000;}
 
-        /* ----- ECRAN BATAILLE ----- */
-        #camera-wrapper { position: relative; width: 100%; height: 60%; background: #000; border-bottom: 4px solid #333; overflow: hidden; }
-        video { display: none; } /* Caché car on dessine sur le canvas */
+        /* ----- MATCHMAKING & BATAILLE (Identique visuellement, adapté iPhone) ----- */
+        #camera-wrapper { flex: 1; position: relative; width: 100%; background: #000; overflow: hidden; }
+        video { display: none; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        
-        .battle-hud { display: flex; justify-content: space-between; padding: 10px 20px; font-family: 'Anton', sans-serif; font-size: 2rem; background: #111; z-index: 10; position: relative;}
-        .timer { position: absolute; left: 50%; transform: translateX(-50%); color: white; text-shadow: 2px 2px #000; font-size: 2.5rem; }
-        .score-blue { color: #4287f5; text-shadow: 2px 2px #000; display: flex; flex-direction: column; align-items: center; }
-        .score-red { color: #f54242; text-shadow: 2px 2px #000; display: flex; flex-direction: column; align-items: center;}
-        .player-tag { font-size: 1rem; color: white; }
+        .battle-hud { display: flex; justify-content: space-between; padding: 10px 20px; font-family: 'Anton'; font-size: 1.5rem; background: rgba(0,0,0,0.8); z-index: 10; position: absolute; top:0; width: 100%;}
+        .timer { color: white; text-shadow: 2px 2px #000; font-size: 2rem; }
 
-        .feedback { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Anton'; font-size: 4rem; color: var(--cr-gold); text-shadow: 3px 3px #000; display: none; z-index: 20;}
-
-        /* ----- ECRAN MATCHMAKING ----- */
-        #matchmaking-screen { justify-content: center; align-items: center; text-align: center; }
-        .vs-container { display: flex; justify-content: space-around; width: 100%; align-items: center; margin: 40px 0; }
-        .avatar-box { text-align: center; font-family: 'Anton'; font-size: 1.5rem; }
-        .avatar { width: 80px; height: 80px; background: #333; border: 3px solid white; border-radius: 10px; margin-bottom: 10px; display: inline-block; }
-        .vs-text { font-family: 'Anton'; font-size: 3rem; color: var(--cr-gold); text-shadow: 2px 2px #000; }
-        .spinner { border: 6px solid #333; border-top: 6px solid var(--cr-gold); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* ----- INSTALL PWA BUTTON ----- */
+        #install-container { padding: 10px; text-align: center; }
+        .install-btn { background: #333; color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;}
     </style>
 </head>
 <body>
 
-    <!-- 1. ECRAN DE CONNEXION -->
+    <!-- 1. CREATION COMPTE -->
     <div id="login-screen" class="screen active-screen">
-        <h1>CLASH OF PUSHUPS</h1>
-        <p>Crée ton profil de combattant</p>
-        <input type="text" id="username-input" placeholder="Ton Pseudo..." maxlength="12">
-        <button class="cr-button" onclick="createAccount()">C'est parti !</button>
+        <h1 style="font-family: 'Anton'; font-size: 2.5rem; color: var(--cr-gold); text-shadow: 2px 2px #000; text-align: center; margin-top:0;">CLASH OF PUSHUPS</h1>
+        
+        <div class="profile-pic-container" id="pfp-preview-container">
+            <img id="pfp-preview" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Profil">
+            <label for="pfp-upload" class="upload-btn">📷 Modifier</label>
+            <input type="file" id="pfp-upload" accept="image/*">
+        </div>
+
+        <input type="text" id="username-input" placeholder="Ton Pseudo (ex: GigaChad)" maxlength="12">
+        
+        <select id="font-select">
+            <option value="Anton">Police: Clash (Anton)</option>
+            <option value="Roboto">Police: Moderne (Roboto)</option>
+            <option value="Permanent Marker">Police: Street (Marker)</option>
+            <option value="Pacifico">Police: Fun (Pacifico)</option>
+            <option value="Orbitron">Police: Futur (Orbitron)</option>
+        </select>
+
+        <button class="cr-button" onclick="createAccount()">Entrer dans l'Arène</button>
+        
+        <div id="install-container">
+            <button class="install-btn" onclick="installApp()">⬇️ Installer l'application</button>
+        </div>
     </div>
 
-    <!-- 2. ECRAN MENU PRINCIPAL -->
+    <!-- 2. MENU PRINCIPAL (3D) -->
     <div id="menu-screen" class="screen">
         <div class="top-bar">
-            <div class="stat-box">⭐ Lvl 1</div>
-            <div class="top-stats">
-                <div class="stat-box">🪙 1500</div>
-                <div class="stat-box" style="color: lightgreen;">💎 50</div>
+            <div class="player-profile-small">
+                <img id="menu-pfp" src="" alt="Profil">
+                <div>
+                    <div id="menu-username" class="menu-username-display">Joueur</div>
+                    <div style="font-size: 0.8rem; color: #aaa;">Niveau 1</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; font-family: 'Anton'; font-size: 1.2rem; gap: 5px;">
+                🪙 2500 <span style="color:lightgreen; margin-left: 10px;">💎 100</span>
             </div>
         </div>
-        <div class="player-info">
-            <div class="player-name" id="menu-username">Joueur</div>
-            <div class="trophy-count">🏆 <span id="menu-trophies">0</span></div>
+
+        <div class="arena-3d-container">
+            <div class="arena-name-badge" id="menu-arena-name">Arène 1</div>
+            
+            <!-- Île 3D -->
+            <div class="arena-island" id="arena-island">
+                <div class="arena-base"></div>
+                <div class="arena-surface" id="arena-surface">🌳</div>
+            </div>
         </div>
-        <div class="arena-display">
-            <div class="arena-title" id="menu-arena-name">Arène 1: Débutant</div>
-            <div class="arena-img-placeholder"></div>
-            <button class="cr-button" style="width: 80%; font-size: 2rem;" onclick="startMatchmaking()">COMBAT</button>
-        </div>
-        <div class="chest-slots">
-            <div class="chest active">Coffre<br>Débloqué</div>
-            <div class="chest">Emplacement<br>Vide</div>
-            <div class="chest">Emplacement<br>Vide</div>
-            <div class="chest">Emplacement<br>Vide</div>
+
+        <div style="text-align: center; padding: 0 20px;">
+            <div class="trophy-tracker">🏆 <span id="menu-trophies">0</span> / <span id="next-arena-trophies">400</span></div>
+            <button class="cr-button blue" onclick="startMatchmaking()">COMBAT</button>
         </div>
     </div>
 
-    <!-- 3. ECRAN MATCHMAKING -->
-    <div id="matchmaking-screen" class="screen">
+    <!-- 3. MATCHMAKING -->
+    <div id="matchmaking-screen" class="screen" style="justify-content: center; align-items: center; text-align: center;">
         <h2 style="font-family: 'Anton'; font-size: 2rem;">Recherche d'adversaire...</h2>
-        <div class="spinner"></div>
-        <div class="vs-container">
-            <div class="avatar-box">
-                <div class="avatar" style="background-color: var(--cr-blue);"></div>
-                <div id="mm-player-name">Toi</div>
-            </div>
-            <div class="vs-text">VS</div>
-            <div class="avatar-box">
-                <div class="avatar" style="background-color: var(--cr-red);" id="mm-bot-avatar">?</div>
-                <div id="mm-bot-name">...</div>
-            </div>
-        </div>
+        <div style="font-size: 4rem; margin: 20px 0;">⚔️</div>
+        <h1 id="mm-bot-name" style="font-family: 'Anton'; color: #f54242;">...</h1>
     </div>
 
-    <!-- 4. ECRAN DE BATAILLE -->
+    <!-- 4. ECRAN BATAILLE -->
     <div id="battle-screen" class="screen">
-        <div class="battle-hud">
-            <div class="score-blue">
-                <span class="player-tag" id="hud-player-name">Toi</span>
-                <span id="player-score">0</span>
-            </div>
-            <div class="timer" id="timer">30</div>
-            <div class="score-red">
-                <span class="player-tag" id="hud-bot-name">Bot</span>
-                <span id="bot-score">0</span>
-            </div>
-        </div>
-        
         <div id="camera-wrapper">
+            <div class="battle-hud">
+                <div style="color: #4287f5; display:flex; flex-direction:column; align-items:flex-start;">
+                    <span id="hud-player-name" style="font-size: 1rem; color:white;">Toi</span>
+                    <span id="player-score" style="font-size: 2.5rem;">0</span>
+                </div>
+                <div class="timer" id="timer">30</div>
+                <div style="color: #f54242; display:flex; flex-direction:column; align-items:flex-end;">
+                    <span id="hud-bot-name" style="font-size: 1rem; color:white;">Bot</span>
+                    <span id="bot-score" style="font-size: 2.5rem;">0</span>
+                </div>
+            </div>
             <video id="video" playsinline></video>
             <canvas id="canvas"></canvas>
-            <div class="feedback" id="feedback">SUPER !</div>
         </div>
-
-        <div style="padding: 20px; text-align: center; background: #111; flex: 1;">
-            <h3 style="color: var(--cr-gold); margin: 0 0 10px 0;">Place-toi de profil à la caméra !</h3>
-            <p style="font-size: 0.9rem; color: #aaa;">Le tracker blanc doit bien voir ton épaule, ton coude et ton poignet pour calculer l'angle.</p>
+        <div style="padding: env(safe-area-inset-bottom, 20px); text-align: center; background: #111;">
+            <h3 style="color: var(--cr-gold); margin: 10px 0;">Caméra de profil !</h3>
         </div>
     </div>
 
-    <!-- 5. ECRAN DE RESULTAT -->
-    <div id="result-screen" class="screen">
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-            <h1 id="result-title" style="font-family: 'Anton'; font-size: 4rem; margin: 0; text-shadow: 3px 3px #000;">VICTOIRE</h1>
-            <h2 id="result-trophies" style="font-size: 2rem; color: var(--cr-gold);">+30 🏆</h2>
-        </div>
-        <div style="padding: 20px; text-align: center;">
-            <button class="cr-button" onclick="showScreen('menu-screen')">Retour au menu</button>
-        </div>
+    <!-- 5. ECRAN RESULTAT -->
+    <div id="result-screen" class="screen" style="justify-content: center; align-items: center; text-align: center; padding: 20px;">
+        <h1 id="result-title" style="font-family: 'Anton'; font-size: 4rem; margin: 0; text-shadow: 3px 3px #000;">VICTOIRE</h1>
+        <h2 id="result-trophies" style="font-size: 2rem; color: var(--cr-gold);">+30 🏆</h2>
+        <button class="cr-button" onclick="showScreen('menu-screen')">Continuer</button>
     </div>
 
     <script>
-        // --- DONNÉES DU JEU ---
-        let userData = {
-            username: "",
-            trophies: 0,
-            arena: 1
-        };
-
+        // --- DONNEES DU JEU & 10 ARÈNES ---
+        let userData = { username: "", font: "Anton", pfp: "", trophies: 0, arena: 1 };
+        
+        // Thèmes d'arènes inspirés de Clash Royale
         const arenas = [
-            { name: "Arène 1: Le Parc", minTrophies: 0, botInterval: 2500 },
-            { name: "Arène 2: Salle de Sport", minTrophies: 100, botInterval: 2200 },
-            { name: "Arène 3: La Rue", minTrophies: 250, botInterval: 1900 },
-            { name: "Arène 4: Dojo Ninja", minTrophies: 450, botInterval: 1600 },
-            { name: "Arène 5: Camp Militaire", minTrophies: 700, botInterval: 1300 },
-            { name: "Arène 6: Montagne de Fer", minTrophies: 1000, botInterval: 1000 },
-            { name: "Arène 7: Volcan Actif", minTrophies: 1400, botInterval: 850 },
-            { name: "Arène 8: Espace Zéro G", minTrophies: 1900, botInterval: 700 },
-            { name: "Arène 9: Temple Divin", minTrophies: 2500, botInterval: 550 },
-            { name: "Arène 10: LIGUE DES LÉGENDES", minTrophies: 3200, botInterval: 400 } // Très difficile !
+            { name: "1. Stade Gobelin", min: 0, max: 400, surface: "linear-gradient(#5da13b, #3d7a2b)", icon: "🛖", interval: 2500 },
+            { name: "2. Fosse aux Os", min: 400, max: 800, surface: "linear-gradient(#c2b280, #8a7b52)", icon: "🦴", interval: 2200 },
+            { name: "3. Arène Barbare", min: 800, max: 1100, surface: "linear-gradient(#808080, #555555)", icon: "⚔️", interval: 1900 },
+            { name: "4. Parc P.E.K.K.A", min: 1100, max: 1400, surface: "linear-gradient(#8b0000, #4a0000)", icon: "🔥", interval: 1700 },
+            { name: "5. Vallée des Sorts", min: 1400, max: 1700, surface: "linear-gradient(#8a2be2, #4b0082)", icon: "🧪", interval: 1500 },
+            { name: "6. Atelier d'Ouvrier", min: 1700, max: 2000, surface: "linear-gradient(#cd853f, #8b4513)", icon: "⚙️", interval: 1300 },
+            { name: "7. Arène Royale", min: 2000, max: 2300, surface: "linear-gradient(#d4af37, #b8860b)", icon: "👑", interval: 1100 },
+            { name: "8. Sommet Glacé", min: 2300, max: 2600, surface: "linear-gradient(#add8e6, #4682b4)", icon: "❄️", interval: 900 },
+            { name: "9. Arène Sauvage", min: 2600, max: 3000, surface: "linear-gradient(#228b22, #006400)", icon: "🌴", interval: 700 },
+            { name: "10. Mont des Cochons", min: 3000, max: 9999, surface: "linear-gradient(#ffaa00, #cc5500)", icon: "🐗", interval: 500 }
         ];
 
-        const fakeNames = ["DarkSlayer99", "ProGamer_FR", "xX_Kylian_Xx", "GymBro2024", "NinjaTurtl", "GigaChad", "ElFamoso", "TryHarder", "MaitrePompes", "AlphaWolf"];
-        
-        let currentOpponent = "";
         let currentBotInterval = 2500;
-
-        // --- VARIABLES BATAILLE ---
         let gameActive = false;
-        let playerScore = 0;
-        let botScore = 0;
-        let time = 30;
-        let timerInterval;
-        let botInterval;
-        let isDown = false; // Etat de la pompe
+        let playerScore = 0, botScore = 0, time = 30, isDown = false;
+        let timerInterval, botInterval;
 
-        // --- NAVIGATION UI ---
+        // --- NAVIGATION ---
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
             document.getElementById(screenId).classList.add('active-screen');
             if(screenId === 'menu-screen') updateMenuUI();
         }
 
-        // --- LOGIQUE COMPTE & PROGRESSION ---
+        // --- GESTION PHOTO DE PROFIL ---
+        const pfpInput = document.getElementById('pfp-upload');
+        const pfpPreview = document.getElementById('pfp-preview');
+        
+        pfpInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    pfpPreview.src = event.target.result;
+                    userData.pfp = event.target.result; // Base64
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // --- GESTION POLICE D'ECRITURE ---
+        const fontSelect = document.getElementById('font-select');
+        const usernameInput = document.getElementById('username-input');
+        
+        fontSelect.addEventListener('change', function(e) {
+            usernameInput.style.fontFamily = e.target.value;
+        });
+
+        // --- COMPTE & SAUVEGARDE ---
         function createAccount() {
-            const input = document.getElementById('username-input').value.trim();
-            if(input.length < 3) return alert("Pseudo trop court ! (3 lettres minimum)");
+            const input = usernameInput.value.trim();
+            if(input.length < 3) return alert("Pseudo trop court (3 lettres min).");
             
             userData.username = input;
-            // Sauvegarde dans le navigateur
-            localStorage.setItem("clashPushupData", JSON.stringify(userData));
+            userData.font = fontSelect.value;
+            if(!userData.pfp) userData.pfp = pfpPreview.src; // Default avatar
+            
+            localStorage.setItem("clashPushupV2", JSON.stringify(userData));
             showScreen('menu-screen');
         }
 
-        function loadAccount() {
-            const saved = localStorage.getItem("clashPushupData");
+        window.onload = () => {
+            const saved = localStorage.getItem("clashPushupV2");
             if(saved) {
                 userData = JSON.parse(saved);
                 showScreen('menu-screen');
             }
-        }
+        };
 
+        // --- MISE A JOUR UI MENU (Arènes 3D) ---
         function updateMenuUI() {
-            document.getElementById('menu-username').innerText = userData.username;
+            const nameEl = document.getElementById('menu-username');
+            nameEl.innerText = userData.username;
+            nameEl.style.fontFamily = userData.font;
+            document.getElementById('menu-pfp').src = userData.pfp;
             document.getElementById('menu-trophies').innerText = userData.trophies;
-            
-            // Calculer l'arène actuelle
-            let currentArenaIndex = 0;
-            for(let i=0; i<arenas.length; i++) {
-                if(userData.trophies >= arenas[i].minTrophies) currentArenaIndex = i;
+
+            // Trouver l'arène actuelle
+            let currentArena = arenas[0];
+            for(let a of arenas) {
+                if(userData.trophies >= a.min) currentArena = a;
             }
-            userData.arena = currentArenaIndex + 1;
-            document.getElementById('menu-arena-name').innerText = arenas[currentArenaIndex].name;
-            currentBotInterval = arenas[currentArenaIndex].botInterval;
+            
+            document.getElementById('menu-arena-name').innerText = currentArena.name;
+            document.getElementById('next-arena-trophies').innerText = currentArena.max;
+            currentBotInterval = currentArena.interval;
+
+            // Appliquer le style 3D de l'arène
+            const surface = document.getElementById('arena-surface');
+            surface.style.background = currentArena.surface;
+            surface.innerText = currentArena.icon;
+            
+            // Petite animation de l'île
+            const island = document.getElementById('arena-island');
+            island.style.transform = "rotateX(60deg) rotateZ(0deg)";
+            setTimeout(() => {
+                island.style.transform = "rotateX(60deg) rotateZ(-45deg)";
+            }, 100);
         }
 
-        // --- MATCHMAKING ---
+        // --- INSTALLATION PWA ---
+        function installApp() {
+            // Sur iPhone, l'API d'installation n'existe pas. Il faut le faire manuellement.
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            if(isIOS) {
+                alert("Sur iPhone : Touche le bouton 'Partager' ⬆️ en bas de Safari, puis 'Sur l'écran d'accueil' ➕ pour installer le jeu en plein écran !");
+            } else {
+                alert("Sur Android/PC : Clique sur 'Ajouter à l'écran d'accueil' dans les options de ton navigateur (les 3 petits points).");
+            }
+        }
+
+        // --- MATCHMAKING & BATAILLE ---
         function startMatchmaking() {
             showScreen('matchmaking-screen');
-            document.getElementById('mm-player-name').innerText = userData.username;
-            document.getElementById('mm-bot-name').innerText = "...";
-            document.getElementById('mm-bot-avatar').innerText = "?";
+            const bots = ["DarkSlayer99", "AlphaWolf", "GymBro", "TryHarder", "ElFamoso"];
+            const botName = bots[Math.floor(Math.random() * bots.length)];
             
-            // Simuler une recherche
             setTimeout(() => {
-                currentOpponent = fakeNames[Math.floor(Math.random() * fakeNames.length)];
-                document.getElementById('mm-bot-name').innerText = currentOpponent;
-                document.getElementById('mm-bot-avatar').innerText = "!";
-                
-                setTimeout(() => startBattle(), 2000); // Lance le combat 2s après avoir trouvé
-            }, 2500);
+                document.getElementById('mm-bot-name').innerText = botName;
+                setTimeout(() => startBattle(botName), 1500);
+            }, 1500);
         }
 
-        // --- BATAILLE & CAMERA (MEDIAPIPE) ---
+        // MediaPipe Setup
         const videoElement = document.getElementById('video');
         const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
 
-        // Calcul de l'angle entre 3 points
-        function calculateAngle(a, b, c) {
-            let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-            let angle = Math.abs(radians * 180.0 / Math.PI);
-            if (angle > 180.0) angle = 360 - angle;
-            return angle;
-        }
-
         function onResults(results) {
-            // Dessiner la caméra et le squelette
             canvasCtx.save();
             canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             
-            if (results.poseLandmarks) {
-                // Dessine les lignes et les points
+            if (results.poseLandmarks && gameActive) {
                 drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffffff', lineWidth: 4});
-                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffcc00', lineWidth: 2, radius: 4});
+                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffcc00', lineWidth: 2});
 
-                if (gameActive) {
-                    // On prend le bras gauche (indices 11 épaule, 13 coude, 15 poignet)
-                    // Si tu es de l'autre profil, tu peux moyenner avec le droit (12, 14, 16)
-                    const shoulder = results.poseLandmarks[11];
-                    const elbow = results.poseLandmarks[13];
-                    const wrist = results.poseLandmarks[15];
+                const shoulder = results.poseLandmarks[11];
+                const elbow = results.poseLandmarks[13];
+                const wrist = results.poseLandmarks[15];
 
-                    // Vérifie que les points sont bien visibles à l'écran
-                    if(shoulder.visibility > 0.6 && elbow.visibility > 0.6 && wrist.visibility > 0.6) {
-                        const angle = calculateAngle(shoulder, elbow, wrist);
-                        
-                        // Logique de pompe stricte :
-                        // Bras plié = angle < 90 degrés
-                        // Bras tendu = angle > 150 degrés
-                        if (angle < 90) {
-                            isDown = true;
-                        } else if (angle > 150 && isDown) {
-                            isDown = false;
-                            playerScore++;
-                            document.getElementById('player-score').innerText = playerScore;
-                            
-                            // Petit effet visuel
-                            const fb = document.getElementById('feedback');
-                            fb.style.display = 'block';
-                            setTimeout(() => fb.style.display = 'none', 500);
-                        }
+                if(shoulder.visibility > 0.6 && elbow.visibility > 0.6 && wrist.visibility > 0.6) {
+                    let radians = Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x) - Math.atan2(shoulder.y - elbow.y, shoulder.x - elbow.x);
+                    let angle = Math.abs(radians * 180.0 / Math.PI);
+                    if (angle > 180.0) angle = 360 - angle;
+                    
+                    if (angle < 90) isDown = true;
+                    else if (angle > 150 && isDown) {
+                        isDown = false;
+                        playerScore++;
+                        document.getElementById('player-score').innerText = playerScore;
                     }
                 }
             }
             canvasCtx.restore();
         }
 
-        const pose = new Pose({locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-        }});
+        const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
         pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         pose.onResults(onResults);
+        const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480 });
 
-        const camera = new Camera(videoElement, {
-            onFrame: async () => { await pose.send({image: videoElement}); },
-            width: 640, height: 480
-        });
-
-        // --- GESTION DU COMBAT ---
-        function startBattle() {
+        function startBattle(botName) {
             showScreen('battle-screen');
-            document.getElementById('hud-player-name').innerText = userData.username;
-            document.getElementById('hud-bot-name').innerText = currentOpponent;
             
-            playerScore = 0;
-            botScore = 0;
-            time = 30;
-            isDown = false;
-            gameActive = true;
+            const hudPlayer = document.getElementById('hud-player-name');
+            hudPlayer.innerText = userData.username;
+            hudPlayer.style.fontFamily = userData.font;
             
+            document.getElementById('hud-bot-name').innerText = botName;
+            
+            playerScore = 0; botScore = 0; time = 30; isDown = false; gameActive = true;
             document.getElementById('player-score').innerText = 0;
             document.getElementById('bot-score').innerText = 0;
             document.getElementById('timer').innerText = time;
 
-            // Démarre la caméra (demande l'autorisation si première fois)
             camera.start();
 
-            // Timer principal
             timerInterval = setInterval(() => {
-                time--;
-                document.getElementById('timer').innerText = time;
+                time--; document.getElementById('timer').innerText = time;
                 if(time <= 0) endBattle();
             }, 1000);
 
-            // Simulation du bot (Sa vitesse dépend de l'arène)
             botInterval = setInterval(() => {
-                if(gameActive) {
-                    botScore++;
-                    document.getElementById('bot-score').innerText = botScore;
-                }
+                if(gameActive) { botScore++; document.getElementById('bot-score').innerText = botScore; }
             }, currentBotInterval);
         }
 
         function endBattle() {
-            gameActive = false;
-            clearInterval(timerInterval);
-            clearInterval(botInterval);
-            camera.stop(); // Coupe la caméra pour économiser la batterie
-
+            gameActive = false; clearInterval(timerInterval); clearInterval(botInterval); camera.stop();
             showScreen('result-screen');
+            
             const title = document.getElementById('result-title');
             const trophiesTxt = document.getElementById('result-trophies');
 
             if (playerScore > botScore) {
-                title.innerText = "VICTOIRE";
-                title.style.color = "#4287f5";
-                userData.trophies += 30;
-                trophiesTxt.innerText = "+30 🏆";
-                trophiesTxt.style.color = "lightgreen";
+                title.innerText = "VICTOIRE"; title.style.color = "#4287f5";
+                userData.trophies += 30; trophiesTxt.innerText = "+30 🏆"; trophiesTxt.style.color = "lightgreen";
             } else if (playerScore < botScore) {
-                title.innerText = "DÉFAITE";
-                title.style.color = "#f54242";
-                let loss = Math.min(userData.trophies, 20); // Perd max 20, ne descend pas sous 0
-                userData.trophies -= loss;
-                trophiesTxt.innerText = "-" + loss + " 🏆";
-                trophiesTxt.style.color = "#f54242";
+                title.innerText = "DÉFAITE"; title.style.color = "#f54242";
+                let loss = Math.min(userData.trophies, 20);
+                userData.trophies -= loss; trophiesTxt.innerText = "-" + loss + " 🏆"; trophiesTxt.style.color = "#f54242";
             } else {
-                title.innerText = "ÉGALITÉ";
-                title.style.color = "white";
-                trophiesTxt.innerText = "0 🏆";
-                trophiesTxt.style.color = "white";
+                title.innerText = "ÉGALITÉ"; title.style.color = "white"; trophiesTxt.innerText = "0 🏆"; trophiesTxt.style.color = "white";
             }
-
-            localStorage.setItem("clashPushupData", JSON.stringify(userData));
+            localStorage.setItem("clashPushupV2", JSON.stringify(userData));
         }
-
-        // Lancement : Vérifie si un compte existe déjà
-        window.onload = loadAccount;
-
     </script>
 </body>
 </html>
