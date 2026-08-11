@@ -3,28 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#1a1a1a">
-    <title>Clash of Pushups</title>
+    <title>Clash of Pushups - Duel Edition</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&family=Permanent+Marker&family=Pacifico&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe pour les pompes -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    
+    <!-- PeerJS pour le multijoueur P2P SANS SERVEUR -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
     <style>
         :root {
             --cr-blue: #2b78e4;
-            --cr-blue-dark: #124d9c;
-            --cr-gold: #ffcc00;
-            --cr-gold-dark: #cc9900;
-            --cr-green: #4caf50;
             --cr-red: #f54242;
+            --cr-gold: #ffcc00;
             --cr-wood: #5c4033;
-            --cr-wood-dark: #3a2b1c;
-            --safe-top: env(safe-area-inset-top, 20px);
-            --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -35,544 +30,330 @@
             background-color: #050a14; color: white;
             display: flex; justify-content: center;
             height: 100vh; overflow: hidden;
-            position: relative;
+            /* Nouveau fond inspiré de l'image (dots bleus foncés) */
+            background-image: radial-gradient(#112244 15%, transparent 16%), radial-gradient(#112244 15%, transparent 16%);
+            background-size: 40px 40px; background-position: 0 0, 20px 20px;
         }
-
-        /* --- THEME DE FOND TRES VISUEL --- */
-        .bg-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-        .bg-gradient {
-            background: radial-gradient(circle at 50% -20%, #1e457c, #050a14 70%);
-        }
-        .bg-particles {
-            background-image: 
-                radial-gradient(circle at 15% 25%, rgba(255, 204, 0, 0.15) 10px, transparent 11px),
-                radial-gradient(circle at 85% 75%, rgba(43, 120, 228, 0.15) 10px, transparent 11px);
-            background-size: 100px 100px;
-            opacity: 0.5;
-            animation: moveBg 20s linear infinite;
-        }
-        @keyframes moveBg { 100% { background-position: 100px 100px; } }
-        
-        .bg-glow {
-            position: fixed; width: 400px; height: 400px; border-radius: 50%;
-            filter: blur(100px); z-index: 0; pointer-events: none; opacity: 0.3;
-            animation: floatGlow 8s ease-in-out infinite alternate;
-        }
-        .bg-glow.g1 { background: var(--cr-gold); top: -100px; left: -100px; }
-        .bg-glow.g2 { background: var(--cr-blue); bottom: -100px; right: -100px; animation-delay: -4s; }
-        @keyframes floatGlow { 0% { transform: scale(1) translate(0,0); } 100% { transform: scale(1.2) translate(40px, 30px); } }
 
         .screen {
             display: none; width: 100%; max-width: 500px; height: 100%;
             flex-direction: column; position: relative; z-index: 1;
-            background: linear-gradient(to bottom, rgba(255,255,255,0.03), rgba(0,0,0,0.85));
+            background: linear-gradient(to bottom, rgba(10,20,40,0.9), rgba(0,0,0,0.95));
             box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
         }
         .active-screen { display: flex; }
 
-        /* --- BOUTONS STYLE CLASH ROYALE --- */
         .cr-button {
-            position: relative; overflow: hidden;
-            background: linear-gradient(to bottom, #ffe44d, var(--cr-gold) 40%, var(--cr-gold-dark));
+            background: linear-gradient(to bottom, #ffe44d, var(--cr-gold) 40%, #cc9900);
             border: 3px solid #332200; border-radius: 12px;
-            color: #4a3000; font-family: 'Anton', sans-serif; font-size: 1.5rem; letter-spacing: 1px;
-            padding: 14px 30px; text-transform: uppercase;
-            text-shadow: 1px 1px 0px rgba(255,255,255,0.4);
-            box-shadow: 
-                inset 0 4px 0 rgba(255,255,255,0.6), 
-                inset 0 -4px 0 rgba(0,0,0,0.2), 
-                0 6px 0 #805500, 
-                0 12px 15px rgba(0,0,0,0.6);
-            cursor: pointer; transition: all 0.1s; margin: 10px 0; width: 100%;
+            color: #4a3000; font-family: 'Anton', sans-serif; font-size: 1.2rem;
+            padding: 12px 20px; text-transform: uppercase; cursor: pointer;
+            box-shadow: inset 0 4px 0 rgba(255,255,255,0.6), 0 6px 0 #805500;
+            margin: 10px 0; width: 100%; transition: 0.1s;
         }
-        .cr-button.blue { 
-            background: linear-gradient(to bottom, #69a3ff, var(--cr-blue) 40%, var(--cr-blue-dark));
-            border-color: #061c3b; color: white;
-            text-shadow: 2px 2px 0px rgba(0,0,0,0.6);
-            box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), inset 0 -4px 0 rgba(0,0,0,0.3), 0 6px 0 #092c5c, 0 12px 15px rgba(0,0,0,0.6);
-        }
-        .cr-button.gray { 
-            background: linear-gradient(to bottom, #a0a0a0, #777 40%, #444);
-            border-color: #222; color: white;
-            text-shadow: 2px 2px 0px rgba(0,0,0,0.6);
-            box-shadow: inset 0 4px 0 rgba(255,255,255,0.3), inset 0 -4px 0 rgba(0,0,0,0.3), 0 6px 0 #222, 0 12px 15px rgba(0,0,0,0.6);
-        }
-        .cr-button:active { 
-            transform: translateY(6px); 
-            box-shadow: inset 0 2px 0 rgba(255,255,255,0.4), inset 0 -2px 0 rgba(0,0,0,0.3), 0 0px 0 #805500, 0 4px 6px rgba(0,0,0,0.5); 
-        }
-        .cr-button:disabled { filter: grayscale(100%); cursor: not-allowed; opacity: 0.8; pointer-events: none; }
+        .cr-button.blue { background: linear-gradient(to bottom, #69a3ff, var(--cr-blue) 40%, #124d9c); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #092c5c; }
+        .cr-button.red { background: linear-gradient(to bottom, #ff6b6b, var(--cr-red) 40%, #9c1212); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #5c0909; }
+        .cr-button:active { transform: translateY(6px); box-shadow: 0 0px 0 #805500; }
 
-        /* VRAIE ARENE 3D */
-        .arena-3d-container {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            perspective: 1200px; overflow: hidden; position: relative; touch-action: none;
-        }
+        /* --- NOUVEAU DESIGN D'ARÈNE --- */
+        .arena-3d-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; perspective: 1000px; }
         .arena-island {
-            width: 220px; height: 220px; position: relative;
-            transform-style: preserve-3d; 
-            transform: rotateX(60deg) rotateZ(-45deg);
-            transition: transform 0.1s; 
-            cursor: grab;
-        }
-        /* Les côtés pour l'épaisseur 3D */
-        .arena-island::before {
-            content: ''; position: absolute; width: 100%; height: 40px;
-            background: var(--cr-wood); border: 2px solid #2a1c0d;
-            transform-origin: bottom; transform: rotateX(-90deg) translateY(40px); bottom: 0;
-            box-shadow: inset 0 -10px 20px rgba(0,0,0,0.5);
-        }
-        .arena-island::after {
-            content: ''; position: absolute; width: 40px; height: 100%;
-            background: var(--cr-wood-dark); border: 2px solid #2a1c0d;
-            transform-origin: right; transform: rotateY(90deg) translateX(40px); right: 0;
-            box-shadow: inset -10px 0 20px rgba(0,0,0,0.5);
+            width: 260px; height: 340px; position: relative;
+            transform-style: preserve-3d; transform: rotateX(55deg) rotateZ(-35deg);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         
         .arena-surface {
-            position: absolute; width: 100%; height: 100%; 
-            border: 6px solid #8c6239; box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
-            display: flex; align-items: center; justify-content: center; 
-            font-size: 5rem; text-shadow: 0 15px 20px rgba(0,0,0,0.6);
-            transform: translateZ(0.1px); /* Evite le z-fighting */
-        }
-        
-        .arena-name-badge { 
-            position: absolute; top: 10%; z-index: 10; 
-            background: linear-gradient(to bottom, #333, #111); padding: 5px 25px; 
-            border-radius: 8px; font-family: 'Anton'; font-size: 1.8rem; 
-            border: 3px solid var(--cr-gold); text-shadow: 2px 2px #000;
-            box-shadow: 0 10px 15px rgba(0,0,0,0.6);
+            position: absolute; width: 100%; height: 100%;
+            background: #5da13b;
+            border: 8px solid #8c6239; border-radius: 10px;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.7);
+            overflow: hidden;
+            /* Damier de gazon */
+            background-image: 
+                linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%, rgba(0,0,0,0.05)), 
+                linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.05) 75%, rgba(0,0,0,0.05));
+            background-size: 40px 40px; background-position: 0 0, 20px 20px;
         }
 
-        /* --- MENUS & UI --- */
-        input[type="text"], select {
+        /* La Rivière au milieu */
+        .arena-surface::before {
+            content: ''; position: absolute; top: 45%; left: -10%; width: 120%; height: 10%;
+            background: #2ab7ca; border-top: 3px solid #e0ce9a; border-bottom: 3px solid #e0ce9a;
+            transform: rotate(-5deg); box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* Les deux ponts */
+        .bridge {
+            position: absolute; top: 44%; width: 40px; height: 15%; background: #a57147;
+            border-left: 2px solid #3e2723; border-right: 2px solid #3e2723;
+            box-shadow: 2px 5px 10px rgba(0,0,0,0.6);
+        }
+        .bridge.left { left: 20%; transform: rotate(-5deg); }
+        .bridge.right { right: 20%; transform: rotate(-5deg); }
+
+        /* Zones de déploiement (Couronnes) */
+        .zone-red { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); opacity: 0.3; font-size: 3rem; }
+        .zone-blue { position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%); opacity: 0.3; font-size: 3rem; }
+
+        /* Epaisseur 3D */
+        .arena-island::before {
+            content: ''; position: absolute; width: 100%; height: 30px; background: var(--cr-wood);
+            transform-origin: bottom; transform: rotateX(-90deg) translateY(30px); bottom: 0; border: 2px solid #2a1c0d; border-radius: 0 0 10px 10px;
+        }
+        .arena-island::after {
+            content: ''; position: absolute; width: 30px; height: 100%; background: #3a2b1c;
+            transform-origin: right; transform: rotateY(90deg) translateX(30px); right: 0; border: 2px solid #2a1c0d; border-radius: 0 10px 10px 0;
+        }
+
+        input {
             width: 100%; padding: 15px; font-size: 1.2rem;
             border-radius: 10px; border: 3px solid var(--cr-gold); background: rgba(0,0,0,0.7); color: white;
-            margin-bottom: 15px; text-align: center; font-weight: bold;
-            box-shadow: inset 0 5px 10px rgba(0,0,0,0.5);
+            margin-bottom: 15px; text-align: center; font-family: 'Anton'; letter-spacing: 1px;
         }
 
-        .top-bar { 
-            display: flex; justify-content: space-between; align-items:center; 
-            padding: 10px 20px; background: rgba(0,0,0,0.7); border-bottom: 3px solid #333; 
-        }
-        
-        .tab-bar { 
-            display: none; position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; 
-            background: linear-gradient(to top, #000, #1a1a1a); border-top: 3px solid var(--cr-gold); 
-            padding-bottom: var(--safe-bottom); 
-        }
-        .tab-bar.visible { display: flex; }
-        .tab-btn {
-            flex: 1; background: none; border: none; color: #666; padding: 12px 0;
-            display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 1.6rem; cursor: pointer;
-            transition: 0.2s;
-        }
-        .tab-btn span { font-size: 0.75rem; font-family: 'Anton'; letter-spacing: 1px; text-transform: uppercase;}
-        .tab-btn.active { color: var(--cr-gold); text-shadow: 0 0 10px rgba(255,204,0,0.5); transform: translateY(-5px); }
+        /* HUB MULTIJOUEUR */
+        .multiplayer-box { background: rgba(0,0,0,0.6); border: 2px solid #555; padding: 15px; border-radius: 10px; margin-top: 20px; text-align: center;}
+        .code-display { font-size: 2rem; font-family: 'Anton'; color: var(--cr-gold); letter-spacing: 4px; margin: 10px 0; background: #000; padding: 10px; border-radius: 8px; border: 1px dashed var(--cr-gold);}
 
         /* BATAILLE HUD */
-        #camera-wrapper { flex: 1; position: relative; width: 100%; background: #000; overflow: hidden; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.8); margin-top: 10px;}
+        #camera-wrapper { flex: 1; position: relative; background: #000; overflow: hidden; border-radius: 10px;}
         video { display: none; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 
-        .battle-hud-top { 
-            display: flex; justify-content: space-between; align-items: flex-start; 
-            padding: 10px 16px; background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent); 
-            z-index: 10; position: absolute; top:0; width: 100%; 
-        }
+        .battle-hud-top { display: flex; justify-content: space-between; padding: 10px 20px; position: absolute; top:0; width: 100%; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);}
+        .score { font-family: 'Anton'; font-size: 3.5rem; text-shadow: 3px 3px 0 #000; }
         
-        .score-anim {
-            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .score-bump { transform: scale(1.6) rotate(5deg); color: #fff !important; }
-
-        .fighter-score { font-family: 'Anton'; font-size: 2.8rem; text-shadow: 3px 3px 0 #000, 0 0 10px rgba(0,0,0,0.8); }
-        .timer-box { font-family: 'Anton'; font-size: 2.2rem; text-shadow: 3px 3px #000; color: #fff; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 10px; border: 2px solid #555; }
-
-        .compare-bar-wrap { 
-            display: flex; align-items: center; gap: 8px; padding: 0 16px; 
-            position: absolute; top: 90px; width: 100%; z-index: 10; font-family: 'Anton';
-        }
-        .compare-bar { flex: 1; height: 16px; border-radius: 8px; background: var(--cr-red); overflow: hidden; border: 2px solid #000; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
-        .compare-fill { height: 100%; background: var(--cr-blue); width: 50%; transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-
-        /* ANIMATION +1 */
-        .plus-popup {
-            position: absolute; font-family: 'Anton'; font-size: 4rem; color: #fff;
-            text-shadow: 0 0 10px var(--cr-gold), 3px 3px 0 #000; pointer-events: none; z-index: 20;
-            animation: popUpRep 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-        @keyframes popUpRep { 
-            0% { transform: translate(-50%,-50%) scale(0.2); opacity: 0; } 
-            20% { transform: translate(-50%,-50%) scale(1.2); opacity: 1; } 
-            100% { transform: translate(-50%,-150px) scale(1); opacity: 0; } 
-        }
-
-        #login-screen, #result-screen { justify-content: center; align-items: center; padding: 20px; }
-        .abandon-bar { padding: 14px; text-align: center; }
+        .timer-box { font-family: 'Anton'; font-size: 2.5rem; color: white; text-shadow: 2px 2px #000; background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 8px; border: 2px solid #555;}
+        
+        .sudden-death { animation: pulseRed 0.5s infinite alternate; }
+        @keyframes pulseRed { from { box-shadow: inset 0 0 0px red; } to { box-shadow: inset 0 0 50px red; } }
 
     </style>
 </head>
 <body>
-    <div class="bg-layer bg-gradient"></div>
-    <div class="bg-layer bg-particles"></div>
-    <div class="bg-glow g1"></div>
-    <div class="bg-glow g2"></div>
 
-    <!-- 1. LOGIN -->
-    <div id="login-screen" class="screen active-screen">
-        <h1 style="font-family: 'Anton'; font-size: 3rem; color: var(--cr-gold); text-shadow: 4px 4px 0 #4a3000, 0 10px 15px rgba(0,0,0,0.8); text-align: center; margin-bottom: 40px; line-height: 1.1;">CLASH OF<br>PUSHUPS</h1>
-        <input type="text" id="username-input" placeholder="Ton Pseudo (ex: GigaChad)" maxlength="12">
-        <button class="cr-button" onclick="createAccount()">ENTRER DANS L'ARÈNE</button>
-    </div>
-
-    <!-- 2. MENU PRINCIPAL -->
-    <div id="menu-screen" class="screen">
-        <div class="top-bar">
-            <div style="font-family: 'Anton'; font-size: 1.4rem;">👤 <span id="menu-username">Joueur</span></div>
-            <div style="font-family: 'Anton'; font-size: 1.4rem; color: var(--cr-gold);">🏆 <span id="menu-trophies-mini">0</span></div>
+    <!-- MENU PRINCIPAL -->
+    <div id="menu-screen" class="screen active-screen">
+        <div style="padding: 20px; text-align: center;">
+            <h1 style="font-family: 'Anton'; color: var(--cr-gold); font-size: 2.5rem; margin:0;">CLASH OF PUSHUPS</h1>
+            <input type="text" id="player-name" placeholder="Ton Pseudo (ex: [DEV] GigaChad)" value="[DEV] PGM">
         </div>
 
-        <div class="arena-3d-container" id="arena-container">
-            <div class="arena-name-badge" id="menu-arena-name">Arène 1</div>
+        <div class="arena-3d-container">
+            <h2 style="font-family: 'Anton';">1. Stade Gobelin</h2>
             <div class="arena-island" id="arena-island">
-                <div class="arena-surface" id="arena-surface">🌳</div>
+                <div class="arena-surface">
+                    <div class="zone-red">🏰</div>
+                    <div class="zone-blue">🏰</div>
+                    <div class="bridge left"></div>
+                    <div class="bridge right"></div>
+                </div>
             </div>
-            <div style="position: absolute; bottom: 20px; font-size: 0.9rem; opacity: 0.6;">👆 Glisse pour faire tourner</div>
         </div>
 
-        <div style="text-align: center; padding: 0 20px 20px 20px;">
-            <div style="font-size: 1.8rem; font-family: 'Anton'; color: var(--cr-gold); margin-bottom: 12px; text-shadow: 2px 2px #000;">
-                🏆 <span id="menu-trophies">0</span> <span style="font-size: 1.2rem; color: #ccc;">/ <span id="next-arena-trophies">400</span></span>
-            </div>
-            <button class="cr-button blue" id="btn-combat" onclick="startMatchmaking()">COMBATTRE !</button>
-        </div>
+        <div style="padding: 20px;">
+            <button class="cr-button" onclick="startBotMatch()">JOUER (VS IA)</button>
+            
+            <div class="multiplayer-box">
+                <h3 style="margin: 0; font-family: 'Anton';">DUEL ENTRE AMIS (P2P)</h3>
+                <p style="font-size: 0.8rem; color: #aaa;">Aucun serveur requis. Connexion directe.</p>
+                
+                <button class="cr-button blue" onclick="hostGame()">1. CRÉER UN CODE</button>
+                <div id="my-code-box" style="display: none;">
+                    <div>Ton code à envoyer :</div>
+                    <div class="code-display" id="my-code">...</div>
+                    <div style="font-size: 0.8rem; color: var(--cr-gold); animation: pulse 1s infinite;">En attente d'un adversaire...</div>
+                </div>
 
-        <div class="tab-bar visible">
-            <button class="tab-btn active">🏠<span>Accueil</span></button>
+                <div style="margin: 15px 0; border-top: 1px solid #444;"></div>
+                
+                <input type="text" id="friend-code" placeholder="Code de ton ami" style="margin-bottom: 5px;">
+                <button class="cr-button red" onclick="joinGame()">2. REJOINDRE</button>
+            </div>
         </div>
     </div>
 
-    <!-- 3. MATCHMAKING -->
-    <div id="matchmaking-screen" class="screen" style="justify-content: center; align-items: center; text-align: center;">
-        <h2 style="font-family: 'Anton'; font-size: 2.5rem; color: var(--cr-gold); text-shadow: 2px 2px #000;">RECHERCHE...</h2>
-        <div style="font-size: 5rem; margin: 30px 0; animation: spin 2s linear infinite;">⚔️</div>
-        <h1 id="mm-bot-name" style="font-family: 'Anton'; color: var(--cr-red); font-size: 2rem;"></h1>
-        <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
-    </div>
-
-    <!-- 4. BATAILLE -->
+    <!-- BATAILLE -->
     <div id="battle-screen" class="screen">
         <div id="camera-wrapper">
             <div class="battle-hud-top">
                 <div style="text-align: left;">
-                    <div style="font-size: 0.9rem; font-weight: bold; color: var(--cr-blue);">Toi</div>
-                    <div class="fighter-score score-anim" id="player-score" style="color: var(--cr-blue);">0</div>
+                    <div id="p1-name" style="color: var(--cr-blue); font-weight: bold;">Toi</div>
+                    <div class="score" id="player-score" style="color: var(--cr-blue);">0</div>
                 </div>
                 <div class="timer-box" id="timer">30</div>
                 <div style="text-align: right;">
-                    <div style="font-size: 0.9rem; font-weight: bold; color: var(--cr-red);">Adversaire</div>
-                    <div class="fighter-score score-anim" id="bot-score" style="color: var(--cr-red);">0</div>
+                    <div id="p2-name" style="color: var(--cr-red); font-weight: bold;">Ennemi</div>
+                    <div class="score" id="enemy-score" style="color: var(--cr-red);">0</div>
                 </div>
             </div>
-            
-            <div class="compare-bar-wrap">
-                <div class="compare-bar"><div class="compare-fill" id="compare-fill"></div></div>
-            </div>
-
             <video id="video" playsinline autoplay muted></video>
             <canvas id="canvas"></canvas>
-            
-            <!-- Instructions Pose -->
-            <div id="pose-hint" style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-family: 'Anton'; font-size: 1.2rem; text-shadow: 2px 2px #000; color: var(--cr-gold);">Place-toi face caméra !</div>
-        </div>
-        <div class="abandon-bar">
-            <button class="cr-button gray" onclick="abandonBattle()">🏳️ ABANDONNER</button>
+            <div id="pose-hint" style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-family: 'Anton'; font-size: 1.5rem; text-shadow: 2px 2px #000; color: var(--cr-gold);">Mets-toi en position !</div>
         </div>
     </div>
 
-    <!-- 5. RESULTAT -->
-    <div id="result-screen" class="screen">
-        <h1 id="result-title" style="font-family: 'Anton'; font-size: 5rem; margin: 0; text-shadow: 4px 4px 0 #000;">VICTOIRE</h1>
-        <h2 id="result-trophies" style="font-family: 'Anton'; font-size: 3rem; color: var(--cr-gold); margin: 20px 0; text-shadow: 2px 2px #000;">+30 🏆</h2>
-        <div id="result-stats" style="font-size: 1.5rem; margin-bottom: 30px; font-weight: bold;"></div>
-        <button class="cr-button" onclick="resetToMenu()">OK</button>
+    <!-- RÉSULTAT -->
+    <div id="result-screen" class="screen" style="justify-content: center; align-items: center;">
+        <h1 id="result-title" style="font-family: 'Anton'; font-size: 5rem; text-shadow: 4px 4px 0 #000;">VICTOIRE</h1>
+        <button class="cr-button" onclick="location.reload()" style="width: 80%;">RETOUR AU MENU</button>
     </div>
 
     <script>
-        // ===================== DONNEES & ARENES =====================
-        let userData = { username: "", trophies: 0, arena: 1 };
+        // ===================== LOGIQUE RESEAU P2P (PeerJS) =====================
+        let peer = null;
+        let conn = null;
+        let isHost = false;
+        let isMultiplayer = false;
         
-        const arenas = [
-            { name: "1. Stade Gobelin", min: 0, max: 400, surface: "linear-gradient(#5da13b, #3d7a2b)", icon: "🛖" },
-            { name: "2. Fosse aux Os", min: 400, max: 800, surface: "linear-gradient(#c2b280, #8a7b52)", icon: "🦴" },
-            { name: "3. Arène Barbare", min: 800, max: 1100, surface: "linear-gradient(#808080, #555555)", icon: "⚔️" },
-            { name: "4. Parc P.E.K.K.A", min: 1100, max: 1400, surface: "linear-gradient(#8b0000, #4a0000)", icon: "🔥" },
-            { name: "5. Vallée des Sorts", min: 1400, max: 1700, surface: "linear-gradient(#8a2be2, #4b0082)", icon: "🧪" },
-            { name: "6. Atelier", min: 1700, max: 2000, surface: "linear-gradient(#cd853f, #8b4513)", icon: "⚙️" },
-            { name: "7. Arène Royale", min: 2000, max: 9999, surface: "linear-gradient(#d4af37, #b8860b)", icon: "👑" }
-        ];
-
-        let gameActive = false, playerScore = 0, botScore = 0, time = 30;
-        let timerInterval, botTimeouts = [];
-        let isDown = false;
-
-        // ===================== AUDIO (Synthèse Native) =====================
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
+        function initPeer() {
+            if(peer) return;
+            // Génère un ID aléatoire court de 5 lettres
+            const id = Math.random().toString(36).substring(2, 7).toUpperCase();
+            peer = new Peer(id);
             
-            const now = audioCtx.currentTime;
-            
-            if (type === 'rep') {
-                // Bruit clair et valorisant de validation (style pièce d'or)
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(800, now);
-                osc.frequency.exponentialRampToValueAtTime(1500, now + 0.1);
-                gain.gain.setValueAtTime(0.5, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now); osc.stop(now + 0.15);
-            } else if (type === 'start') {
-                // Gong de début
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.5);
-                gain.gain.setValueAtTime(0.6, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-                osc.start(now); osc.stop(now + 0.5);
-            } else if (type === 'win') {
-                // Fanfare de victoire
-                osc.type = 'square';
-                [400, 500, 600, 800].forEach((freq, i) => {
-                    setTimeout(() => {
-                        const o = audioCtx.createOscillator();
-                        const g = audioCtx.createGain();
-                        o.connect(g); g.connect(audioCtx.destination);
-                        o.type = 'square'; o.frequency.value = freq;
-                        g.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                        o.start(); o.stop(audioCtx.currentTime + 0.2);
-                    }, i * 150);
-                });
-            } else if (type === 'lose') {
-                // Son lourd de défaite
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(300, now);
-                osc.frequency.exponentialRampToValueAtTime(50, now + 0.8);
-                gain.gain.setValueAtTime(0.5, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-                osc.start(now); osc.stop(now + 0.8);
-            }
-        }
-
-        // ===================== SAUVEGARDE =====================
-        function loadData() {
-            let saved = localStorage.getItem("cop_data");
-            if(saved) {
-                userData = JSON.parse(saved);
-                document.getElementById('login-screen').classList.remove('active-screen');
-                document.getElementById('menu-screen').classList.add('active-screen');
-                updateMenu();
-            }
-        }
-        function saveData() { localStorage.setItem("cop_data", JSON.stringify(userData)); }
-        
-        function createAccount() {
-            let name = document.getElementById("username-input").value.trim();
-            if(!name) name = "Challenger";
-            userData.username = name;
-            saveData();
-            document.getElementById('login-screen').classList.remove('active-screen');
-            document.getElementById('menu-screen').classList.add('active-screen');
-            updateMenu();
-        }
-
-        // ===================== GESTION ARENE =====================
-        function updateMenu() {
-            document.getElementById('menu-username').innerText = userData.username;
-            document.getElementById('menu-trophies').innerText = userData.trophies;
-            document.getElementById('menu-trophies-mini').innerText = userData.trophies;
-            
-            let aIndex = arenas.findIndex(a => userData.trophies >= a.min && userData.trophies < a.max);
-            if(aIndex === -1) aIndex = arenas.length - 1;
-            userData.arena = aIndex + 1;
-            
-            let arena = arenas[aIndex];
-            document.getElementById('menu-arena-name').innerText = arena.name;
-            document.getElementById('arena-surface').style.background = arena.surface;
-            document.getElementById('arena-surface').innerText = arena.icon;
-            
-            let next = arenas[aIndex + 1] ? arenas[aIndex + 1].min : "Max";
-            document.getElementById('next-arena-trophies').innerText = next;
-        }
-
-        // Interaction 3D Menu
-        let isDragging = false, prevX = 0;
-        let rotZ = -45;
-        const island = document.getElementById('arena-island');
-        island.addEventListener('pointerdown', (e) => { isDragging = true; prevX = e.clientX; island.style.transition = 'none'; });
-        window.addEventListener('pointerup', () => { isDragging = false; island.style.transition = 'transform 0.3s'; });
-        window.addEventListener('pointermove', (e) => {
-            if(!isDragging) return;
-            let deltaX = e.clientX - prevX;
-            rotZ += deltaX * 0.5;
-            island.style.transform = `rotateX(60deg) rotateZ(${rotZ}deg)`;
-            prevX = e.clientX;
-        });
-
-        // ===================== INTELLIGENCE ARTIFICIELLE =====================
-        function calculateBotSchedule(arenaIndex) {
-            // Configuration des tranches par arène (demande utilisateur)
-            const ranges = [
-                { min: 6, max: 8 },   // Arène 1
-                { min: 8, max: 10 },  // Arène 2
-                { min: 8, max: 12 },  // Arène 3
-                { min: 8, max: 18 },  // Arène 4
-                { min: 12, max: 22 }, // Arène 5
-                { min: 15, max: 26 }, // Arène 6
-                { min: 20, max: 30 }  // Arène 7+
-            ];
-            
-            let config = ranges[Math.min(arenaIndex, ranges.length - 1)];
-            let min = config.min;
-            let max = config.max;
-
-            // 20% de chance d'être "très fort"
-            let isStrong = Math.random() < 0.20;
-            if (isStrong) {
-                min = max; 
-                max = Math.floor(max * 1.3); // 30% de répétitions en plus que la limite max
-                console.log("Attention : Le bot est TRÈS FORT sur cette partie !");
-            }
-
-            let totalReps = Math.floor(Math.random() * (max - min + 1)) + min;
-            let schedule = [];
-            let currentTime = 0;
-            
-            // Répartir les reps sur 30 secondes avec un peu d'aléatoire
-            for(let i=0; i<totalReps; i++) {
-                // Temps moyen par rep
-                let avgTime = 30000 / totalReps;
-                // Variation +- 30%
-                let varTime = avgTime * (0.7 + Math.random() * 0.6);
-                currentTime += varTime;
-                if(currentTime < 29500) { // Ne pas dépasser 30s
-                    schedule.push(currentTime);
-                }
-            }
-            return schedule;
-        }
-
-        // ===================== LOGIQUE DE JEU =====================
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-            document.getElementById(id).classList.add('active-screen');
-        }
-
-        function startMatchmaking() {
-            showScreen('matchmaking-screen');
-            document.getElementById('mm-bot-name').innerText = "Adversaire...";
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            setTimeout(() => {
-                document.getElementById('mm-bot-name').innerText = "Maître d'Arène " + userData.arena;
-                setTimeout(initBattle, 1500);
-            }, 2000);
-        }
-
-        function initBattle() {
-            showScreen('battle-screen');
-            playerScore = 0; botScore = 0; time = 30; gameActive = true;
-            document.getElementById('player-score').innerText = 0;
-            document.getElementById('bot-score').innerText = 0;
-            document.getElementById('timer').innerText = 30;
-            updateCompareBar();
-            
-            playSound('start');
-            startCamera();
-
-            // Planification IA
-            let schedule = calculateBotSchedule(userData.arena - 1);
-            botTimeouts.forEach(clearTimeout);
-            botTimeouts = [];
-            
-            schedule.forEach(delay => {
-                let t = setTimeout(() => {
-                    if(gameActive) {
-                        botScore++;
-                        animateScore('bot-score');
-                        updateScores();
-                    }
-                }, delay);
-                botTimeouts.push(t);
+            peer.on('open', (id) => {
+                document.getElementById('my-code').innerText = id;
             });
 
+            // Quand quelqu'un se connecte à moi (Le Host reçoit la connexion)
+            peer.on('connection', (connection) => {
+                conn = connection;
+                setupConnection();
+            });
+        }
+
+        function hostGame() {
+            document.getElementById('my-code-box').style.display = 'block';
+            isHost = true;
+            isMultiplayer = true;
+            initPeer();
+        }
+
+        function joinGame() {
+            const friendId = document.getElementById('friend-code').value.toUpperCase().trim();
+            if(!friendId) return alert("Rentre un code !");
+            
+            isHost = false;
+            isMultiplayer = true;
+            initPeer();
+            
+            // On attend une demi-seconde que notre peer soit prêt avant de connecter
+            setTimeout(() => {
+                conn = peer.connect(friendId);
+                setupConnection();
+            }, 500);
+        }
+
+        function setupConnection() {
+            conn.on('open', () => {
+                alert("Connexion établie ! Le duel va commencer.");
+                // On envoie notre pseudo à l'autre
+                conn.send({ type: 'hello', name: document.getElementById('player-name').value });
+                
+                if(isHost) {
+                    setTimeout(() => {
+                        // Le host dicte le début de la partie
+                        conn.send({ type: 'start' });
+                        startBattle(document.getElementById('player-name').value, "Adversaire");
+                    }, 2000);
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'hello') {
+                    document.getElementById('p2-name').innerText = data.name;
+                }
+                if (data.type === 'start' && !isHost) {
+                    startBattle(document.getElementById('player-name').value, document.getElementById('p2-name').innerText);
+                }
+                if (data.type === 'score') {
+                    enemyScore = data.score;
+                    document.getElementById('enemy-score').innerText = enemyScore;
+                }
+            });
+        }
+
+        // ===================== LOGIQUE JEU =====================
+        let playerScore = 0, enemyScore = 0, time = 30;
+        let gameActive = false, timerInterval;
+        let suddenDeath = false;
+
+        function startBotMatch() {
+            isMultiplayer = false;
+            startBattle(document.getElementById('player-name').value, "Robot PGM");
+            // Simulation IA très basique
+            setInterval(() => { if(gameActive && Math.random() > 0.4 && !suddenDeath) { enemyScore++; document.getElementById('enemy-score').innerText = enemyScore; } }, 1500);
+        }
+
+        function startBattle(p1Name, p2Name) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById('battle-screen').classList.add('active-screen');
+            
+            document.getElementById('p1-name').innerText = p1Name;
+            document.getElementById('p2-name').innerText = p2Name;
+            
+            playerScore = 0; enemyScore = 0; time = 30; gameActive = true; suddenDeath = false;
+            startCamera();
+
             timerInterval = setInterval(() => {
-                time--;
-                document.getElementById('timer').innerText = time;
-                if(time <= 0) endGame();
+                if(time > 0 && !suddenDeath) {
+                    time--;
+                    document.getElementById('timer').innerText = time;
+                } else if (time === 0 && playerScore === enemyScore) {
+                    // FEATURE : MORT SUBITE
+                    suddenDeath = true;
+                    document.getElementById('timer').innerText = "MORT SUBITE";
+                    document.getElementById('timer').style.color = "var(--cr-red)";
+                    document.getElementById('battle-screen').classList.add('sudden-death');
+                } else if (time === 0 && playerScore !== enemyScore) {
+                    endGame();
+                }
             }, 1000);
-        }
-
-        // --- Animations in-game ---
-        function animateScore(id) {
-            let el = document.getElementById(id);
-            el.innerText = id === 'player-score' ? playerScore : botScore;
-            el.classList.add('score-bump');
-            setTimeout(() => el.classList.remove('score-bump'), 150);
-        }
-
-        function spawnPlusOne() {
-            let wrap = document.getElementById('camera-wrapper');
-            let rect = wrap.getBoundingClientRect();
-            let plus = document.createElement('div');
-            plus.className = 'plus-popup';
-            plus.innerText = '+1';
-            plus.style.left = '30%'; // Côté joueur
-            plus.style.top = '50%';
-            wrap.appendChild(plus);
-            setTimeout(() => plus.remove(), 800);
-        }
-
-        function updateScores() {
-            updateCompareBar();
-        }
-
-        function updateCompareBar() {
-            let total = playerScore + botScore;
-            let percent = total === 0 ? 50 : (playerScore / total) * 100;
-            document.getElementById('compare-fill').style.width = percent + "%";
         }
 
         function playerScored() {
             if(!gameActive) return;
             playerScore++;
-            playSound('rep');
-            animateScore('player-score');
-            spawnPlusOne();
-            updateScores();
+            document.getElementById('player-score').innerText = playerScore;
+            
+            if(isMultiplayer && conn) {
+                // On envoie la mise à jour du score par P2P
+                conn.send({ type: 'score', score: playerScore });
+            }
+
+            // Si on est en mort subite et qu'on vient de marquer, on gagne direct.
+            if(suddenDeath && playerScore > enemyScore) {
+                setTimeout(endGame, 500);
+            }
         }
 
-        // ===================== MEDIAPIPE (Analyse vidéo) =====================
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById('result-screen').classList.add('active-screen');
+            
+            let title = document.getElementById('result-title');
+            if(playerScore > enemyScore) { title.innerText = "VICTOIRE"; title.style.color = "#4caf50"; }
+            else if(playerScore < enemyScore) { title.innerText = "DÉFAITE"; title.style.color = "var(--cr-red)"; }
+            else { title.innerText = "ÉGALITÉ"; title.style.color = "white"; }
+        }
+
+        // ===================== DÉTECTION (Nouveau Système + Fiable) =====================
         const videoElement = document.getElementById('video');
         const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        let camera;
+        let isDown = false;
 
         function startCamera() {
             const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-            pose.setOptions({ modelComplexity: 0, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            pose.setOptions({ modelComplexity: 0, smoothLandmarks: true });
             pose.onResults(onPoseResults);
 
-            camera = new Camera(videoElement, {
+            const camera = new Camera(videoElement, {
                 onFrame: async () => { await pose.send({image: videoElement}); },
                 width: 640, height: 480, facingMode: "user"
             });
@@ -583,30 +364,35 @@
             if (!gameActive) return;
             canvasElement.width = videoElement.videoWidth;
             canvasElement.height = videoElement.videoHeight;
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.translate(canvasElement.width, 0); // Miroir
-            canvasCtx.scale(-1, 1);
+            canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.translate(canvasElement.width, 0); canvasCtx.scale(-1, 1);
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
             if (results.poseLandmarks) {
                 document.getElementById('pose-hint').style.display = 'none';
-                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffcc00', lineWidth: 4});
-                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#2b78e4', lineWidth: 2, radius: 4});
-
-                // Calcul angle Coude
-                const shoulder = results.poseLandmarks[11]; // Epaule gauche
-                const elbow = results.poseLandmarks[13]; // Coude gauche
-                const wrist = results.poseLandmarks[15]; // Poignet gauche
                 
-                if (shoulder && elbow && wrist) {
-                    let angle = calculateAngle(shoulder, elbow, wrist);
-                    
-                    if (angle < 90 && !isDown) {
-                        isDown = true; // Position basse atteinte
-                    } else if (angle > 150 && isDown) {
-                        isDown = false; // Remontée complète
-                        playerScored(); // +1 validé !
+                // Repères : 11 (Epaule G), 12 (Epaule D), 13 (Coude G), 14 (Coude D)
+                let shoulderL = results.poseLandmarks[11];
+                let elbowL = results.poseLandmarks[13];
+                let shoulderR = results.poseLandmarks[12];
+                let elbowR = results.poseLandmarks[14];
+
+                if(shoulderL && elbowL && shoulderR && elbowR) {
+                    // Moyenne de la hauteur Y (0 = haut de l'écran, 1 = bas de l'écran)
+                    let avgShoulderY = (shoulderL.y + shoulderR.y) / 2;
+                    let avgElbowY = (elbowL.y + elbowR.y) / 2;
+
+                    // Logique : Quand les épaules descendent au niveau des coudes, on est en bas.
+                    // Tolérance de 0.05 (pour ne pas forcer à toucher le sol si la caméra est mal placée)
+                    if (avgShoulderY > avgElbowY - 0.05 && !isDown) {
+                        isDown = true;
+                        canvasElement.style.filter = "brightness(1.5)"; // Feedback visuel (flash)
+                        setTimeout(() => canvasElement.style.filter = "none", 100);
+                    } 
+                    // Quand les épaules remontent bien plus haut que les coudes, la pompe est finie.
+                    else if (avgShoulderY < avgElbowY - 0.15 && isDown) {
+                        isDown = false;
+                        playerScored();
                     }
                 }
             } else {
@@ -615,63 +401,8 @@
             canvasCtx.restore();
         }
 
-        function calculateAngle(a, b, c) {
-            let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-            let angle = Math.abs(radians * 180.0 / Math.PI);
-            if (angle > 180.0) angle = 360 - angle;
-            return angle;
-        }
-
-        // ===================== FIN DU JEU =====================
-        function abandonBattle() { endGame(true); }
-
-        function endGame(forfeit = false) {
-            gameActive = false;
-            clearInterval(timerInterval);
-            botTimeouts.forEach(clearTimeout);
-            if(camera) camera.stop();
-
-            showScreen('result-screen');
-            const title = document.getElementById('result-title');
-            const trop = document.getElementById('result-trophies');
-            const stats = document.getElementById('result-stats');
-            
-            stats.innerHTML = `Toi: <span style="color:var(--cr-blue)">${playerScore}</span> - Adversaire: <span style="color:var(--cr-red)">${botScore}</span>`;
-
-            if (forfeit || botScore > playerScore) {
-                title.innerText = "DÉFAITE";
-                title.style.color = "var(--cr-red)";
-                let lost = Math.min(userData.trophies, 25); // Perte max de 25
-                userData.trophies -= lost;
-                trop.innerText = `-${lost} 🏆`;
-                trop.style.color = "var(--cr-red)";
-                playSound('lose');
-            } else if (playerScore > botScore) {
-                title.innerText = "VICTOIRE !";
-                title.style.color = "var(--cr-green)";
-                userData.trophies += 30;
-                trop.innerText = `+30 🏆`;
-                trop.style.color = "var(--cr-gold)";
-                playSound('win');
-            } else {
-                title.innerText = "ÉGALITÉ";
-                title.style.color = "white";
-                trop.innerText = `0 🏆`;
-                trop.style.color = "gray";
-            }
-            saveData();
-        }
-
-        function resetToMenu() {
-            showScreen('menu-screen');
-            updateMenu();
-        }
-
-        // Initialisation
-        window.onload = loadData;
-        
-        // Mode test rapide sur mobile : tap pour simuler une pompe si mediapipe n'est pas détecté/lent
-        document.getElementById('video').addEventListener('click', () => { if(gameActive) playerScored(); });
+        // Test sur mobile sans caméra
+        document.getElementById('video').addEventListener('click', playerScored);
     </script>
 </body>
 </html>
