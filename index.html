@@ -342,31 +342,48 @@
             else { title.innerText = "ÉGALITÉ"; title.style.color = "white"; }
         }
 
-        // ===================== DÉTECTION (Nouveau Système + Fiable) =====================
+        // ===================== DÉTECTION (Nouveau Système + Fiable + Fix Caméra) =====================
         const videoElement = document.getElementById('video');
         const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
         let isDown = false;
 
-        function startCamera() {
-            const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-            pose.setOptions({ modelComplexity: 0, smoothLandmarks: true });
-            pose.onResults(onPoseResults);
+        async function startCamera() {
+            try {
+                // 1. Force la demande de permission AVANT de lancer l'IA
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                videoElement.srcObject = stream;
+                
+                // 2. Initialise MediaPipe
+                const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+                pose.setOptions({ modelComplexity: 0, smoothLandmarks: true });
+                pose.onResults(onPoseResults);
 
-            const camera = new Camera(videoElement, {
-                onFrame: async () => { await pose.send({image: videoElement}); },
-                width: 640, height: 480, facingMode: "user"
-            });
-            camera.start();
+                // 3. Lance la boucle de capture
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => { await pose.send({image: videoElement}); },
+                    width: 640, height: 480
+                });
+                camera.start();
+                
+            } catch (err) {
+                alert("Impossible d'accéder à la caméra 🎥\nAssure-toi d'être sur GitHub Pages (HTTPS) ou sur un serveur local, et d'avoir autorisé l'accès.\nErreur technique : " + err.message);
+            }
         }
 
         function onPoseResults(results) {
             if (!gameActive) return;
-            canvasElement.width = videoElement.videoWidth;
-            canvasElement.height = videoElement.videoHeight;
-            canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.translate(canvasElement.width, 0); canvasCtx.scale(-1, 1);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            canvasElement.width = videoElement.videoWidth || 640;
+            canvasElement.height = videoElement.videoHeight || 480;
+            canvasCtx.save(); 
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.translate(canvasElement.width, 0); 
+            canvasCtx.scale(-1, 1);
+            
+            // Dessine le flux vidéo sur le canvas
+            if (results.image) {
+                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            }
 
             if (results.poseLandmarks) {
                 document.getElementById('pose-hint').style.display = 'none';
@@ -378,18 +395,14 @@
                 let elbowR = results.poseLandmarks[14];
 
                 if(shoulderL && elbowL && shoulderR && elbowR) {
-                    // Moyenne de la hauteur Y (0 = haut de l'écran, 1 = bas de l'écran)
                     let avgShoulderY = (shoulderL.y + shoulderR.y) / 2;
                     let avgElbowY = (elbowL.y + elbowR.y) / 2;
 
-                    // Logique : Quand les épaules descendent au niveau des coudes, on est en bas.
-                    // Tolérance de 0.05 (pour ne pas forcer à toucher le sol si la caméra est mal placée)
                     if (avgShoulderY > avgElbowY - 0.05 && !isDown) {
                         isDown = true;
-                        canvasElement.style.filter = "brightness(1.5)"; // Feedback visuel (flash)
+                        canvasElement.style.filter = "brightness(1.5)"; 
                         setTimeout(() => canvasElement.style.filter = "none", 100);
                     } 
-                    // Quand les épaules remontent bien plus haut que les coudes, la pompe est finie.
                     else if (avgShoulderY < avgElbowY - 0.15 && isDown) {
                         isDown = false;
                         playerScored();
@@ -401,8 +414,8 @@
             canvasCtx.restore();
         }
 
-        // Test sur mobile sans caméra
-        document.getElementById('video').addEventListener('click', playerScored);
+        // Test sur mobile/PC sans faire de vraies pompes en cliquant sur la vidéo
+        document.getElementById('camera-wrapper').addEventListener('click', playerScored);
     </script>
 </body>
 </html>
