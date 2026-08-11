@@ -1,581 +1,282 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Clash of Pushups - Ultimate Royale</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    
-    <!-- MediaPipe pour la détection de mouvements -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    
-    <!-- PeerJS pour le multijoueur P2P sans serveur -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
-    <style>
-        :root {
-            --cr-blue: #2b78e4;
-            --cr-red: #f54242;
-            --cr-gold: #ffcc00;
-            --cr-wood: #5c4033;
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            margin: 0; padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background-color: #050a14; color: white;
-            display: flex; justify-content: center;
-            height: 100vh; overflow: hidden;
-            background-image: radial-gradient(#112244 15%, transparent 16%), radial-gradient(#112244 15%, transparent 16%);
-            background-size: 40px 40px; background-position: 0 0, 20px 20px;
-        }
-
-        .screen {
-            display: none; width: 100%; max-width: 500px; height: 100%;
-            flex-direction: column; position: relative; z-index: 1;
-            background: linear-gradient(to bottom, rgba(10,20,40,0.95), rgba(0,0,0,0.98));
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-        }
-        .active-screen { display: flex; }
-
-        .cr-button {
-            background: linear-gradient(to bottom, #ffe44d, var(--cr-gold) 40%, #cc9900);
-            border: 3px solid #332200; border-radius: 12px;
-            color: #4a3000; font-family: 'Anton', sans-serif; font-size: 1.2rem;
-            padding: 12px 20px; text-transform: uppercase; cursor: pointer;
-            box-shadow: inset 0 4px 0 rgba(255,255,255,0.6), 0 6px 0 #805500;
-            margin: 10px 0; width: 100%; transition: 0.1s;
-        }
-        .cr-button.blue { background: linear-gradient(to bottom, #69a3ff, var(--cr-blue) 40%, #124d9c); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #092c5c; }
-        .cr-button.red { background: linear-gradient(to bottom, #ff6b6b, var(--cr-red) 40%, #9c1212); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #5c0909; }
-        .cr-button.gray { background: linear-gradient(to bottom, #aaa, #777 40%, #444); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.3), 0 6px 0 #222; }
-        .cr-button:active { transform: translateY(6px); box-shadow: 0 0px 0 #805500; }
-
-        /* DESIGN D'ARÈNE ROYALE */
-        .arena-3d-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; perspective: 1000px; }
-        .arena-island {
-            width: 240px; height: 320px; position: relative;
-            transform-style: preserve-3d; transform: rotateX(55deg) rotateZ(-35deg);
-        }
-        .arena-surface {
-            position: absolute; width: 100%; height: 100%;
-            background: #5da13b; border: 8px solid #8c6239; border-radius: 10px;
-            box-shadow: inset 0 0 40px rgba(0,0,0,0.7); overflow: hidden;
-            background-image: linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,0.05) 25%, transparent 25%);
-            background-size: 30px 30px;
-        }
-        .arena-surface::before {
-            content: ''; position: absolute; top: 45%; left: -10%; width: 120%; height: 10%;
-            background: #2ab7ca; border-top: 3px solid #e0ce9a; border-bottom: 3px solid #e0ce9a;
-            transform: rotate(-5deg);
-        }
-        .bridge { position: absolute; top: 44%; width: 35px; height: 15%; background: #a57147; border: 2px solid #3e2723; }
-        .bridge.left { left: 20%; transform: rotate(-5deg); }
-        .bridge.right { right: 20%; transform: rotate(-5deg); }
-        .arena-island::before {
-            content: ''; position: absolute; width: 100%; height: 25px; background: var(--cr-wood);
-            transform-origin: bottom; transform: rotateX(-90deg) translateY(25px); bottom: 0; border: 2px solid #2a1c0d;
-        }
-        .arena-island::after {
-            content: ''; position: absolute; width: 25px; height: 100%; background: #3a2b1c;
-            transform-origin: right; transform: rotateY(90deg) translateX(25px); right: 0; border: 2px solid #2a1c0d;
-        }
-
-        input {
-            width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 10px;
-            border: 3px solid var(--cr-gold); background: rgba(0,0,0,0.7); color: white;
-            margin-bottom: 10px; text-align: center; font-family: 'Anton';
-        }
-
-        /* ECRAN CONNEXION GOOGLE */
-        #login-screen { justify-content: center; align-items: center; padding: 30px; text-align: center; }
-        .google-btn {
-            background: white; color: #444; border: none; border-radius: 8px;
-            padding: 12px 24px; font-weight: bold; font-size: 1.1rem; display: flex;
-            align-items: center; justify-content: center; gap: 12px; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 100%; margin-top: 20px;
-            transition: 0.2s;
-        }
-        .google-btn:hover { background: #f1f1f1; }
-
-        /* PROFIL & HEADER */
-        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: rgba(0,0,0,0.8); border-bottom: 2px solid #333; }
-        .profile-pic { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--cr-gold); object-fit: cover; }
-
-        /* HUD DUEL & TRACKER VISUEL */
-        #camera-wrapper { flex: 1; position: relative; background: #000; overflow: hidden; border-radius: 12px; margin: 10px; border: 3px solid #333; }
-        video { display: none; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-
-        .battle-hud-top { display: flex; justify-content: space-between; padding: 15px; position: absolute; top:0; width: 100%; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent); }
-        .score-counter { font-family: 'Anton'; font-size: 3.2rem; text-shadow: 3px 3px 0 #000; line-height: 1; }
-        .timer-box { font-family: 'Anton'; font-size: 2rem; color: white; text-shadow: 2px 2px #000; background: rgba(0,0,0,0.7); padding: 4px 15px; border-radius: 8px; border: 2px solid var(--cr-gold); }
-
-        /* EFFET VISUEL +1 STYLE CLASH ROYALE */
-        .floating-plus {
-            position: absolute; font-family: 'Anton'; font-size: 3.5rem; color: #00ffcc;
-            text-shadow: 2px 2px 0 #000, 0 0 15px #00ffcc; pointer-events: none; z-index: 25;
-            animation: floatUp 0.8s ease-out forwards;
-        }
-        @keyframes floatUp {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            30% { transform: translate(-50%, -100px) scale(1.2); opacity: 1; }
-            100% { transform: translate(-50%, -160px) scale(1); opacity: 0; }
-        }
-
-        /* TRACKER FORM (Cercle de progression de pompe) */
-        .tracker-ring-container {
-            position: absolute; bottom: 20px; left: 20px; z-index: 20;
-            background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 12px;
-            border: 2px solid var(--cr-gold); display: flex; align-items: center; gap: 10px;
-        }
-        .rep-status-dot { width: 15px; height: 15px; border-radius: 50%; background: var(--cr-red); transition: 0.2s; box-shadow: 0 0 8px var(--cr-red); }
-        .rep-status-dot.active { background: #00ffcc; box-shadow: 0 0 12px #00ffcc; }
-
-        .sudden-death { animation: pulseRed 0.5s infinite alternate; }
-        @keyframes pulseRed { from { box-shadow: inset 0 0 0px red; } to { box-shadow: inset 0 0 40px red; } }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Clash of Pushups — Ranked Royale</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-database-compat.js"></script>
+<style>
+:root{
+ --accent:#ffd22e; --accent2:#ff8b1f; --bg:#070b16; --panel:rgba(13,19,34,.84); --line:rgba(255,255,255,.11);
+ --good:#39ff9a; --bad:#ff4d67; --cyan:#41e8ff; --rank:#ffd22e;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:#fff;font-family:Roboto,sans-serif}
+body{display:flex;justify-content:center;background:
+ radial-gradient(circle at 20% 10%,rgba(79,129,255,.13),transparent 30%),
+ radial-gradient(circle at 80% 80%,rgba(255,95,55,.10),transparent 35%),#050811}
+button,input{font:inherit}.screen{display:none;width:100%;max-width:540px;height:100%;flex-direction:column;position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(5,8,17,.90),rgba(4,7,13,.98));box-shadow:0 0 60px rgba(0,0,0,.7)}.active-screen{display:flex}
+.screen::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,.03),transparent 35%,rgba(255,255,255,.02));}
+.topbar{z-index:2;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(0,0,0,.62);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+.avatar{width:42px;height:42px;border-radius:50%;border:2px solid var(--accent);object-fit:cover;background:#222}.name{font-family:Anton;font-size:1.15rem}.tiny{font-size:.72rem;color:#9fa9bf}
+.btn{position:relative;width:100%;border:0;border-radius:13px;padding:13px 16px;color:#1d1400;font-family:Anton;letter-spacing:.8px;text-transform:uppercase;cursor:pointer;background:linear-gradient(#ffe970,#ffc400 45%,#d58c00);box-shadow:inset 0 2px 0 rgba(255,255,255,.7),0 6px 0 #704d00,0 0 18px rgba(255,205,34,.18);transition:.08s transform,.15s filter}.btn:active{transform:translateY(5px);filter:brightness(.92)}.btn.blue{color:#fff;background:linear-gradient(#70c7ff,#338aff 50%,#1859bb);box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 6px 0 #12397c}.btn.dark{color:#fff;background:linear-gradient(#555d70,#2e3340);box-shadow:inset 0 2px 0 rgba(255,255,255,.2),0 6px 0 #161921}.btn.red{color:#fff;background:linear-gradient(#ff7a87,#eb3752 50%,#9d1d34);box-shadow:inset 0 2px 0 rgba(255,255,255,.3),0 6px 0 #5a1421}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.28);backdrop-filter:blur(14px)}
+.hero{padding:18px 18px 10px;display:flex;align-items:center;gap:14px}.hero-logo{font-family:Anton;font-size:2.2rem;line-height:.94;color:var(--rank);text-shadow:0 3px #000,0 0 20px rgba(255,210,46,.45)}
+.rank-badge{min-width:84px;height:84px;border-radius:22px;display:grid;place-items:center;border:3px solid rgba(255,255,255,.45);background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.38),transparent 35%),linear-gradient(145deg,var(--rank),#473b00 115%);box-shadow:inset 0 2px 0 rgba(255,255,255,.35),0 0 35px color-mix(in srgb,var(--rank) 34%,transparent)}.rank-badge b{font-family:Anton;font-size:1.1rem;text-shadow:0 2px #000}
+.progress{height:10px;background:#1a2030;border-radius:999px;overflow:hidden;border:1px solid #333}.progress>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--rank));box-shadow:0 0 18px var(--cyan);transition:width .35s}
+.menu-scroll{flex:1;overflow:auto;padding:0 14px 22px}.section-title{font-family:Anton;color:#cbd2df;letter-spacing:.6px;margin:16px 0 8px}.rank-track{display:flex;gap:8px;overflow:auto;padding:4px 2px 10px}.rank-chip{min-width:89px;padding:9px 8px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#121a29;text-align:center;font-size:.73rem}.rank-chip.active{transform:translateY(-2px);box-shadow:0 0 20px color-mix(in srgb,var(--rank) 26%,transparent);border-color:var(--rank)}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.small-card{padding:12px}.value{font-family:Anton;font-size:1.7rem}.label{color:#99a1b4;font-size:.7rem;text-transform:uppercase;letter-spacing:.7px}.mission{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px;border-radius:12px;background:rgba(255,255,255,.04);margin:7px 0}.mission strong{font-size:.84rem}.mission span{font-family:Anton;color:var(--accent);font-size:.95rem}.reward-pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 9px;background:rgba(255,210,46,.1);border:1px solid rgba(255,210,46,.24);font-size:.7rem;color:#ffdf75}
+/* RANK THEMES */
+.theme-BRONZE{--rank:#b87a44}.theme-ARGENT{--rank:#dce5ef}.theme-GOLD{--rank:#ffd32c}.theme-PLATINE{--rank:#6fe4ef}.theme-DIAMOND{--rank:#7ca6ff}.theme-RUBY{--rank:#ff4b65}.theme-CHRYSTAL{--rank:#a8ffff}.theme-CHAMPION{--rank:#c17bff}.theme-LEGENDE{--rank:#fff0a3}
+.rank-BRONZE{background:radial-gradient(circle at 35% 30%,#8b5b31 0,transparent 38%),linear-gradient(135deg,#1a1009,#070a14)}.rank-ARGENT{background:radial-gradient(circle at 30% 30%,#dbe2ea 0,transparent 35%),linear-gradient(135deg,#17202a,#070a14)}.rank-GOLD{background:radial-gradient(circle at 35% 25%,#ffde58 0,transparent 34%),linear-gradient(135deg,#3a2400,#080a13)}.rank-PLATINE{background:radial-gradient(circle at 30% 30%,#8df3f0 0,transparent 34%),linear-gradient(135deg,#082d34,#070a14)}.rank-DIAMOND{background:radial-gradient(circle at 30% 30%,#8eb4ff 0,transparent 34%),linear-gradient(135deg,#0b1d43,#070a14)}.rank-RUBY{background:radial-gradient(circle at 30% 30%,#ff6e86 0,transparent 34%),linear-gradient(135deg,#420b1a,#070a14)}.rank-CHRYSTAL{background:radial-gradient(circle at 30% 30%,#caffff 0,transparent 34%),linear-gradient(135deg,#0d3439,#070a14)}.rank-CHAMPION{background:radial-gradient(circle at 30% 30%,#d3a4ff 0,transparent 34%),linear-gradient(135deg,#321050,#070a14)}.rank-LEGENDE{background:radial-gradient(circle at 25% 22%,#fff7b2 0,transparent 30%),radial-gradient(circle at 80% 70%,#7c6cff 0,transparent 28%),linear-gradient(135deg,#17100a,#070a14)}
+/* BATTLE */
+#battle-screen{background:#000}.battle{flex:1;position:relative;overflow:hidden}.camera{position:absolute;inset:0;background:#050505}.camera video{display:none}.camera canvas{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.battle::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.68),transparent 18%,transparent 72%,rgba(0,0,0,.72))}
+.hud{position:absolute;top:0;left:0;right:0;z-index:5;padding:12px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start}.score-box{text-shadow:0 3px 0 #000}.score-name{font-weight:900;font-size:.72rem}.score{font-family:Anton;font-size:3.3rem;line-height:.9}.score.you{color:#65a8ff}.score.enemy{color:#ff6d7b;text-align:right}.timer{font-family:Anton;font-size:1.8rem;padding:6px 12px;border:2px solid var(--rank);border-radius:12px;background:rgba(0,0,0,.72);box-shadow:0 0 20px color-mix(in srgb,var(--rank) 36%,transparent)}
+.combat-panel{position:absolute;left:12px;right:12px;bottom:10px;z-index:8}.rep-bar{padding:10px 12px;border-radius:14px;background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(10px)}.rep-top{display:flex;justify-content:space-between;align-items:end}.rep-pct{font-family:Anton;font-size:2rem;color:var(--cyan);text-shadow:0 0 12px rgba(65,232,255,.7)}.rep-state{font-family:Anton;color:#fff}.rep-meter{height:16px;border-radius:999px;background:#131824;overflow:hidden;border:1px solid #394153;margin-top:6px}.rep-meter i{display:block;width:0;height:100%;background:linear-gradient(90deg,#2e78ff,#41e8ff,#55ff9a);box-shadow:0 0 22px rgba(65,232,255,.65);transition:width .06s}.threshold{position:relative;margin-top:4px;height:10px}.threshold::after{content:"70%";position:absolute;left:70%;top:0;transform:translateX(-50%);font-size:.58rem;color:#ffd65a}.threshold i{position:absolute;left:70%;top:-18px;width:2px;height:18px;background:#ffd65a;box-shadow:0 0 10px #ffd65a}.combo{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:rgba(255,170,30,.12);border:1px solid rgba(255,190,80,.25);font-family:Anton;color:#ffda73}.battle-actions{display:flex;gap:8px;margin-top:8px}.battle-actions .btn{margin:0}.hint{font-size:.76rem;color:#d2d8e4;text-align:center;margin:6px 0 0;text-shadow:0 2px 4px #000}
+/* FX */
+.flash{position:absolute;inset:0;z-index:40;pointer-events:none;background:rgba(255,255,255,.7);opacity:0}.flash.go{animation:flash .35s ease}.shake{animation:shake .32s ease}.floating{position:absolute;z-index:50;font-family:Anton;pointer-events:none;font-size:2rem;text-shadow:0 3px #000,0 0 14px currentColor;animation:float .9s ease-out forwards}.confetti{position:absolute;width:8px;height:15px;z-index:60;pointer-events:none;animation:fall 1.1s linear forwards}.toast{position:absolute;top:74px;left:50%;z-index:70;transform:translateX(-50%);padding:10px 14px;border-radius:999px;background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.14);font-family:Anton;opacity:0;animation:toast 1.8s ease forwards;white-space:nowrap}.overlay{position:absolute;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(9px)}.overlay.show{display:flex}.count{font-family:Anton;font-size:8rem;color:var(--rank);text-shadow:0 5px #000,0 0 40px var(--rank);animation:pop .9s ease}
+@keyframes flash{0%{opacity:0}25%{opacity:.85}100%{opacity:0}}@keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(5px,-2px)}50%{transform:translate(-4px,3px)}75%{transform:translate(3px,2px)}}@keyframes float{0%{transform:translate(-50%,10px) scale(.5);opacity:0}25%{opacity:1}100%{transform:translate(-50%,-90px) scale(1.12);opacity:0}}@keyframes fall{0%{transform:translateY(-20px) rotate(0)}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}@keyframes toast{0%{opacity:0;transform:translate(-50%,-8px)}15%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-8px)}}@keyframes pop{0%{transform:scale(.3);opacity:0}40%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:0}}
+/* RESULTS */
+.result-wrap{height:100%;overflow:auto;padding:18px 16px 28px;text-align:center}.result-title{font-family:Anton;font-size:4.5rem;line-height:.9;margin:26px 0 4px;text-shadow:0 5px #000}.delta{font-family:Anton;font-size:2rem;color:var(--accent)}.result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}.result-card{padding:13px;text-align:left}.mini-chart{height:48px;display:flex;align-items:end;gap:4px}.mini-chart i{flex:1;background:linear-gradient(#54ffcf,#2b7cff);border-radius:3px 3px 0 0}.reward-track{display:flex;gap:8px;overflow:auto;padding-bottom:4px}.reward{min-width:82px;padding:10px;border-radius:12px;background:#121a29;border:1px solid #263249}.reward.done{border-color:var(--rank);box-shadow:0 0 18px color-mix(in srgb,var(--rank) 20%,transparent)}.reward b{font-family:Anton;display:block;margin-bottom:4px}.reward span{font-size:.68rem;color:#9ea8bb}
+input{width:100%;padding:11px 12px;border-radius:11px;border:1px solid #384257;background:#0f1522;color:#fff;outline:none}.settings{padding:18px;overflow:auto}.setting{padding:13px;margin-bottom:10px}
+@media (min-width:700px){.screen{max-width:700px;border-left:1px solid #111;border-right:1px solid #111}}
+</style>
 </head>
 <body>
-
-    <!-- 1. ECRAN DE CONNEXION GOOGLE -->
-    <div id="login-screen" class="screen active-screen">
-        <h1 style="font-family: 'Anton'; color: var(--cr-gold); font-size: 3rem; margin-bottom: 10px; text-shadow: 3px 3px #000;">CLASH OF PUSHUPS</h1>
-        <p style="color: #aaa; margin-bottom: 30px;">Affronte tes amis en faisant de vraies pompes !</p>
-        <div style="font-size: 4rem; margin-bottom: 20px;">👑⚔️</div>
-        <button class="google-btn" onclick="loginWithGoogle()">
-            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.14C3.15 21.32 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.18C.43 8.13 0 9.83 0 11.6s.43 3.47 1.18 4.98l4.09-2.34z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.15 2.68 1.18 6.62l4.09 3.14c.95-2.85 3.6-4.95 6.73-4.95z"/></svg>
-            Se connecter avec Google
-        </button>
+<div id="app" class="screen active-screen theme-GOLD rank-GOLD">
+  <div id="login-screen" class="screen active-screen" style="max-width:none">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(255,210,46,.14),transparent 24%),radial-gradient(circle at 20% 80%,rgba(65,232,255,.12),transparent 30%)"></div>
+      <div style="max-width:430px;z-index:2">
+        <div style="font-size:4rem;filter:drop-shadow(0 0 25px rgba(255,210,46,.35))">💪⚔️👑</div>
+        <div class="hero-logo" style="font-size:3.6rem;margin-top:6px">CLASH OF<br>PUSHUPS</div>
+        <p style="color:#aeb7c8;margin:12px 0 24px">Le premier duel où ton vrai mouvement devient ton score.</p>
+        <button class="btn" onclick="loginDemo()">ENTRER DANS L'ARÈNE</button>
+        <div class="tiny" style="margin-top:14px">Caméra nécessaire pour les matchs classés.</div>
+      </div>
     </div>
+  </div>
 
-    <!-- 2. MENU PRINCIPAL -->
-    <div id="menu-screen" class="screen">
-        <div class="top-bar">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <img id="user-avatar" class="profile-pic" src="" alt="Avatar">
-                <div>
-                    <div id="user-display-name" style="font-family: 'Anton'; font-size: 1.1px; font-size: 1.1rem;">Joueur</div>
-                    <div style="font-size: 0.75rem; color: var(--cr-gold);">🏆 <span id="user-trophies">0</span> Trophées</div>
-                </div>
-            </div>
-            <button class="cr-button gray" style="width: auto; padding: 6px 12px; font-size: 0.9rem; margin:0;" onclick="openSettings()">⚙️ Paramètres</button>
-        </div>
-
-        <div class="arena-3d-container">
-            <h2 id="arena-title" style="font-family: 'Anton'; color: var(--cr-gold); margin-bottom: 0;">1. Stade Gobelin</h2>
-            <div class="arena-island">
-                <div class="arena-surface">
-                    <div class="bridge left"></div>
-                    <div class="bridge right"></div>
-                </div>
-            </div>
-        </div>
-
-        <div style="padding: 20px;">
-            <button class="cr-button" onclick="startBotMatch()">JOUER (VS IA)</button>
-            
-            <div style="background: rgba(0,0,0,0.5); border: 2px solid #444; padding: 12px; border-radius: 10px; margin-top: 10px; text-align: center;">
-                <h3 style="margin: 0 0 5px 0; font-family: 'Anton'; font-size: 1rem;">DUEL ENTRE AMIS (P2P)</h3>
-                <button class="cr-button blue" style="margin: 5px 0; padding: 8px;" onclick="hostGame()">CRÉER UN SALON</button>
-                <div style="display: flex; gap: 5px; margin-top: 5px;">
-                    <input type="text" id="friend-code" placeholder="Code salon ami" style="margin:0; font-size: 0.9rem; padding: 8px;">
-                    <button class="cr-button red" style="margin:0; width: 120px; padding: 8px;" onclick="joinGame()">REJOINDRE</button>
-                </div>
-                <div id="my-code-box" style="display:none; margin-top: 8px; font-size: 0.85rem; color: var(--cr-gold);">
-                    Code de salon : <b id="my-code" style="letter-spacing: 2px;">...</b> (En attente...)
-                </div>
-            </div>
-        </div>
+  <div id="home-screen" class="screen">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:10px"><img id="avatar" class="avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces"><div><div id="display-name" class="name">Champion</div><div class="tiny">⚡ <span id="streak">1</span> jour de série · <span id="coins">0</span> éclats</div></div></div>
+      <button class="btn dark" style="width:auto;padding:8px 11px;margin:0;font-size:.8rem" onclick="openSettings()">⚙️</button>
     </div>
-
-    <!-- 3. PARAMETRES (Gestion fixe du Code Ami et de la Sauvegarde) -->
-    <div id="settings-screen" class="screen" style="padding: 20px; justify-content: center;">
-        <h2 style="font-family: 'Anton'; color: var(--cr-gold); text-align: center; font-size: 2rem;">PARAMÈTRES</h2>
-        
-        <div style="background: rgba(0,0,0,0.6); border: 2px solid #444; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-            <label style="font-size: 0.9rem; color: #aaa;">Ton Code Ami Permanent :</label>
-            <div style="display: flex; gap: 10px; margin-top: 5px;">
-                <input type="text" id="settings-friend-code" style="margin:0; text-transform: uppercase;" maxlength="8">
-                <button class="cr-button blue" style="margin:0; width: 140px; padding: 10px;" onclick="saveCustomFriendCode()">Modifier</button>
-            </div>
-            <p style="font-size: 0.75rem; color: #888; margin-top: 5px;">C'est ce code fixe que tes amis devront utiliser pour te retrouver.</p>
+    <div id="home-theme" class="menu-scroll rank-GOLD">
+      <div class="hero">
+        <div class="rank-badge"><b id="rank-badge-text">GOLD</b></div>
+        <div style="flex:1">
+          <div class="tiny">RANG ACTUEL</div><div id="rank-title" style="font-family:Anton;font-size:1.65rem;color:var(--rank)">Gold</div>
+          <div class="progress"><i id="rank-progress"></i></div>
+          <div class="tiny" style="margin-top:5px"><span id="rank-xp">0</span> / <span id="rank-cap">100</span> XP de ligue</div>
         </div>
-
-        <button class="cr-button red" onclick="logout()">DÉCONNEXION</button>
-        <button class="cr-button gray" onclick="closeSettings()" style="margin-top: 10px;">RETOUR</button>
+      </div>
+      <div class="card" style="padding:13px 12px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><div class="section-title" style="margin:0">SAISON</div><span class="reward-pill">🏆 Top performance</span></div>
+        <div style="font-size:.9rem;color:#cbd4e2;margin-top:4px">Monte de rang avec tes victoires, protège ta série et débloque des cosmétiques.</div>
+        <div class="rank-track" id="rank-track"></div>
+      </div>
+      <div class="section-title">MATCHMAKING</div>
+      <div class="card" style="padding:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><div style="font-family:Anton;font-size:1.25rem">⚔️ CLASSÉ</div><div class="tiny">60 secondes · le plus de pompes gagne</div></div><div id="queue-status" class="reward-pill">🌐 En ligne</div></div>
+        <button class="btn" onclick="startRankedQueue()">LANCER UN MATCH</button>
+        <div class="tiny" style="text-align:center;margin-top:7px">Recherche d'un joueur de ton niveau. Au bout de 30 s, un adversaire IA est utilisé pour ne pas te faire attendre.</div>
+      </div>
+      <div class="menu-grid" style="margin-top:10px">
+        <button class="btn blue" style="font-size:.9rem;padding:11px" onclick="startBotMatch(true)">⚡ MATCH DÉMO</button>
+        <button class="btn dark" style="font-size:.9rem;padding:11px" onclick="openFriends()">👥 AMIS / DUELS</button>
+      </div>
+      <div class="section-title">TES OBJECTIFS</div>
+      <div class="card" style="padding:10px" id="missions"></div>
+      <div class="section-title">STATS DE COMPÉTITION</div>
+      <div class="menu-grid">
+        <div class="card small-card"><div class="label">Victoires</div><div id="wins" class="value">0</div></div>
+        <div class="card small-card"><div class="label">Pompes validées</div><div id="total-reps" class="value">0</div></div>
+        <div class="card small-card"><div class="label">Meilleure série</div><div id="best-combo" class="value">0</div></div>
+        <div class="card small-card"><div class="label">Taux de victoire</div><div id="winrate" class="value">0%</div></div>
+      </div>
+      <div class="section-title">RÉCOMPENSES SAISON</div>
+      <div class="reward-track" id="season-rewards"></div>
     </div>
+  </div>
 
-    <!-- 4. BATAILLE -->
-    <div id="battle-screen" class="screen">
-        <div id="camera-wrapper">
-            <div class="battle-hud-top">
-                <div style="text-align: left;">
-                    <div id="p1-name" style="color: var(--cr-blue); font-weight: bold; font-size: 0.9rem;">Toi</div>
-                    <div class="score-counter" id="player-score" style="color: var(--cr-blue);">0</div>
-                </div>
-                <div class="timer-box" id="timer">30</div>
-                <div style="text-align: right;">
-                    <div id="p2-name" style="color: var(--cr-red); font-weight: bold; font-size: 0.9rem;">Ennemi</div>
-                    <div class="score-counter" id="enemy-score" style="color: var(--cr-red);">0</div>
-                </div>
-            </div>
-
-            <video id="video" playsinline autoplay muted></video>
-            <canvas id="canvas"></canvas>
-
-            <!-- TRACKER VISUEL & ETAT DE LA POMPE -->
-            <div class="tracker-ring-container">
-                <div class="rep-status-dot" id="rep-dot"></div>
-                <div>
-                    <div style="font-size: 0.7rem; color: #aaa; font-family: 'Anton';">STATUT POMPE</div>
-                    <div id="rep-status-text" style="font-family: 'Anton'; font-size: 0.9rem; color: #fff;">EN HAUT</div>
-                </div>
-            </div>
-
-            <div id="pose-hint" style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-family: 'Anton'; font-size: 1.3rem; text-shadow: 2px 2px #000; color: var(--cr-gold);">Place-toi de profil face caméra !</div>
+  <div id="battle-screen" class="screen">
+    <div class="battle" id="battle-root">
+      <div class="camera" id="camera-wrap"><video id="video" playsinline autoplay muted></video><canvas id="canvas"></canvas></div>
+      <div class="hud">
+        <div class="score-box"><div id="p1-name" class="score-name" style="color:#6ca7ff">TOI</div><div id="player-score" class="score you">0</div></div>
+        <div class="timer" id="timer">60</div>
+        <div class="score-box"><div id="p2-name" class="score-name" style="color:#ff6f80;text-align:right">ADVERSAIRE</div><div id="enemy-score" class="score enemy">0</div></div>
+      </div>
+      <div id="flash" class="flash"></div>
+      <div id="battle-overlay" class="overlay"><div id="count-text" class="count">3</div></div>
+      <div class="combat-panel">
+        <div class="rep-bar">
+          <div class="rep-top"><div><div class="tiny">MOUVEMENT TRACKER</div><div id="rep-state" class="rep-state">Positionne-toi de profil</div></div><div id="rep-pct" class="rep-pct">0%</div></div>
+          <div class="rep-meter"><i id="rep-meter-fill"></i></div><div class="threshold"><i></i></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px"><span class="tiny">Une pompe compte seulement à ≥ 70% de descente.</span><span class="combo" id="combo">COMBO ×0</span></div>
         </div>
-        <div style="padding: 10px 20px;">
-            <button class="cr-button red" style="margin:0; padding: 10px;" onclick="endGame()">ABANDONNER</button>
-        </div>
+        <div class="hint" id="pose-hint">Place épaules + coudes dans le cadre. Descends jusqu'à 70 %, puis remonte.</div>
+        <div class="battle-actions"><button class="btn red" onclick="endGame('quit')">ABANDONNER</button><button class="btn dark" onclick="toggleMute()">🔊 <span id="mute-label">SON</span></button></div>
+      </div>
     </div>
+  </div>
 
-    <!-- 5. RESULTAT -->
-    <div id="result-screen" class="screen" style="justify-content: center; align-items: center; text-align: center; padding: 20px;">
-        <h1 id="result-title" style="font-family: 'Anton'; font-size: 4rem; text-shadow: 4px 4px 0 #000; margin: 0;">VICTOIRE</h1>
-        <div id="result-trophies-text" style="font-family: 'Anton'; font-size: 2rem; color: var(--cr-gold); margin: 15px 0;">+30 🏆</div>
-        <button class="cr-button" onclick="returnToMenu()">CONTINUER</button>
-    </div>
+  <div id="result-screen" class="screen"><div class="result-wrap">
+    <div id="result-rank-pill" class="reward-pill">LIGUE</div>
+    <div id="result-title" class="result-title">VICTOIRE</div>
+    <div id="result-subtitle" style="color:#aeb7c8">Belle série. Continue comme ça.</div>
+    <div id="result-delta" class="delta">+25 XP</div>
+    <div class="result-grid"><div class="card result-card"><div class="label">Ton score</div><div id="result-player" class="value">0</div></div><div class="card result-card"><div class="label">Adversaire</div><div id="result-enemy" class="value">0</div></div></div>
+    <div class="card result-card" style="margin-bottom:10px"><div class="label">Ta performance</div><div style="display:flex;justify-content:space-between;margin:6px 0"><span>Pompes validées</span><b id="result-reps">0</b></div><div style="display:flex;justify-content:space-between;margin:6px 0"><span>Meilleur combo</span><b id="result-combo">×0</b></div><div style="display:flex;justify-content:space-between;margin:6px 0"><span>Précision mouvement</span><b id="result-accuracy">0%</b></div><div class="mini-chart" id="result-bars"></div></div>
+    <button class="btn" onclick="returnHome()">CONTINUER</button>
+  </div></div>
 
-    <script>
-        // ===================== GESTION DU PROFIL & GOOGLE SIMULATION =====================
-        let userData = {
-            name: "",
-            email: "",
-            avatar: "",
-            trophies: 0,
-            friendCode: ""
-        };
+  <div id="settings-screen" class="screen"><div class="settings">
+    <div class="section-title" style="margin-top:4px">PARAMÈTRES</div>
+    <div class="card setting"><div class="label">Pseudo</div><input id="nickname" maxlength="18"></div>
+    <div class="card setting"><div class="label">Caméra</div><div style="margin-top:7px;color:#c3cada;font-size:.85rem">Autorise la caméra et place ton téléphone à hauteur du sol. Le tracking se fait localement dans le navigateur.</div></div>
+    <div class="card setting"><div class="label">Réseau</div><div id="network-info" style="margin-top:7px;color:#c3cada;font-size:.85rem">PeerJS + matchmaking Firebase (si configuré).</div></div>
+    <button class="btn" onclick="saveSettings()">ENREGISTRER</button><button class="btn dark" style="margin-top:10px" onclick="returnHome()">RETOUR</button>
+  </div></div>
 
-        function loadGameData() {
-            let saved = localStorage.getItem("cop_save_data");
-            if (saved) {
-                userData = JSON.parse(saved);
-                // Si connecté, passe direct au menu
-                if (userData.email) {
-                    showScreen('menu-screen');
-                    updateMenuUI();
-                }
-            }
-        }
+  <div id="friends-screen" class="screen"><div class="settings">
+    <div class="section-title" style="margin-top:4px">DUELS ENTRE AMIS</div>
+    <div class="card setting"><div class="label">Code de salon</div><input id="room-code" placeholder="Ex. PUSH1234"><button class="btn blue" style="margin-top:10px" onclick="hostRoom()">CRÉER UN SALON</button><button class="btn" style="margin-top:10px" onclick="joinRoom()">REJOINDRE</button><div id="room-status" class="tiny" style="margin-top:8px"></div></div>
+    <button class="btn dark" onclick="returnHome()">RETOUR</button>
+  </div></div>
+</div>
+<script>
+/* =========================
+   CONFIG RÉSEAU (serverless)
+   =========================
+   1) PeerJS Cloud = signalisation gratuite, WebRTC pour le duel.
+   2) Firebase RTDB = file d'attente/matchmaking anonyme. Crée un projet Firebase gratuit,
+      active Realtime Database puis colle ton objet firebaseConfig ci-dessous.
+      Sans config, le bouton classé conserve le fallback IA après 30 secondes.
+*/
+const FIREBASE_CONFIG = {
+  apiKey: "REMPLACE_MOI",
+  authDomain: "REMPLACE_MOI.firebaseapp.com",
+  databaseURL: "https://REMPLACE_MOI-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "REMPLACE_MOI",
+  storageBucket: "REMPLACE_MOI.firebasestorage.app",
+  messagingSenderId: "REMPLACE_MOI",
+  appId: "REMPLACE_MOI"
+};
+const hasFirebaseConfig = Object.values(FIREBASE_CONFIG).every(v => v && !String(v).includes('REMPLACE_MOI'));
+let db = null;
+if (hasFirebaseConfig && window.firebase) { try { if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG); db = firebase.database(); } catch(e) { console.warn('Firebase indisponible',e); } }
 
-        function saveGameData() {
-            localStorage.setItem("cop_save_data", JSON.stringify(userData));
-        }
+const RANKS = [
+ {id:'BRONZE',label:'Bronze',theme:'rank-BRONZE',xp:0,cap:100,icon:'🥉',env:'Ruines de cuivre'},
+ {id:'ARGENT',label:'Argent',theme:'rank-ARGENT',xp:100,cap:130,icon:'🥈',env:'Citadelle lunaire'},
+ {id:'GOLD',label:'Gold',theme:'rank-GOLD',xp:230,cap:160,icon:'🥇',env:'Temple doré'},
+ {id:'PLATINE',label:'Platine',theme:'rank-PLATINE',xp:390,cap:200,icon:'💠',env:'Galerie cryo'},
+ {id:'DIAMOND',label:'Diamond',theme:'rank-DIAMOND',xp:590,cap:240,icon:'💎',env:'Cité céleste'},
+ {id:'RUBY',label:'Ruby',theme:'rank-RUBY',xp:830,cap:280,icon:'♦️',env:'Volcan rouge'},
+ {id:'CHRYSTAL',label:'Chrystal',theme:'rank-CHRYSTAL',xp:1110,cap:320,icon:'🔷',env:'Palais de cristal'},
+ {id:'CHAMPION',label:'Champion',theme:'rank-CHAMPION',xp:1430,cap:380,icon:'🏆',env:'Arène des héros'},
+ {id:'LEGENDE',label:'Legende',theme:'rank-LEGENDE',xp:1810,cap:9999,icon:'👑',env:'Trône légendaire'}
+];
+let user = JSON.parse(localStorage.getItem('cop_ranked_save') || 'null') || {
+ name:'Champion',xp:260,coins:80,streak:1,wins:0,losses:0,totalReps:0,bestCombo:0,seasonReps:0,missions:{reps:0,wins:0,combo:0},muted:false
+};
+let game={active:false,ranked:false,bot:false,playerScore:0,enemyScore:0,time:60,combo:0,bestCombo:0,validReps:0,depthMax:0,accuracy:0, samples:0, timer:null, aiTimer:null, queueTimer:null, queuedNode:null, peer:null, conn:null, host:false, isMute:user.muted};
+let poseState={cycle:'up',downStartY:null,downDepth:0,ready:false,baseline:null,lastScoreAt:0};
 
-        function loginWithGoogle() {
-            // Simulation d'une connexion Google authentique avec récupération automatique des infos de profil
-            userData.name = "Lucas Dupont";
-            userData.email = "lucas.dupont@gmail.com";
-            userData.avatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces";
-            
-            // Si pas de code ami fixe existant, on en génère un unique par défaut
-            if (!userData.friendCode) {
-                userData.friendCode = "P" + Math.random().toString(36).substring(2, 7).toUpperCase();
-            }
+const $=id=>document.getElementById(id);
+const rankOf=()=>{let r=RANKS[0]; for(const x of RANKS){if(user.xp>=x.xp)r=x;} return r;};
+function save(){localStorage.setItem('cop_ranked_save',JSON.stringify(user));}
+function applyTheme(){const r=rankOf(); document.documentElement.style.setProperty('--rank',getComputedStyle(document.body).getPropertyValue('--rank')); document.querySelectorAll('.rank-GOLD,.rank-BRONZE,.rank-ARGENT,.rank-PLATINE,.rank-DIAMOND,.rank-RUBY,.rank-CHRYSTAL,.rank-CHAMPION,.rank-LEGENDE').forEach(el=>el.classList.remove(...RANKS.map(x=>x.theme))); $('home-theme').classList.add(r.theme); $('app').classList.add(r.theme); document.body.className='theme-'+r.id; $('rank-badge-text').textContent=r.label.toUpperCase(); $('rank-title').textContent=r.label; $('rank-xp').textContent=Math.max(0,user.xp-r.xp); $('rank-cap').textContent=r.cap; $('rank-progress').style.width=Math.min(100,((user.xp-r.xp)/r.cap)*100)+'%'; $('rank-badge-text').parentElement.innerHTML='<b>'+r.icon+' '+r.label.toUpperCase()+'</b>'; $('result-rank-pill').textContent=r.icon+' '+r.label.toUpperCase()+' · '+r.env; renderRanks();}
+function renderRanks(){let current=rankOf().id; $('rank-track').innerHTML=RANKS.map(r=>`<div class="rank-chip ${r.id===current?'active':''}" style="--rank:${rankColor(r.id)}"><div style="font-size:1.2rem">${r.icon}</div><b>${r.label}</b><div class="tiny">${r.xp===0?'Départ':r.xp+' XP'}</div></div>`).join('');}
+function rankColor(id){return ({BRONZE:'#b87a44',ARGENT:'#dce5ef',GOLD:'#ffd32c',PLATINE:'#6fe4ef',DIAMOND:'#7ca6ff',RUBY:'#ff4b65',CHRYSTAL:'#a8ffff',CHAMPION:'#c17bff',LEGENDE:'#fff0a3'})[id]}
+function loginDemo(){show('home-screen');updateHome();sound('victory');toast('Bienvenue dans la Ligue 💪');}
+function show(id){document.querySelectorAll('#app>.screen').forEach(s=>s.classList.remove('active-screen'));$(id).classList.add('active-screen');}
+function updateHome(){applyTheme(); $('display-name').textContent=user.name; $('coins').textContent=user.coins; $('streak').textContent=user.streak; $('wins').textContent=user.wins; $('total-reps').textContent=user.totalReps; $('best-combo').textContent=user.bestCombo; const games=user.wins+user.losses; $('winrate').textContent=(games?Math.round(user.wins/games*100):0)+'%'; $('nickname').value=user.name; renderMissions(); renderRewards();}
+function renderMissions(){const m=[['Faire 20 pompes','reps',20,'💪'],['Gagner 2 matchs','wins',2,'🏆'],['Faire un combo ×8','combo',8,'🔥']];$('missions').innerHTML=m.map(x=>{let v=user.missions?.[x[1]]||0;let pct=Math.min(100,v/x[2]*100);return `<div class="mission"><div><strong>${x[3]} ${x[0]}</strong><div class="progress" style="margin-top:6px"><i style="width:${pct}%"></i></div><div class="tiny">${Math.min(v,x[2])}/${x[2]}</div></div><span>+${x[2]*3} XP</span></div>`}).join('');}
+function renderRewards(){const rewards=[['Bronze','Cadre 🥉'],['Gold','Aura dorée ✨'],['Platine','Trace 💠'],['Diamond','Emote 💎'],['Ruby','Badge ♦️'],['Champion','Pose 🏆'],['Legende','Couronne 👑']];let current=rankOf().xp; $('season-rewards').innerHTML=rewards.map((r,i)=>`<div class="reward ${current>=RANKS[Math.min(i,RANKS.length-1)].xp?'done':''}"><b>${r[0]}</b><span>${r[1]}</span></div>`).join('');}
+function openSettings(){show('settings-screen')};function openFriends(){show('friends-screen')};function saveSettings(){user.name=($('nickname').value||'Champion').trim().slice(0,18);save();updateHome();returnHome();toast('Profil sauvegardé');sound('click')};function returnHome(){show('home-screen');updateHome();}
 
-            saveGameData();
-            showScreen('menu-screen');
-            updateMenuUI();
-        }
+/* ===== Audio / haptics / FX ===== */
+let audioCtx=null;
+function ensureAudio(){if(!audioCtx)try{audioCtx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}
+function sound(kind){if(game.isMute)return;ensureAudio();if(!audioCtx)return;const now=audioCtx.currentTime;const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(audioCtx.destination);const map={click:[420,.05,'sine'],rep:[740,.10,'triangle'],combo:[900,.18,'square'],victory:[520,.4,'sine'],lose:[160,.38,'sawtooth'],count:[320,.14,'square'],rank:[660,.7,'triangle']};const a=map[kind]||map.click;o.type=a[2];o.frequency.setValueAtTime(a[0],now);o.frequency.exponentialRampToValueAtTime(a[0]*1.7,now+a[1]);g.gain.setValueAtTime(.0001,now);g.gain.exponentialRampToValueAtTime(.12,now+.01);g.gain.exponentialRampToValueAtTime(.0001,now+a[1]);o.start(now);o.stop(now+a[1]+.02);if(navigator.vibrate && ['rep','combo','victory'].includes(kind))navigator.vibrate(kind==='combo'?[20,20,35]:20)}
+function toggleMute(){game.isMute=!game.isMute;user.muted=game.isMute;save();$('mute-label').textContent=game.isMute?'MUET':'SON';if(!game.isMute)sound('click')}
+function flash(){const f=$('flash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');}
+function shake(){const b=$('battle-root');b.classList.remove('shake');void b.offsetWidth;b.classList.add('shake')}
+function floatText(text,color='#41e8ff'){const el=document.createElement('div');el.className='floating';el.textContent=text;el.style.color=color;el.style.left=(45+Math.random()*10)+'%';el.style.top='58%';$('battle-root').appendChild(el);setTimeout(()=>el.remove(),900)}
+function toast(text){const el=document.createElement('div');el.className='toast';el.textContent=text;document.body.appendChild(el);setTimeout(()=>el.remove(),1900)}
+function confetti(){for(let i=0;i<55;i++){const el=document.createElement('div');el.className='confetti';el.style.left=Math.random()*100+'%';el.style.top='-20px';el.style.background=`hsl(${Math.random()*360} 90% 60%)`;el.style.animationDelay=(Math.random()*.35)+'s';document.body.appendChild(el);setTimeout(()=>el.remove(),1400)}}
 
-        function updateMenuUI() {
-            document.getElementById('user-display-name').innerText = userData.name;
-            document.getElementById('user-avatar').src = userData.avatar;
-            document.getElementById('user-trophies').innerText = userData.trophies;
-            document.getElementById('settings-friend-code').value = userData.friendCode;
-        }
+/* ===== MATCHMAKING ===== */
+function makePeer(){return new Peer(undefined,{debug:1});}
+function startRankedQueue(){if(game.active||game.queueTimer)return;show('battle-screen');prepareBattle(true,false); $('timer').textContent='30'; $('queue-status').textContent='🔎 Recherche…'; let sec=30; toast('Recherche d’un adversaire…'); sound('click');
+ if(db){ joinFirebaseQueue(); }
+ game.queueTimer=setInterval(()=>{sec--; $('timer').textContent=sec; if(sec<=0){clearInterval(game.queueTimer);game.queueTimer=null;cleanupQueue(); if(game.enemyScore===-1)startBotMatch();}},1000); }
+function joinFirebaseQueue(){const qid='q_'+Math.random().toString(36).slice(2,11), nodeRef=db.ref('cop_matchmaking/'+qid);game.queuedNode=nodeRef;nodeRef.set({qid,rank:rankOf().id,xp:user.xp,peer:'',ts:firebase.database.ServerValue.TIMESTAMP,ready:false});
+ db.ref('cop_matchmaking').orderByChild('ts').limitToLast(20).once('value').then(s=>{const list=[];s.forEach(x=>{const v=x.val();if(x.key!==qid && v && !v.matched && Math.abs((v.xp||0)-user.xp)<220 && Date.now()-(v.ts||Date.now())<45000)list.push({key:x.key,...v});});if(list.length){const other=list[0]; nodeRef.update({matched:other.key}); db.ref('cop_matchmaking/'+other.key).update({matched:qid}); establishPeerMatch(other.peer);}}).catch(()=>{});
+ nodeRef.on('value',snap=>{const v=snap.val()||{}; if(v.matched && v.matched!==qid && !game.conn){db.ref('cop_matchmaking/'+v.matched).once('value').then(s=>establishPeerMatch((s.val()||{}).peer));}});
+ // publish a broker id when peer opens
+ game.peer=makePeer();game.peer.on('open',id=>nodeRef.update({peer:id}));game.peer.on('connection',c=>{game.conn=c;setupConn(true)});game.peer.on('error',()=>{});
+}
+function establishPeerMatch(remoteId){if(!remoteId || game.conn)return;if(!game.peer){game.peer=makePeer();game.peer.on('open',()=>{game.conn=game.peer.connect(remoteId,{reliable:true});setupConn(false)});}else{game.conn=game.peer.connect(remoteId,{reliable:true});setupConn(false)}}
+function setupConn(host){game.host=host;game.conn.on('open',()=>{game.conn.send({type:'hello',name:user.name});if(host){game.conn.send({type:'start'});startLiveBattle(user.name,'Rival');}});game.conn.on('data',data=>{if(data.type==='hello')$('p2-name').textContent=data.name||'Rival';if(data.type==='start'&&!game.active)startLiveBattle(user.name,data.name||'Rival');if(data.type==='score'){game.enemyScore=data.score;$('enemy-score').textContent=data.score;}if(data.type==='pulse'){pulseEnemy(data.ratio||0)}});game.conn.on('close',()=>{if(game.active){toast('Connexion perdue — le combat continue contre l’IA.');startBotTakeover()}})}
+function send(data){try{if(game.conn&&game.conn.open)game.conn.send(data)}catch(e){}}
+function cleanupQueue(){try{game.queuedNode?.remove()}catch(e){} }
 
-        function logout() {
-            localStorage.removeItem("cop_save_data");
-            userData = { name: "", email: "", avatar: "", trophies: 0, friendCode: "" };
-            showScreen('login-screen');
-        }
+function startBotMatch(fromHome=false){if(fromHome){show('battle-screen');prepareBattle(false,true);} else prepareBattle(true,true); startCountdown(()=>runBattle('Robot PGM',true));}
+function startLiveBattle(me,opp){prepareBattle(true,false);startCountdown(()=>runBattle(opp,false,true));}
+function prepareBattle(ranked,bot){game.active=false;game.ranked=ranked;game.bot=bot;game.playerScore=0;game.enemyScore=bot?-1:(ranked?-1:0);game.time=60;game.combo=0;game.bestCombo=0;game.validReps=0;game.samples=0;game.accuracy=0;game.depthMax=0;$('p1-name').textContent=user.name;$('p2-name').textContent=bot?'Recherche…':'ADVERSAIRE';$('player-score').textContent='0';$('enemy-score').textContent=bot?'…':'0';$('rep-pct').textContent='0%';$('rep-meter-fill').style.width='0%';$('rep-state').textContent='Positionne-toi de profil';$('combo').textContent='COMBO ×0';document.documentElement.style.setProperty('--rank',rankColor(rankOf().id));}
+function startCountdown(cb){const ov=$('battle-overlay'),tx=$('count-text');ov.classList.add('show');let n=3;tx.textContent=n;sound('count');const iv=setInterval(()=>{n--;if(n>0){tx.textContent=n;sound('count')}else{tx.textContent='GO!';sound('victory');flash();setTimeout(()=>{clearInterval(iv);ov.classList.remove('show');cb()},500)}},850)}
+function runBattle(enemyName,isBot,live=false){game.active=true;game.bot=isBot;$('p2-name').textContent=enemyName||'Rival';$('timer').textContent=60;startCamera();clearInterval(game.timer);game.timer=setInterval(()=>{if(!game.active)return;if(game.time>0){game.time--;$('timer').textContent=game.time;if(game.time<=10)sound('count')}else endGame();},1000);
+ if(isBot){clearInterval(game.aiTimer);game.aiTimer=setInterval(()=>{if(!game.active)return;let skill=rankOf().xp/5000;let chance=.34+Math.min(.18,skill);if(Math.random()<chance){game.enemyScore++;$('enemy-score').textContent=game.enemyScore;send({type:'score',score:game.enemyScore});floatText('-1', '#ff6d7b')}} ,Math.max(700,1450-rankOf().xp/4));}}
+function startBotTakeover(){if(!game.active)return;game.bot=true;clearInterval(game.aiTimer);game.aiTimer=setInterval(()=>{if(!game.active)return;if(Math.random()<.38){game.enemyScore=Math.max(game.enemyScore,0)+1;$('enemy-score').textContent=game.enemyScore;}},1200)}
+function pulseEnemy(ratio){/* remote animation hook */}
 
-        function openSettings() { showScreen('settings-screen'); }
-        function closeSettings() { showScreen('menu-screen'); }
+/* ===== PUSH-UP TRACKER ===== */
+const video=$('video'),canvas=$('canvas'),ctx=canvas.getContext('2d');let pose=null,cam=null;
+async function startCamera(){try{if(!pose){pose=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});pose.setOptions({modelComplexity:1,smoothLandmarks:true,minDetectionConfidence:.55,minTrackingConfidence:.55});pose.onResults(onPose);}
+ if(!video.srcObject){const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480},frameRate:{ideal:30}},audio:false});video.srcObject=stream;await video.play();cam=new Camera(video,{onFrame:async()=>{if(game.active)await pose.send({image:video})},width:640,height:480});cam.start();} }catch(e){$('pose-hint').textContent='Caméra indisponible : utilise HTTPS et autorise la caméra.';toast('Caméra nécessaire pour compter les pompes');}}
+function stopCamera(){try{const tracks=video.srcObject?.getTracks()||[];tracks.forEach(t=>t.stop());video.srcObject=null}catch(e){}}
+function onPose(res){if(!game.active)return;canvas.width=video.videoWidth||640;canvas.height=video.videoHeight||480;ctx.save();ctx.translate(canvas.width,0);ctx.scale(-1,1);ctx.clearRect(0,0,canvas.width,canvas.height);if(res.image)ctx.drawImage(res.image,0,0,canvas.width,canvas.height);if(res.poseLandmarks){drawSkeleton(res.poseLandmarks);trackPushup(res.poseLandmarks);}ctx.restore();}
+function drawSkeleton(lm){const pts=[[11,13],[13,15],[12,14],[14,16],[11,12],[11,23],[12,24],[23,24]];ctx.lineWidth=4;ctx.strokeStyle='rgba(65,232,255,.92)';ctx.fillStyle='rgba(255,255,255,.95)';for(const [a,b] of pts){const p=lm[a],q=lm[b];if(p?.visibility>.45&&q?.visibility>.45){ctx.beginPath();ctx.moveTo(p.x*canvas.width,p.y*canvas.height);ctx.lineTo(q.x*canvas.width,q.y*canvas.height);ctx.stroke();}}for(const id of [11,12,13,14,15,16]){const p=lm[id];if(p?.visibility>.45){ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,6,0,Math.PI*2);ctx.fill();}}}
+function trackPushup(lm){const sL=lm[11],sR=lm[12],eL=lm[13],eR=lm[14],hL=lm[23],hR=lm[24];if(!sL||!sR||!eL||!eR)return;const vis=[sL,sR,eL,eR,hL,hR].every(p=>!p||p.visibility>.4);if(!vis){$('pose-state').textContent='Recadre-toi';return;}
+ const sy=(sL.y+sR.y)/2, ey=(eL.y+eR.y)/2, hy=(hL.y+hR.y)/2;const sx=(sL.x+sR.x)/2,ex=(eL.x+eR.x)/2;const sideSpan=Math.abs(sL.x-sR.x);const bodyTilt=Math.abs(sy-hy);
+ // Progression normalisée: référence haute = épaules nettement au-dessus des coudes; référence basse = épaules proches/sous coudes.
+ const raw=1-((sy-(ey-.02))/0.28);let pct=Math.round(Math.max(0,Math.min(1,raw))*100); // plus bas => plus de profondeur
+ // garde-fou posture : on veut un profil raisonnablement horizontal + coudes visibles
+ const postureOk=bodyTilt>.08 && sideSpan<.42;
+ if(!postureOk)pct=Math.min(pct,35);
+ game.samples++;game.accuracy+=(postureOk?100:40);
+ $('rep-pct').textContent=pct+'%';$('rep-meter-fill').style.width=pct+'%';
+ if(pct>=70){$('rep-state').textContent='✅ PROFONDEUR VALIDÉE';$('rep-state').style.color='#55ff9a';poseState.depthMax=Math.max(poseState.depthMax,pct);if(poseState.cycle==='up')poseState.cycle='down';}
+ else {$('rep-state').textContent=pct>35?'DESCENDS ENCORE':'EN HAUT';$('rep-state').style.color=pct>35?'#ffdb6e':'#fff';}
+ if(pct<32 && poseState.cycle==='down'){poseState.cycle='up';if(Date.now()-poseState.lastScoreAt>220){poseState.lastScoreAt=Date.now();playerScored();}}
+}
+function playerScored(){if(!game.active)return;game.playerScore++;game.validReps++;game.combo++;game.bestCombo=Math.max(game.bestCombo,game.combo);game.depthMax=Math.max(game.depthMax,70);$('player-score').textContent=game.playerScore;$('combo').textContent='COMBO ×'+game.combo;floatText('+1', '#55ff9a');flash();sound(game.combo>=5?'combo':'rep');if(game.combo>=5)shake();if(game.combo%5===0)toast('COMBO ×'+game.combo+' 🔥');send({type:'score',score:game.playerScore});updateMissionLive();}
+function updateMissionLive(){user.missions=user.missions||{reps:0,wins:0,combo:0};user.missions.reps=Math.max(user.missions.reps,0)+1;user.missions.combo=Math.max(user.missions.combo,game.combo);}
 
-        function saveCustomFriendCode() {
-            let newCode = document.getElementById('settings-friend-code').value.toUpperCase().trim();
-            if (newCode.length < 3) return alert("Le code ami doit contenir au moins 3 caractères !");
-            userData.friendCode = newCode;
-            saveGameData();
-            alert("Code ami mis à jour avec succès !");
-            closeSettings();
-        }
+/* ===== END / PROGRESSION ===== */
+function endGame(reason='timeout'){if(!game.active && !game.ranked)return;game.active=false;clearInterval(game.timer);clearInterval(game.aiTimer);clearInterval(game.queueTimer);game.queueTimer=null;cleanupQueue();if(game.conn)try{game.conn.close()}catch(e){};stopCamera();
+ if(game.enemyScore<0)game.enemyScore=0;$('enemy-score').textContent=game.enemyScore;
+ const win=game.playerScore>game.enemyScore,draw=game.playerScore===game.enemyScore;
+ if(reason==='quit'){game.combo=0;}
+ user.totalReps+=game.validReps;user.bestCombo=Math.max(user.bestCombo,game.bestCombo);user.missions=user.missions||{reps:0,wins:0,combo:0};user.missions.reps=Math.min(20,user.missions.reps+game.validReps);user.missions.combo=Math.max(user.missions.combo,game.bestCombo);
+ let xpDelta=draw?5:(win?25:-12);if(reason==='quit')xpDelta=-8;if(win){user.wins++;user.missions.wins=Math.min(2,user.missions.wins+1);user.streak++;}else if(!draw){user.losses++;user.streak=Math.max(0,user.streak-1);}xpDelta+=Math.min(15,Math.floor(game.validReps/10));const oldRank=rankOf().id;user.xp=Math.max(0,user.xp+xpDelta);user.coins=Math.max(0,user.coins+(win?10:3));save();updateResult(win,draw,xpDelta,oldRank);show('result-screen');if(win){confetti();sound('victory')}else sound('lose');}
+function updateResult(win,draw,xpDelta,oldRank){const title=draw?'ÉGALITÉ':win?'VICTOIRE !':'DÉFAITE';$('result-title').textContent=title;$('result-title').style.color=draw?'#fff':win?'#55ff9a':'#ff6d7b';$('result-subtitle').textContent=draw?'Prochain duel, prochain round.':win?'Tu viens de prendre des XP de ligue.':'Analyse ton mouvement et repars plus fort.';$('result-delta').textContent=(xpDelta>=0?'+':'')+xpDelta+' XP';$('result-player').textContent=game.playerScore;$('result-enemy').textContent=game.enemyScore;$('result-reps').textContent=game.validReps;$('result-combo').textContent='×'+game.bestCombo;$('result-accuracy').textContent=Math.round(game.samples?game.accuracy/game.samples:0)+'%';$('result-bars').innerHTML=Array.from({length:12},(_,i)=>`<i style="height:${22+Math.random()*65}%"></i>`).join('');const nr=rankOf();if(nr.id!==oldRank){toast('NOUVEAU RANG : '+nr.label.toUpperCase());sound('rank')}updateHome();}
 
-        function showScreen(id) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-            document.getElementById(id).classList.add('active-screen');
-        }
+/* ===== FRIEND ROOMS ===== */
+function hostRoom(){const code=($('room-code').value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,12)||('PUSH'+Math.floor(1000+Math.random()*9000));$('room-code').value=code;$('room-status').textContent='Création du salon…';game.peer=makePeer();game.peer.on('open',id=>{$('room-status').textContent='Salon '+code+' prêt. ID technique : '+id+'. Donne le code à ton ami.';localStorage.setItem('cop_friend_room',id);game.host=true});game.peer.on('connection',c=>{game.conn=c;setupConn(true);$('room-status').textContent='Adversaire connecté !';});}
+function joinRoom(){const id=prompt('Colle l’ID technique PeerJS de ton ami :');if(!id)return;game.peer=makePeer();game.peer.on('open',()=>{game.conn=game.peer.connect(id,{reliable:true});setupConn(false);$('room-status').textContent='Connexion…';});}
 
-        // ===================== RESEAU P2P (PeerJS avec code ami fixe) =====================
-        let peer = null;
-        let conn = null;
-        let isHost = false;
-        let isMultiplayer = false;
-
-        function initPeerWithCustomID() {
-            if (peer) return;
-            // Utilise le code ami permanent de l'utilisateur comme ID de connexion P2P
-            peer = new Peer(userData.friendCode);
-
-            peer.on('open', (id) => {
-                document.getElementById('my-code').innerText = id;
-                document.getElementById('my-code-box').style.display = 'block';
-            });
-
-            peer.on('error', (err) => {
-                if(err.type === 'unavailable-id') {
-                    alert("Ce code ami est déjà actif sur le réseau. Connecte-toi avec ton profil habituel.");
-                }
-            });
-
-            peer.on('connection', (connection) => {
-                conn = connection;
-                setupConnectionListeners();
-            });
-        }
-
-        function hostGame() {
-            isHost = true;
-            isMultiplayer = true;
-            initPeerWithCustomID();
-        }
-
-        function joinGame() {
-            let targetCode = document.getElementById('friend-code').value.toUpperCase().trim();
-            if (!targetCode) return alert("Entre un code de salon valide !");
-            
-            isHost = false;
-            isMultiplayer = true;
-            
-            // Connecte-toi via un ID temporaire aléatoire pour rejoindre l'hôte
-            peer = new Peer();
-            peer.on('open', () => {
-                conn = peer.connect(targetCode);
-                setupConnectionListeners();
-            });
-        }
-
-        function setupConnectionListeners() {
-            conn.on('open', () => {
-                conn.send({ type: 'hello', name: userData.name });
-                if (isHost) {
-                    setTimeout(() => {
-                        conn.send({ type: 'start' });
-                        startBattle(userData.name, "Adversaire");
-                    }, 1500);
-                }
-            });
-
-            conn.on('data', (data) => {
-                if (data.type === 'hello') {
-                    document.getElementById('p2-name').innerText = data.name;
-                }
-                if (data.type === 'start' && !isHost) {
-                    startBattle(userData.name, document.getElementById('p2-name').innerText);
-                }
-                if (data.type === 'score') {
-                    enemyScore = data.score;
-                    document.getElementById('enemy-score').innerText = enemyScore;
-                }
-            });
-        }
-
-        // ===================== MOTEUR DE JEU & EFFETS VISUELS =====================
-        let playerScore = 0, enemyScore = 0, time = 30;
-        let gameActive = false, timerInterval, suddenDeath = false;
-
-        function startBotMatch() {
-            isMultiplayer = false;
-            startBattle(userData.name, "Robot PGM");
-            // IA progressive
-            let aiInterval = setInterval(() => {
-                if (!gameActive) { clearInterval(aiInterval); return; }
-                if (Math.random() > 0.35 && !suddenDeath) {
-                    enemyScore++;
-                    document.getElementById('enemy-score').innerText = enemyScore;
-                }
-            }, 1400);
-        }
-
-        function startBattle(p1Name, p2Name) {
-            showScreen('battle-screen');
-            document.getElementById('p1-name').innerText = p1Name;
-            document.getElementById('p2-name').innerText = p2Name;
-            
-            playerScore = 0; enemyScore = 0; time = 30; gameActive = true; suddenDeath = false;
-            document.getElementById('player-score').innerText = 0;
-            document.getElementById('enemy-score').innerText = 0;
-            document.getElementById('timer').innerText = 30;
-            document.getElementById('battle-screen').classList.remove('sudden-death');
-            
-            startCamera();
-
-            timerInterval = setInterval(() => {
-                if (time > 0 && !suddenDeath) {
-                    time--;
-                    document.getElementById('timer').innerText = time;
-                } else if (time === 0 && playerScore === enemyScore) {
-                    suddenDeath = true;
-                    document.getElementById('timer').innerText = "MORT SUBITE";
-                    document.getElementById('battle-screen').classList.add('sudden-death');
-                } else if (time === 0 && playerScore !== enemyScore) {
-                    endGame();
-                }
-            }, 1000);
-        }
-
-        function triggerVisualEffect() {
-            // Effet visuel "+1" style Clash Royale sur l'écran
-            let wrapper = document.getElementById('camera-wrapper');
-            let plusElem = document.createElement('div');
-            plusElem.className = 'floating-plus';
-            plusElem.innerText = '+1';
-            plusElem.style.left = (40 + Math.random() * 20) + '%';
-            plusElem.style.top = '50%';
-            wrapper.appendChild(plusElem);
-            setTimeout(() => plusElem.remove(), 800);
-        }
-
-        function playerScored() {
-            if (!gameActive) return;
-            playerScore++;
-            document.getElementById('player-score').innerText = playerScore;
-            triggerVisualEffect();
-
-            if (isMultiplayer && conn) {
-                conn.send({ type: 'score', score: playerScore });
-            }
-
-            if (suddenDeath && playerScore > enemyScore) {
-                setTimeout(endGame, 400);
-            }
-        }
-
-        function endGame() {
-            gameActive = false;
-            clearInterval(timerInterval);
-            showScreen('result-screen');
-
-            let title = document.getElementById('result-title');
-            let trophiesText = document.getElementById('result-trophies-text');
-
-            if (playerScore > enemyScore) {
-                title.innerText = "VICTOIRE !";
-                title.style.color = "#4caf50";
-                userData.trophies += 30;
-                trophiesText.innerText = "+30 🏆";
-            } else if (playerScore < enemyScore) {
-                title.innerText = "DÉFAITE...";
-                title.style.color = "var(--cr-red)";
-                userData.trophies = Math.max(0, userData.trophies - 15);
-                trophiesText.innerText = "-15 🏆";
-            } else {
-                title.innerText = "ÉGALITÉ";
-                title.style.color = "white";
-                trophiesText.innerText = "0 🏆";
-            }
-            saveGameData();
-        }
-
-        function returnToMenu() {
-            showScreen('menu-screen');
-            updateMenuUI();
-        }
-
-        // ===================== MEDIAPIPE TRACKER DE POMPES =====================
-        const videoElement = document.getElementById('video');
-        const canvasElement = document.getElementById('canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-        let isDown = false;
-
-        async function startCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                videoElement.srcObject = stream;
-                
-                const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-                pose.setOptions({ modelComplexity: 0, smoothLandmarks: true });
-                pose.onResults(onPoseResults);
-
-                const camera = new Camera(videoElement, {
-                    onFrame: async () => { await pose.send({image: videoElement}); },
-                    width: 640, height: 480
-                });
-                camera.start();
-            } catch (err) {
-                alert("Erreur d'accès caméra : assurez-vous d'être en HTTPS ou sur un serveur local.");
-            }
-        }
-
-        function onPoseResults(results) {
-            if (!gameActive) return;
-            canvasElement.width = videoElement.videoWidth || 640;
-            canvasElement.height = videoElement.videoHeight || 480;
-            canvasCtx.save(); 
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.translate(canvasElement.width, 0); 
-            canvasCtx.scale(-1, 1);
-            
-            if (results.image) {
-                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-            }
-
-            let dot = document.getElementById('rep-dot');
-            let statusText = document.getElementById('rep-status-text');
-
-            if (results.poseLandmarks) {
-                document.getElementById('pose-hint').style.display = 'none';
-                
-                let shoulderL = results.poseLandmarks[11];
-                let elbowL = results.poseLandmarks[13];
-                let shoulderR = results.poseLandmarks[12];
-                let elbowR = results.poseLandmarks[14];
-
-                if(shoulderL && elbowL && shoulderR && elbowR) {
-                    let avgShoulderY = (shoulderL.y + shoulderR.y) / 2;
-                    let avgElbowY = (elbowL.y + elbowR.y) / 2;
-
-                    // Tracker visuel en temps réel
-                    if (avgShoulderY > avgElbowY - 0.05) {
-                        dot.classList.add('active');
-                        statusText.innerText = "BAS (VALIDE)";
-                        if (!isDown) {
-                            isDown = true;
-                        }
-                    } else if (avgShoulderY < avgElbowY - 0.15) {
-                        dot.classList.remove('active');
-                        statusText.innerText = "HAUT";
-                        if (isDown) {
-                            isDown = false;
-                            playerScored();
-                        }
-                    }
-                }
-            } else {
-                document.getElementById('pose-hint').style.display = 'block';
-            }
-            canvasCtx.restore();
-        }
-
-        // Chargement automatique au démarrage
-        window.onload = loadGameData;
-    </script>
+window.addEventListener('load',()=>{game.isMute=user.muted;updateHome();});
+window.addEventListener('beforeunload',()=>{stopCamera();cleanupQueue();});
+</script>
 </body>
 </html>
