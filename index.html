@@ -172,4 +172,187 @@
         #matchmaking-screen, #duel-screen { justify-content: center; align-items: center; text-align: center; padding: 20px; }
 
         /* Bataille */
-        #camera-wrapper { flex: 1; position: relative; width: 100%; background:
+        #camera-wrapper { flex: 1; position: relative; width: 100%; background: #000; overflow: hidden; }
+        video { display: none; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .battle-hud-top { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 16px; background: rgba(0,0,0,0.75); z-index: 10; position: absolute; top:0; width: 100%; }
+        .fighter-box { display: flex; flex-direction: column; align-items: center; width: 30%; }
+        .fighter-box.opponent { align-items: center; }
+        .hexagon-frame { width: 56px; height: 56px; clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); overflow: hidden; border: 3px solid var(--cr-green); background: #222; }
+        .fighter-box.opponent .hexagon-frame { border-color: var(--cr-red); }
+        .hexagon-frame img { width: 100%; height: 100%; object-fit: cover; }
+        .fighter-name { font-size: 0.75rem; margin-top: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .fighter-score { font-family: 'Anton'; font-size: 2.2rem; text-shadow: 2px 2px #000; }
+        .timer-box { font-family: 'Anton'; font-size: 1.8rem; text-shadow: 2px 2px #000; padding-top: 14px; }
+
+        .compare-bar-wrap { display: flex; align-items: center; gap: 8px; padding: 0 16px 8px; background: rgba(0,0,0,0.75); position: absolute; top: 78px; width: 100%; z-index: 10; }
+        .compare-bar { flex: 1; height: 12px; border-radius: 8px; background: var(--cr-red); overflow: hidden; border: 1px solid #000; }
+        .compare-fill { height: 100%; background: var(--cr-green); width: 50%; transition: width 0.3s; }
+
+        .flip-cam-btn {
+            position: absolute; top: 100px; left: 14px; z-index: 10; width: 42px; height: 42px; border-radius: 50%;
+            background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 1.3rem;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+
+        .depth-gauge-wrap { position: absolute; top: 100px; right: 14px; z-index: 10; display: flex; flex-direction: column; align-items: center; }
+        .depth-gauge { width: 22px; height: 130px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.3); border-radius: 12px; display: flex; align-items: flex-end; overflow: hidden; }
+        .depth-gauge-fill { width: 100%; height: 0%; background: linear-gradient(#4287f5,#195ac2); transition: height 0.08s linear; }
+        .depth-gauge-label { font-family: 'Anton'; font-size: 0.9rem; margin-top: 6px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 8px; }
+        .depth-gauge-icon { font-size: 1.3rem; margin-top: 4px; }
+
+        #depth-hint { position: absolute; bottom: 60px; width: 100%; text-align: center; z-index: 10; font-family: 'Anton'; font-size: 1rem; opacity: 0; transition: opacity 0.3s; text-shadow: 2px 2px #000; }
+
+        .plus-popup {
+            position: absolute; font-family: 'Anton'; font-size: 2.5rem; color: var(--cr-gold);
+            text-shadow: 2px 2px #000; pointer-events: none; z-index: 20;
+            animation: popUp 0.9s ease-out forwards;
+        }
+        @keyframes popUp { 0% { transform: translate(-50%,-50%) scale(0.6); opacity: 1; } 100% { transform: translate(-50%,-160%) scale(1.3); opacity: 0; } }
+
+        .abandon-bar { padding: 14px; text-align: center; background: #111; }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="bg-glow g1"></div>
+    <div class="bg-glow g2"></div>
+
+    <!-- 1. CREATION COMPTE -->
+    <div id="login-screen" class="screen active-screen">
+        <h1 style="font-family: 'Anton'; font-size: 2.5rem; color: var(--cr-gold); text-shadow: 2px 2px #000; text-align: center;">CLASH OF PUSHUPS</h1>
+
+        <div class="profile-pic-container">
+            <img id="pfp-preview" src="" alt="Profil">
+            <label for="pfp-upload" class="upload-btn">📷 Modifier</label>
+            <input type="file" id="pfp-upload" accept="image/*">
+        </div>
+
+        <input type="text" id="username-input" placeholder="Ton Pseudo (ex: GigaChad)" maxlength="12">
+        <select id="font-select">
+            <option value="Anton">Police: Clash (Anton)</option>
+            <option value="Roboto">Police: Moderne (Roboto)</option>
+            <option value="Permanent Marker">Police: Street (Marker)</option>
+            <option value="Pacifico">Police: Fun (Pacifico)</option>
+        </select>
+        <button class="cr-button" onclick="createAccount()">Entrer dans l'Arène</button>
+    </div>
+
+    <!-- 2. MENU PRINCIPAL -->
+    <div id="menu-screen" class="screen">
+        <div class="top-bar">
+            <div class="player-profile-small" onclick="openProfileModal()">
+                <img id="menu-pfp" src="" alt="Profil">
+                <div>
+                    <div id="menu-username" style="font-size: 1.2rem; text-shadow: 2px 2px #000;">Joueur</div>
+                </div>
+            </div>
+            <div style="font-family: 'Anton'; font-size: 1.2rem;">🏆 <span id="menu-trophies-mini">0</span></div>
+        </div>
+
+        <div class="arena-3d-container" id="arena-container">
+            <div class="arena-name-badge" id="menu-arena-name">Arène 1</div>
+            <div class="arena-island" id="arena-island">
+                <div class="arena-base"></div>
+                <div class="arena-surface" id="arena-surface">🌳</div>
+            </div>
+            <div class="arena-decor" id="arena-decor"></div>
+            <div class="arena-hint">👆 Glisse pour faire tourner l'arène</div>
+        </div>
+
+        <div style="text-align: center; padding: 0 20px;">
+            <div style="font-size: 1.8rem; font-weight: bold; color: var(--cr-gold); margin-bottom: 12px;">🏆 <span id="menu-trophies">0</span> / <span id="next-arena-trophies">400</span></div>
+            <button class="cr-button blue" id="btn-combat" onclick="startMatchmaking()" disabled>IA en chargement...</button>
+            <button class="cr-button gray" onclick="openDuelScreen()">⚔️ Défier un ami</button>
+        </div>
+
+        <div class="tab-bar visible" id="tab-bar">
+            <button class="tab-btn active" data-tab="menu-screen" onclick="switchTab('menu-screen')">🏠<span>Accueil</span></button>
+            <button class="tab-btn" data-tab="clan-screen" onclick="switchTab('clan-screen')">👥<span>Clan</span></button>
+            <button class="tab-btn" data-tab="settings-screen" onclick="switchTab('settings-screen')">⚙️<span>Réglages</span></button>
+        </div>
+    </div>
+
+    <!-- 2b. CLAN -->
+    <div id="clan-screen" class="screen">
+        <div class="sub-screen-content">
+            <h2>👥 Clan &amp; Amis</h2>
+
+            <div class="card-box" id="clan-info-box">
+                <div id="clan-info"></div>
+                <input type="text" id="clan-name-input" placeholder="Nom du clan" maxlength="16">
+                <button class="cr-button" onclick="createClan()">Créer un clan</button>
+            </div>
+
+            <div class="card-box">
+                <h3 style="margin-top:0;">Ajouter un pote</h3>
+                <input type="text" id="friend-name-input" placeholder="Pseudo de ton pote" maxlength="14">
+                <input type="text" id="friend-code-input" placeholder="Son code de duel" maxlength="6" style="text-transform:uppercase;">
+                <button class="cr-button blue" onclick="addFriend()">Ajouter</button>
+                <div id="friends-list"></div>
+                <p class="info-note">ℹ️ Ta liste d'amis est stockée uniquement sur cet appareil. Pour défier quelqu'un, vous devez être connectés en même temps tous les deux.</p>
+            </div>
+        </div>
+        <div class="tab-bar visible">
+            <button class="tab-btn" data-tab="menu-screen" onclick="switchTab('menu-screen')">🏠<span>Accueil</span></button>
+            <button class="tab-btn active" data-tab="clan-screen" onclick="switchTab('clan-screen')">👥<span>Clan</span></button>
+            <button class="tab-btn" data-tab="settings-screen" onclick="switchTab('settings-screen')">⚙️<span>Réglages</span></button>
+        </div>
+    </div>
+
+    <!-- 2c. REGLAGES -->
+    <div id="settings-screen" class="screen">
+        <div class="sub-screen-content">
+            <h2>⚙️ Réglages</h2>
+            <div class="card-box" style="text-align:center;">
+                <img id="settings-pfp-preview" class="pfp-mini" src="" alt="Profil">
+                <label for="settings-pfp-upload" class="cr-button gray" style="display:inline-block; width:auto; padding:8px 20px; font-size:1rem; cursor:pointer;">📷 Changer la photo</label>
+                <input type="file" id="settings-pfp-upload" accept="image/*">
+                <input type="text" id="settings-username-input" placeholder="Pseudo" maxlength="12" style="margin-top:14px;">
+                <select id="settings-font-select">
+                    <option value="Anton">Police: Clash (Anton)</option>
+                    <option value="Roboto">Police: Moderne (Roboto)</option>
+                    <option value="Permanent Marker">Police: Street (Marker)</option>
+                    <option value="Pacifico">Police: Fun (Pacifico)</option>
+                </select>
+                <button class="cr-button" onclick="saveSettings()">Enregistrer</button>
+            </div>
+            <div class="card-box">
+                <button class="cr-button gray" onclick="resetData()">🗑️ Réinitialiser mes données</button>
+            </div>
+        </div>
+        <div class="tab-bar visible">
+            <button class="tab-btn" data-tab="menu-screen" onclick="switchTab('menu-screen')">🏠<span>Accueil</span></button>
+            <button class="tab-btn" data-tab="clan-screen" onclick="switchTab('clan-screen')">👥<span>Clan</span></button>
+            <button class="tab-btn active" data-tab="settings-screen" onclick="switchTab('settings-screen')">⚙️<span>Réglages</span></button>
+        </div>
+    </div>
+
+    <!-- 3. MATCHMAKING (bot) -->
+    <div id="matchmaking-screen" class="screen">
+        <h2 style="font-family: 'Anton'; font-size: 2rem;">Recherche d'adversaire...</h2>
+        <div style="font-size: 4rem; margin: 20px 0;">⚔️</div>
+        <h1 id="mm-bot-name" style="font-family: 'Anton'; color: #f54242;">...</h1>
+    </div>
+
+    <!-- 3b. DUEL ENTRE AMIS -->
+    <div id="duel-screen" class="screen">
+        <h2 style="font-family: 'Anton'; color: var(--cr-gold);">Défier un ami</h2>
+        <div id="duel-setup">
+            <button class="cr-button" onclick="createDuel()">Créer un duel</button>
+            <div style="margin:15px 0; opacity:.7;">— ou —</div>
+            <input type="text" id="duel-code-input" placeholder="Code du duel" maxlength="6" style="text-transform:uppercase;">
+            <button class="cr-button blue" onclick="joinDuel()">Rejoindre</button>
+        </div>
+        <div id="duel-lobby" style="display:none;">
+            <p>Code à partager avec ton pote :</p>
+            <h1 id="duel-code-display" style="font-family: 'Anton'; letter-spacing: 4px; color: var(--cr-gold);"></h1>
+            <p id="duel-status">En attente d'un ami...</p>
+            <button class="cr-button" id="duel-ready-btn" onclick="markReady()" disabled>Prêt</button>
+        </div>
+        <button class="cr-button gray" style="margin-top:20px;" onclick="leaveDuel()">Annuler</button>
+    </div>
+
+    <!-- 4. BATAILLE -->
+    <div id="battle-screen" class="screen">
