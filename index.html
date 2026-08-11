@@ -3,285 +3,443 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duel de Pompes vs IA</title>
-    <!-- Importation de TensorFlow.js et du modèle PoseDetection (MoveNet) -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+    <title>Clash of Pushups</title>
     
+    <!-- Bibliothèques MediaPipe pour le tracking corporel (Plus précis que l'ancien modèle) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&display=swap');
+
+        :root {
+            --cr-blue: #2b78e4;
+            --cr-dark-blue: #0f3460;
+            --cr-gold: #ffcc00;
+            --cr-gold-dark: #cc9900;
+            --cr-grey: #555555;
+            --cr-bg: #4a6fa5;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background-color: #1a1a2e;
+            font-family: 'Roboto', sans-serif;
+            background-color: #1a1a1a;
             color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #header {
-            width: 100%;
-            background-color: #16213e;
-            padding: 15px 0;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            z-index: 10;
-        }
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-        }
-        .trophies { color: #f9a826; font-weight: bold; }
-        .arena { color: #4ecca3; font-weight: bold; }
-        #scoreboard {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            width: 90%;
-            max-width: 600px;
-            margin: 10px auto;
-            font-size: 2rem;
-            font-weight: bold;
-        }
-        .player-score { color: #4ecca3; }
-        .ai-score { color: #e94560; }
-        #timer { font-size: 2.5rem; }
-        #camera-container {
-            position: relative;
-            margin-top: 20px;
-            width: 640px;
-            height: 480px;
-            border: 4px solid #0f3460;
-            border-radius: 10px;
+            justify-content: center;
             overflow: hidden;
-            background-color: #000;
+            height: 100vh;
         }
-        video, canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
+
+        .screen {
+            display: none;
             width: 100%;
+            max-width: 450px;
             height: 100%;
-            transform: scaleX(-1); /* Effet miroir */
+            background: linear-gradient(to bottom, #5b8db8, #2a4c73);
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
-        #controls {
-            margin-top: 20px;
+
+        .active-screen {
+            display: flex;
         }
-        button {
-            background-color: #e94560;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.5rem;
+
+        /* ----- UI ELEMENTS COMMUNS (Style Clash) ----- */
+        .cr-button {
+            background: linear-gradient(to bottom, var(--cr-gold), var(--cr-gold-dark));
+            border: 2px solid #333;
             border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover { background-color: #d13049; }
-        button:disabled { background-color: #555; cursor: not-allowed; }
-        #message {
-            margin-top: 15px;
+            color: white;
+            font-family: 'Anton', sans-serif;
             font-size: 1.5rem;
-            font-weight: bold;
-            color: #f9a826;
+            padding: 15px 30px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0px #000;
+            box-shadow: inset 0 3px 0 rgba(255,255,255,0.4), inset 0 -4px 0 rgba(0,0,0,0.3), 0 4px 6px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.1s;
         }
+        .cr-button:active { transform: scale(0.95); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.3); }
+        .cr-button.blue { background: linear-gradient(to bottom, #4287f5, #195ac2); }
+        .cr-button.red { background: linear-gradient(to bottom, #f54242, #c21919); }
+
+        .top-bar {
+            background: #111;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 3px solid #333;
+            font-family: 'Anton', sans-serif;
+        }
+        .top-stats { display: flex; gap: 10px; }
+        .stat-box { background: #333; padding: 5px 10px; border-radius: 15px; border: 2px solid #555; display: flex; align-items: center; gap: 5px; }
+        
+        /* ----- ECRAN LOGIN ----- */
+        #login-screen { justify-content: center; align-items: center; background: #111; }
+        #login-screen h1 { font-family: 'Anton', sans-serif; font-size: 3rem; color: var(--cr-gold); text-shadow: 3px 3px 0 #000; text-align: center;}
+        #username-input { padding: 15px; font-size: 1.2rem; border-radius: 5px; border: 2px solid #555; margin-bottom: 20px; width: 80%; text-align: center; font-weight: bold; }
+
+        /* ----- ECRAN MENU ----- */
+        .player-info { padding: 15px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); }
+        .player-name { font-family: 'Anton', sans-serif; font-size: 1.5rem; }
+        .trophy-count { font-size: 1.5rem; color: var(--cr-gold); font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        
+        .arena-display { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .arena-title { font-family: 'Anton', sans-serif; font-size: 2.5rem; text-shadow: 2px 2px #000; text-align: center; }
+        .arena-img-placeholder { width: 150px; height: 150px; background: url('https://cdn-icons-png.flaticon.com/512/3593/3593988.png') no-size/contain center; background-size: cover; margin: 20px 0; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        
+        .chest-slots { display: flex; justify-content: space-around; padding: 10px; background: rgba(0,0,0,0.3); }
+        .chest { width: 70px; height: 90px; background: #333; border: 2px solid #555; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; text-align: center; font-weight: bold; color: #888; box-shadow: inset 0px 5px 10px rgba(0,0,0,0.5); }
+        .chest.active { background: linear-gradient(to bottom, #5bc0eb, #1e7ba8); border-color: white; color: white; }
+
+        /* ----- ECRAN BATAILLE ----- */
+        #camera-wrapper { position: relative; width: 100%; height: 60%; background: #000; border-bottom: 4px solid #333; overflow: hidden; }
+        video { display: none; } /* Caché car on dessine sur le canvas */
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        
+        .battle-hud { display: flex; justify-content: space-between; padding: 10px 20px; font-family: 'Anton', sans-serif; font-size: 2rem; background: #111; z-index: 10; position: relative;}
+        .timer { position: absolute; left: 50%; transform: translateX(-50%); color: white; text-shadow: 2px 2px #000; font-size: 2.5rem; }
+        .score-blue { color: #4287f5; text-shadow: 2px 2px #000; display: flex; flex-direction: column; align-items: center; }
+        .score-red { color: #f54242; text-shadow: 2px 2px #000; display: flex; flex-direction: column; align-items: center;}
+        .player-tag { font-size: 1rem; color: white; }
+
+        .feedback { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: 'Anton'; font-size: 4rem; color: var(--cr-gold); text-shadow: 3px 3px #000; display: none; z-index: 20;}
+
+        /* ----- ECRAN MATCHMAKING ----- */
+        #matchmaking-screen { justify-content: center; align-items: center; text-align: center; }
+        .vs-container { display: flex; justify-content: space-around; width: 100%; align-items: center; margin: 40px 0; }
+        .avatar-box { text-align: center; font-family: 'Anton'; font-size: 1.5rem; }
+        .avatar { width: 80px; height: 80px; background: #333; border: 3px solid white; border-radius: 10px; margin-bottom: 10px; display: inline-block; }
+        .vs-text { font-family: 'Anton'; font-size: 3rem; color: var(--cr-gold); text-shadow: 2px 2px #000; }
+        .spinner { border: 6px solid #333; border-top: 6px solid var(--cr-gold); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="header">
-        <div class="stats">
-            <span class="trophies">Trophées: <span id="trophy-count">0</span></span>
-            <span class="arena">Arène: <span id="arena-level">1</span></span>
+    <!-- 1. ECRAN DE CONNEXION -->
+    <div id="login-screen" class="screen active-screen">
+        <h1>CLASH OF PUSHUPS</h1>
+        <p>Crée ton profil de combattant</p>
+        <input type="text" id="username-input" placeholder="Ton Pseudo..." maxlength="12">
+        <button class="cr-button" onclick="createAccount()">C'est parti !</button>
+    </div>
+
+    <!-- 2. ECRAN MENU PRINCIPAL -->
+    <div id="menu-screen" class="screen">
+        <div class="top-bar">
+            <div class="stat-box">⭐ Lvl 1</div>
+            <div class="top-stats">
+                <div class="stat-box">🪙 1500</div>
+                <div class="stat-box" style="color: lightgreen;">💎 50</div>
+            </div>
         </div>
-        <div id="scoreboard">
-            <div class="player-score">Toi<br><span id="player-score">0</span></div>
-            <div id="timer">30</div>
-            <div class="ai-score">Bot IA<br><span id="ai-score">0</span></div>
+        <div class="player-info">
+            <div class="player-name" id="menu-username">Joueur</div>
+            <div class="trophy-count">🏆 <span id="menu-trophies">0</span></div>
+        </div>
+        <div class="arena-display">
+            <div class="arena-title" id="menu-arena-name">Arène 1: Débutant</div>
+            <div class="arena-img-placeholder"></div>
+            <button class="cr-button" style="width: 80%; font-size: 2rem;" onclick="startMatchmaking()">COMBAT</button>
+        </div>
+        <div class="chest-slots">
+            <div class="chest active">Coffre<br>Débloqué</div>
+            <div class="chest">Emplacement<br>Vide</div>
+            <div class="chest">Emplacement<br>Vide</div>
+            <div class="chest">Emplacement<br>Vide</div>
         </div>
     </div>
 
-    <div id="camera-container">
-        <video id="video" playsinline></video>
-        <canvas id="canvas"></canvas>
+    <!-- 3. ECRAN MATCHMAKING -->
+    <div id="matchmaking-screen" class="screen">
+        <h2 style="font-family: 'Anton'; font-size: 2rem;">Recherche d'adversaire...</h2>
+        <div class="spinner"></div>
+        <div class="vs-container">
+            <div class="avatar-box">
+                <div class="avatar" style="background-color: var(--cr-blue);"></div>
+                <div id="mm-player-name">Toi</div>
+            </div>
+            <div class="vs-text">VS</div>
+            <div class="avatar-box">
+                <div class="avatar" style="background-color: var(--cr-red);" id="mm-bot-avatar">?</div>
+                <div id="mm-bot-name">...</div>
+            </div>
+        </div>
     </div>
 
-    <div id="controls">
-        <button id="start-btn">Démarrer le Duel</button>
+    <!-- 4. ECRAN DE BATAILLE -->
+    <div id="battle-screen" class="screen">
+        <div class="battle-hud">
+            <div class="score-blue">
+                <span class="player-tag" id="hud-player-name">Toi</span>
+                <span id="player-score">0</span>
+            </div>
+            <div class="timer" id="timer">30</div>
+            <div class="score-red">
+                <span class="player-tag" id="hud-bot-name">Bot</span>
+                <span id="bot-score">0</span>
+            </div>
+        </div>
+        
+        <div id="camera-wrapper">
+            <video id="video" playsinline></video>
+            <canvas id="canvas"></canvas>
+            <div class="feedback" id="feedback">SUPER !</div>
+        </div>
+
+        <div style="padding: 20px; text-align: center; background: #111; flex: 1;">
+            <h3 style="color: var(--cr-gold); margin: 0 0 10px 0;">Place-toi de profil à la caméra !</h3>
+            <p style="font-size: 0.9rem; color: #aaa;">Le tracker blanc doit bien voir ton épaule, ton coude et ton poignet pour calculer l'angle.</p>
+        </div>
     </div>
-    <div id="message">Place la caméra au sol pour qu'elle te voie de profil ou de face !</div>
+
+    <!-- 5. ECRAN DE RESULTAT -->
+    <div id="result-screen" class="screen">
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+            <h1 id="result-title" style="font-family: 'Anton'; font-size: 4rem; margin: 0; text-shadow: 3px 3px #000;">VICTOIRE</h1>
+            <h2 id="result-trophies" style="font-size: 2rem; color: var(--cr-gold);">+30 🏆</h2>
+        </div>
+        <div style="padding: 20px; text-align: center;">
+            <button class="cr-button" onclick="showScreen('menu-screen')">Retour au menu</button>
+        </div>
+    </div>
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const startBtn = document.getElementById('start-btn');
-        const messageEl = document.getElementById('message');
+        // --- DONNÉES DU JEU ---
+        let userData = {
+            username: "",
+            trophies: 0,
+            arena: 1
+        };
+
+        const arenas = [
+            { name: "Arène 1: Le Parc", minTrophies: 0, botInterval: 2500 },
+            { name: "Arène 2: Salle de Sport", minTrophies: 100, botInterval: 2200 },
+            { name: "Arène 3: La Rue", minTrophies: 250, botInterval: 1900 },
+            { name: "Arène 4: Dojo Ninja", minTrophies: 450, botInterval: 1600 },
+            { name: "Arène 5: Camp Militaire", minTrophies: 700, botInterval: 1300 },
+            { name: "Arène 6: Montagne de Fer", minTrophies: 1000, botInterval: 1000 },
+            { name: "Arène 7: Volcan Actif", minTrophies: 1400, botInterval: 850 },
+            { name: "Arène 8: Espace Zéro G", minTrophies: 1900, botInterval: 700 },
+            { name: "Arène 9: Temple Divin", minTrophies: 2500, botInterval: 550 },
+            { name: "Arène 10: LIGUE DES LÉGENDES", minTrophies: 3200, botInterval: 400 } // Très difficile !
+        ];
+
+        const fakeNames = ["DarkSlayer99", "ProGamer_FR", "xX_Kylian_Xx", "GymBro2024", "NinjaTurtl", "GigaChad", "ElFamoso", "TryHarder", "MaitrePompes", "AlphaWolf"];
         
-        let detector;
+        let currentOpponent = "";
+        let currentBotInterval = 2500;
+
+        // --- VARIABLES BATAILLE ---
         let gameActive = false;
-        let timeLeft = 30;
-        let timerInterval;
-        let aiInterval;
-        
-        // Statistiques
         let playerScore = 0;
-        let aiScore = 0;
-        let trophies = 0;
-        let arena = 1;
+        let botScore = 0;
+        let time = 30;
+        let timerInterval;
+        let botInterval;
+        let isDown = false; // Etat de la pompe
 
-        // Variables pour la logique de pompe
-        let isDown = false;
+        // --- NAVIGATION UI ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(screenId).classList.add('active-screen');
+            if(screenId === 'menu-screen') updateMenuUI();
+        }
 
-        // 1. Initialiser la caméra
-        async function setupCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-                video.srcObject = stream;
-                return new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        video.play();
-                        resolve(video);
-                    };
-                });
-            } catch (e) {
-                messageEl.innerText = "Erreur: Autorise l'accès à la caméra.";
-                messageEl.style.color = "red";
+        // --- LOGIQUE COMPTE & PROGRESSION ---
+        function createAccount() {
+            const input = document.getElementById('username-input').value.trim();
+            if(input.length < 3) return alert("Pseudo trop court ! (3 lettres minimum)");
+            
+            userData.username = input;
+            // Sauvegarde dans le navigateur
+            localStorage.setItem("clashPushupData", JSON.stringify(userData));
+            showScreen('menu-screen');
+        }
+
+        function loadAccount() {
+            const saved = localStorage.getItem("clashPushupData");
+            if(saved) {
+                userData = JSON.parse(saved);
+                showScreen('menu-screen');
             }
         }
 
-        // 2. Charger le modèle d'IA (MoveNet)
-        async function loadModel() {
-            messageEl.innerText = "Chargement de l'IA (Patiente quelques secondes)...";
-            const detectorConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
-            detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
-            messageEl.innerText = "IA prête ! Clique sur Démarrer.";
-            startBtn.disabled = false;
+        function updateMenuUI() {
+            document.getElementById('menu-username').innerText = userData.username;
+            document.getElementById('menu-trophies').innerText = userData.trophies;
+            
+            // Calculer l'arène actuelle
+            let currentArenaIndex = 0;
+            for(let i=0; i<arenas.length; i++) {
+                if(userData.trophies >= arenas[i].minTrophies) currentArenaIndex = i;
+            }
+            userData.arena = currentArenaIndex + 1;
+            document.getElementById('menu-arena-name').innerText = arenas[currentArenaIndex].name;
+            currentBotInterval = arenas[currentArenaIndex].botInterval;
         }
 
-        // 3. Boucle de détection des mouvements
-        async function detectPose() {
-            if (detector) {
-                const poses = await detector.estimatePoses(video);
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // --- MATCHMAKING ---
+        function startMatchmaking() {
+            showScreen('matchmaking-screen');
+            document.getElementById('mm-player-name').innerText = userData.username;
+            document.getElementById('mm-bot-name').innerText = "...";
+            document.getElementById('mm-bot-avatar').innerText = "?";
+            
+            // Simuler une recherche
+            setTimeout(() => {
+                currentOpponent = fakeNames[Math.floor(Math.random() * fakeNames.length)];
+                document.getElementById('mm-bot-name').innerText = currentOpponent;
+                document.getElementById('mm-bot-avatar').innerText = "!";
                 
-                if (poses.length > 0) {
-                    const keypoints = poses[0].keypoints;
-                    
-                    // Trouver les épaules et les coudes
-                    const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-                    const leftElbow = keypoints.find(k => k.name === 'left_elbow');
+                setTimeout(() => startBattle(), 2000); // Lance le combat 2s après avoir trouvé
+            }, 2500);
+        }
 
-                    // Dessiner les points pour le style visuel
-                    ctx.fillStyle = "#f9a826";
-                    keypoints.forEach(point => {
-                        if (point.score > 0.3) {
-                            ctx.beginPath();
-                            // Inverser X car la vidéo est en miroir
-                            ctx.arc(canvas.width - point.x, point.y, 5, 0, 2 * Math.PI);
-                            ctx.fill();
-                        }
-                    });
+        // --- BATAILLE & CAMERA (MEDIAPIPE) ---
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
 
-                    // Logique pour compter une pompe (très simplifiée)
-                    // En coordonnées d'écran, Y augmente vers le bas.
-                    // Si l'épaule descend au niveau du coude, on est en bas.
-                    if (leftShoulder.score > 0.3 && leftElbow.score > 0.3 && gameActive) {
-                        const distanceY = leftElbow.y - leftShoulder.y;
+        // Calcul de l'angle entre 3 points
+        function calculateAngle(a, b, c) {
+            let radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            if (angle > 180.0) angle = 360 - angle;
+            return angle;
+        }
+
+        function onResults(results) {
+            // Dessiner la caméra et le squelette
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results.poseLandmarks) {
+                // Dessine les lignes et les points
+                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#ffffff', lineWidth: 4});
+                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffcc00', lineWidth: 2, radius: 4});
+
+                if (gameActive) {
+                    // On prend le bras gauche (indices 11 épaule, 13 coude, 15 poignet)
+                    // Si tu es de l'autre profil, tu peux moyenner avec le droit (12, 14, 16)
+                    const shoulder = results.poseLandmarks[11];
+                    const elbow = results.poseLandmarks[13];
+                    const wrist = results.poseLandmarks[15];
+
+                    // Vérifie que les points sont bien visibles à l'écran
+                    if(shoulder.visibility > 0.6 && elbow.visibility > 0.6 && wrist.visibility > 0.6) {
+                        const angle = calculateAngle(shoulder, elbow, wrist);
                         
-                        if (distanceY < 10) { 
-                            isDown = true; 
-                        } else if (distanceY > 40 && isDown) {
+                        // Logique de pompe stricte :
+                        // Bras plié = angle < 90 degrés
+                        // Bras tendu = angle > 150 degrés
+                        if (angle < 90) {
+                            isDown = true;
+                        } else if (angle > 150 && isDown) {
                             isDown = false;
                             playerScore++;
                             document.getElementById('player-score').innerText = playerScore;
+                            
+                            // Petit effet visuel
+                            const fb = document.getElementById('feedback');
+                            fb.style.display = 'block';
+                            setTimeout(() => fb.style.display = 'none', 500);
                         }
                     }
                 }
             }
-            requestAnimationFrame(detectPose);
+            canvasCtx.restore();
         }
 
-        // 4. Logique du Jeu (Chronomètre et IA)
-        function startGame() {
-            gameActive = true;
-            playerScore = 0;
-            aiScore = 0;
-            timeLeft = 30;
-            isDown = false;
-            
-            document.getElementById('player-score').innerText = playerScore;
-            document.getElementById('ai-score').innerText = aiScore;
-            document.getElementById('timer').innerText = timeLeft;
-            startBtn.disabled = true;
-            messageEl.innerText = "C'est parti ! Fais des pompes !";
+        const pose = new Pose({locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+        }});
+        pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        pose.onResults(onResults);
 
-            // Timer de 30 secondes
+        const camera = new Camera(videoElement, {
+            onFrame: async () => { await pose.send({image: videoElement}); },
+            width: 640, height: 480
+        });
+
+        // --- GESTION DU COMBAT ---
+        function startBattle() {
+            showScreen('battle-screen');
+            document.getElementById('hud-player-name').innerText = userData.username;
+            document.getElementById('hud-bot-name').innerText = currentOpponent;
+            
+            playerScore = 0;
+            botScore = 0;
+            time = 30;
+            isDown = false;
+            gameActive = true;
+            
+            document.getElementById('player-score').innerText = 0;
+            document.getElementById('bot-score').innerText = 0;
+            document.getElementById('timer').innerText = time;
+
+            // Démarre la caméra (demande l'autorisation si première fois)
+            camera.start();
+
+            // Timer principal
             timerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').innerText = timeLeft;
-                if (timeLeft <= 0) endGame();
+                time--;
+                document.getElementById('timer').innerText = time;
+                if(time <= 0) endBattle();
             }, 1000);
 
-            // Le bot IA fait une pompe toutes les 1.5 à 2.5 secondes
-            aiInterval = setInterval(() => {
-                if (gameActive) {
-                    aiScore++;
-                    document.getElementById('ai-score').innerText = aiScore;
+            // Simulation du bot (Sa vitesse dépend de l'arène)
+            botInterval = setInterval(() => {
+                if(gameActive) {
+                    botScore++;
+                    document.getElementById('bot-score').innerText = botScore;
                 }
-            }, Math.random() * 1000 + 1500);
+            }, currentBotInterval);
         }
 
-        function endGame() {
+        function endBattle() {
             gameActive = false;
             clearInterval(timerInterval);
-            clearInterval(aiInterval);
-            startBtn.disabled = false;
-            startBtn.innerText = "Rejouer";
+            clearInterval(botInterval);
+            camera.stop(); // Coupe la caméra pour économiser la batterie
 
-            if (playerScore > aiScore) {
-                trophies += 25;
-                messageEl.innerText = "Victoire ! Tu as gagné 25 trophées ! 🏆";
-                messageEl.style.color = "#4ecca3";
-                checkArena();
-            } else if (playerScore < aiScore) {
-                trophies = Math.max(0, trophies - 10);
-                messageEl.innerText = "Défaite... Tu perds 10 trophées. 😭";
-                messageEl.style.color = "#e94560";
+            showScreen('result-screen');
+            const title = document.getElementById('result-title');
+            const trophiesTxt = document.getElementById('result-trophies');
+
+            if (playerScore > botScore) {
+                title.innerText = "VICTOIRE";
+                title.style.color = "#4287f5";
+                userData.trophies += 30;
+                trophiesTxt.innerText = "+30 🏆";
+                trophiesTxt.style.color = "lightgreen";
+            } else if (playerScore < botScore) {
+                title.innerText = "DÉFAITE";
+                title.style.color = "#f54242";
+                let loss = Math.min(userData.trophies, 20); // Perd max 20, ne descend pas sous 0
+                userData.trophies -= loss;
+                trophiesTxt.innerText = "-" + loss + " 🏆";
+                trophiesTxt.style.color = "#f54242";
             } else {
-                messageEl.innerText = "Égalité ! Bien joué.";
-                messageEl.style.color = "#f9a826";
+                title.innerText = "ÉGALITÉ";
+                title.style.color = "white";
+                trophiesTxt.innerText = "0 🏆";
+                trophiesTxt.style.color = "white";
             }
-            document.getElementById('trophy-count').innerText = trophies;
+
+            localStorage.setItem("clashPushupData", JSON.stringify(userData));
         }
 
-        function checkArena() {
-            const nextArenaThreshold = arena * 100;
-            if (trophies >= nextArenaThreshold) {
-                arena++;
-                document.getElementById('arena-level').innerText = arena;
-                messageEl.innerText += ` PROMOTION ! Bienvenue dans l'arène ${arena} !`;
-            }
-        }
+        // Lancement : Vérifie si un compte existe déjà
+        window.onload = loadAccount;
 
-        // Lancement initial
-        async function init() {
-            startBtn.disabled = true;
-            canvas.width = 640;
-            canvas.height = 480;
-            await setupCamera();
-            await loadModel();
-            detectPose(); // Lance la boucle vidéo
-        }
-
-        startBtn.addEventListener('click', startGame);
-        
-        // Démarrer l'initialisation au chargement de la page
-        init();
     </script>
 </body>
 </html>
