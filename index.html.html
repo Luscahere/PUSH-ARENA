@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duel de Pompes vs IA</title>
+    <!-- Importation de TensorFlow.js et du modèle PoseDetection (MoveNet) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a2e;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #header {
+            width: 100%;
+            background-color: #16213e;
+            padding: 15px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        .trophies { color: #f9a826; font-weight: bold; }
+        .arena { color: #4ecca3; font-weight: bold; }
+        #scoreboard {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 90%;
+            max-width: 600px;
+            margin: 10px auto;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .player-score { color: #4ecca3; }
+        .ai-score { color: #e94560; }
+        #timer { font-size: 2.5rem; }
+        #camera-container {
+            position: relative;
+            margin-top: 20px;
+            width: 640px;
+            height: 480px;
+            border: 4px solid #0f3460;
+            border-radius: 10px;
+            overflow: hidden;
+            background-color: #000;
+        }
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform: scaleX(-1); /* Effet miroir */
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        button {
+            background-color: #e94560;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #d13049; }
+        button:disabled { background-color: #555; cursor: not-allowed; }
+        #message {
+            margin-top: 15px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #f9a826;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="header">
+        <div class="stats">
+            <span class="trophies">Trophées: <span id="trophy-count">0</span></span>
+            <span class="arena">Arène: <span id="arena-level">1</span></span>
+        </div>
+        <div id="scoreboard">
+            <div class="player-score">Toi<br><span id="player-score">0</span></div>
+            <div id="timer">30</div>
+            <div class="ai-score">Bot IA<br><span id="ai-score">0</span></div>
+        </div>
+    </div>
+
+    <div id="camera-container">
+        <video id="video" playsinline></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="controls">
+        <button id="start-btn">Démarrer le Duel</button>
+    </div>
+    <div id="message">Place la caméra au sol pour qu'elle te voie de profil ou de face !</div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const startBtn = document.getElementById('start-btn');
+        const messageEl = document.getElementById('message');
+        
+        let detector;
+        let gameActive = false;
+        let timeLeft = 30;
+        let timerInterval;
+        let aiInterval;
+        
+        // Statistiques
+        let playerScore = 0;
+        let aiScore = 0;
+        let trophies = 0;
+        let arena = 1;
+
+        // Variables pour la logique de pompe
+        let isDown = false;
+
+        // 1. Initialiser la caméra
+        async function setupCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+                video.srcObject = stream;
+                return new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve(video);
+                    };
+                });
+            } catch (e) {
+                messageEl.innerText = "Erreur: Autorise l'accès à la caméra.";
+                messageEl.style.color = "red";
+            }
+        }
+
+        // 2. Charger le modèle d'IA (MoveNet)
+        async function loadModel() {
+            messageEl.innerText = "Chargement de l'IA (Patiente quelques secondes)...";
+            const detectorConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
+            detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
+            messageEl.innerText = "IA prête ! Clique sur Démarrer.";
+            startBtn.disabled = false;
+        }
+
+        // 3. Boucle de détection des mouvements
+        async function detectPose() {
+            if (detector) {
+                const poses = await detector.estimatePoses(video);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (poses.length > 0) {
+                    const keypoints = poses[0].keypoints;
+                    
+                    // Trouver les épaules et les coudes
+                    const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
+                    const leftElbow = keypoints.find(k => k.name === 'left_elbow');
+
+                    // Dessiner les points pour le style visuel
+                    ctx.fillStyle = "#f9a826";
+                    keypoints.forEach(point => {
+                        if (point.score > 0.3) {
+                            ctx.beginPath();
+                            // Inverser X car la vidéo est en miroir
+                            ctx.arc(canvas.width - point.x, point.y, 5, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    });
+
+                    // Logique pour compter une pompe (très simplifiée)
+                    // En coordonnées d'écran, Y augmente vers le bas.
+                    // Si l'épaule descend au niveau du coude, on est en bas.
+                    if (leftShoulder.score > 0.3 && leftElbow.score > 0.3 && gameActive) {
+                        const distanceY = leftElbow.y - leftShoulder.y;
+                        
+                        if (distanceY < 10) { 
+                            isDown = true; 
+                        } else if (distanceY > 40 && isDown) {
+                            isDown = false;
+                            playerScore++;
+                            document.getElementById('player-score').innerText = playerScore;
+                        }
+                    }
+                }
+            }
+            requestAnimationFrame(detectPose);
+        }
+
+        // 4. Logique du Jeu (Chronomètre et IA)
+        function startGame() {
+            gameActive = true;
+            playerScore = 0;
+            aiScore = 0;
+            timeLeft = 30;
+            isDown = false;
+            
+            document.getElementById('player-score').innerText = playerScore;
+            document.getElementById('ai-score').innerText = aiScore;
+            document.getElementById('timer').innerText = timeLeft;
+            startBtn.disabled = true;
+            messageEl.innerText = "C'est parti ! Fais des pompes !";
+
+            // Timer de 30 secondes
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').innerText = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+
+            // Le bot IA fait une pompe toutes les 1.5 à 2.5 secondes
+            aiInterval = setInterval(() => {
+                if (gameActive) {
+                    aiScore++;
+                    document.getElementById('ai-score').innerText = aiScore;
+                }
+            }, Math.random() * 1000 + 1500);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            clearInterval(aiInterval);
+            startBtn.disabled = false;
+            startBtn.innerText = "Rejouer";
+
+            if (playerScore > aiScore) {
+                trophies += 25;
+                messageEl.innerText = "Victoire ! Tu as gagné 25 trophées ! 🏆";
+                messageEl.style.color = "#4ecca3";
+                checkArena();
+            } else if (playerScore < aiScore) {
+                trophies = Math.max(0, trophies - 10);
+                messageEl.innerText = "Défaite... Tu perds 10 trophées. 😭";
+                messageEl.style.color = "#e94560";
+            } else {
+                messageEl.innerText = "Égalité ! Bien joué.";
+                messageEl.style.color = "#f9a826";
+            }
+            document.getElementById('trophy-count').innerText = trophies;
+        }
+
+        function checkArena() {
+            const nextArenaThreshold = arena * 100;
+            if (trophies >= nextArenaThreshold) {
+                arena++;
+                document.getElementById('arena-level').innerText = arena;
+                messageEl.innerText += ` PROMOTION ! Bienvenue dans l'arène ${arena} !`;
+            }
+        }
+
+        // Lancement initial
+        async function init() {
+            startBtn.disabled = true;
+            canvas.width = 640;
+            canvas.height = 480;
+            await setupCamera();
+            await loadModel();
+            detectPose(); // Lance la boucle vidéo
+        }
+
+        startBtn.addEventListener('click', startGame);
+        
+        // Démarrer l'initialisation au chargement de la page
+        init();
+    </script>
+</body>
+</html>
