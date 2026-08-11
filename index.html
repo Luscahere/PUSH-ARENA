@@ -356,3 +356,699 @@
 
     <!-- 4. BATAILLE -->
     <div id="battle-screen" class="screen">
+        <div id="camera-wrapper">
+            <div class="battle-hud-top">
+                <div class="fighter-box player">
+                    <div class="hexagon-frame"><img id="hud-player-pfp" src=""></div>
+                    <span class="fighter-name" id="hud-player-name">Toi</span>
+                    <span class="fighter-score" id="player-score">0</span>
+                </div>
+                <div class="timer-box" id="timer">30</div>
+                <div class="fighter-box opponent">
+                    <div class="hexagon-frame"><img id="hud-bot-pfp" src=""></div>
+                    <span class="fighter-name" id="hud-bot-name">Bot</span>
+                    <span class="fighter-score" id="bot-score">0</span>
+                </div>
+            </div>
+            <div class="compare-bar-wrap">
+                <span id="compare-left">0</span>
+                <div class="compare-bar"><div class="compare-fill" id="compare-fill"></div></div>
+                <span id="compare-right">0</span>
+            </div>
+
+            <button class="flip-cam-btn" onclick="flipCamera()">🔄</button>
+
+            <div class="depth-gauge-wrap">
+                <div class="depth-gauge"><div class="depth-gauge-fill" id="depth-fill"></div></div>
+                <div class="depth-gauge-label"><span id="depth-percent">0</span>%</div>
+                <div class="depth-gauge-icon">🔥</div>
+            </div>
+
+            <div id="depth-hint"></div>
+
+            <video id="video" playsinline autoplay muted></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="abandon-bar">
+            <button class="cr-button gray" style="width:auto; padding:12px 30px;" onclick="abandonBattle()">🏳️ Abandonner</button>
+        </div>
+    </div>
+
+    <!-- 5. RESULTAT -->
+    <div id="result-screen" class="screen" style="justify-content: center; align-items: center; text-align: center; padding: 20px;">
+        <h1 id="result-title" style="font-family: 'Anton'; font-size: 4rem; margin: 0; text-shadow: 3px 3px #000;">VICTOIRE</h1>
+        <h2 id="result-trophies" style="font-size: 2rem; color: var(--cr-gold);">+30 🏆</h2>
+        <p id="result-recap" style="opacity:0.8;"></p>
+        <button class="cr-button" onclick="resetToMenu()">Continuer</button>
+    </div>
+
+    <!-- MODAL PROFIL -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeProfileModal()">✕</button>
+            <img id="modal-pfp" class="modal-pfp" src="">
+            <h2 id="modal-username" style="font-family:'Anton'; margin:6px 0;"></h2>
+            <div class="stats-grid">
+                <div class="stat-item"><span class="stat-value" id="stat-wins">0</span><span class="stat-label">Victoires</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-losses">0</span><span class="stat-label">Défaites</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-winrate">0%</span><span class="stat-label">% Victoire</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-total">0</span><span class="stat-label">Pompes totales</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-best">0</span><span class="stat-label">Record / duel</span></div>
+                <div class="stat-item"><span class="stat-value" id="stat-trophies">0</span><span class="stat-label">Record trophées</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================== DONNEES & ARENES =====================
+        let userData = {
+            username: "", font: "Anton", pfp: "", trophies: 0, arena: 1,
+            wins: 0, losses: 0, totalPushups: 0, bestDuelPushups: 0, highestTrophies: 0,
+            clan: null, friends: []
+        };
+
+        const arenas = [
+            { name: "1. Stade Gobelin", min: 0, max: 400, surface: "linear-gradient(#5da13b, #3d7a2b)", icon: "🛖", interval: 2500, decor: [["🌳",10,15],["🌳",90,20],["🪨",15,85],["🌿",85,80]] },
+            { name: "2. Fosse aux Os", min: 400, max: 800, surface: "linear-gradient(#c2b280, #8a7b52)", icon: "🦴", interval: 2200, decor: [["🦴",8,20],["🦴",92,25],["💀",15,82],["🪦",85,78]] },
+            { name: "3. Arène Barbare", min: 800, max: 1100, surface: "linear-gradient(#808080, #555555)", icon: "⚔️", interval: 1900, decor: [["🛡️",10,18],["⚔️",90,22],["🏹",15,84],["🪓",85,80]] },
+            { name: "4. Parc P.E.K.K.A", min: 1100, max: 1400, surface: "linear-gradient(#8b0000, #4a0000)", icon: "🔥", interval: 1700, decor: [["🔥",8,18],["🔥",92,22],["💢",15,84],["⚡",85,80]] },
+            { name: "5. Vallée des Sorts", min: 1400, max: 1700, surface: "linear-gradient(#8a2be2, #4b0082)", icon: "🧪", interval: 1500, decor: [["🧪",10,18],["✨",90,22],["🔮",15,84],["🧙",85,80]] },
+            { name: "6. Atelier", min: 1700, max: 2000, surface: "linear-gradient(#cd853f, #8b4513)", icon: "⚙️", interval: 1300, decor: [["⚙️",8,18],["🔧",92,22],["🪛",15,84],["🛠️",85,80]] },
+            { name: "7. Arène Royale", min: 2000, max: 2300, surface: "linear-gradient(#d4af37, #b8860b)", icon: "👑", interval: 1100, decor: [["👑",10,18],["🏰",90,22],["🚩",15,84],["🎺",85,80]] },
+            { name: "8. Sommet Glacé", min: 2300, max: 2600, surface: "linear-gradient(#add8e6, #4682b4)", icon: "❄️", interval: 900, decor: [["❄️",8,18],["🧊",92,22],["⛄",15,84],["❄️",85,80]] },
+            { name: "9. Arène Sauvage", min: 2600, max: 3000, surface: "linear-gradient(#228b22, #006400)", icon: "🌴", interval: 700, decor: [["🌴",10,18],["🐊",90,22],["🌿",15,84],["🦜",85,80]] },
+            { name: "10. Légende", min: 3000, max: 9999, surface: "linear-gradient(#ffaa00, #cc5500)", icon: "🐗", interval: 500, decor: [["🐗",8,18],["🔥",92,22],["🏆",15,84],["✨",85,80]] }
+        ];
+
+        const TRYSTERO_APP_ID = "clash-of-pushups-app-v3";
+
+        let currentBotInterval = 2500, gameActive = false;
+        let playerScore = 0, botScore = 0, time = 30, isDown = false, repMaxPercent = 0, forfeited = false;
+        let timerInterval, botInterval, currentFacing = "user", currentOpponentLabel = "Bot";
+
+        // Multijoueur
+        let room = null, scoreAction = null, profileAction = null, readyAction = null, startAction = null;
+        let opponentPeerId = null, opponentName = "Ami", isMultiplayer = false;
+        let isHost = false, localReady = false, remoteReady = false, duelCode = "";
+
+        // ===================== UTILITAIRES =====================
+        function generateCode() {
+            return Math.random().toString(36).substring(2, 7).toUpperCase();
+        }
+        function escapeHtml(str) {
+            const d = document.createElement("div");
+            d.innerText = str == null ? "" : str;
+            return d.innerHTML;
+        }
+        function defaultAvatarDataUri() {
+            const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">' +
+                '<rect width="150" height="150" fill="#000000"/>' +
+                '<circle cx="75" cy="55" r="30" fill="#ffffff"/>' +
+                '<path d="M15 150 C15 95 135 95 135 150 Z" fill="#ffffff"/>' +
+                '</svg>';
+            return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+        }
+        function saveData() {
+            localStorage.setItem("clashPushupV3", JSON.stringify(userData));
+        }
+        function migrateUserData() {
+            userData.wins = userData.wins || 0;
+            userData.losses = userData.losses || 0;
+            userData.totalPushups = userData.totalPushups || 0;
+            userData.bestDuelPushups = userData.bestDuelPushups || 0;
+            userData.highestTrophies = userData.highestTrophies || userData.trophies || 0;
+            userData.friends = userData.friends || [];
+            userData.clan = userData.clan || null;
+        }
+
+        // ===================== NAVIGATION =====================
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(screenId).classList.add('active-screen');
+        }
+        function switchTab(screenId) {
+            showScreen(screenId);
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === screenId);
+            });
+            if (screenId === 'clan-screen') renderClan();
+            if (screenId === 'settings-screen') openSettings();
+        }
+
+        // ===================== PHOTO DE PROFIL =====================
+        function handlePfpFile(file, previewEl) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 150; canvas.height = 150;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, 150, 150);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                    previewEl.src = compressed;
+                    userData.pfp = compressed;
+                    saveData();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('pfp-upload').addEventListener('change', function(e) {
+            handlePfpFile(e.target.files[0], document.getElementById('pfp-preview'));
+        });
+        document.getElementById('settings-pfp-upload').addEventListener('change', function(e) {
+            handlePfpFile(e.target.files[0], document.getElementById('settings-pfp-preview'));
+        });
+
+        const fontSelect = document.getElementById('font-select');
+        const usernameInput = document.getElementById('username-input');
+        fontSelect.addEventListener('change', e => usernameInput.style.fontFamily = e.target.value);
+
+        function createAccount() {
+            if (usernameInput.value.trim().length < 3) return alert("Pseudo trop court.");
+            userData.username = usernameInput.value.trim();
+            userData.font = fontSelect.value;
+            if (!userData.pfp) userData.pfp = document.getElementById('pfp-preview').src;
+            migrateUserData();
+            saveData();
+            initMenu();
+        }
+
+        window.onload = () => {
+            document.getElementById('pfp-preview').src = defaultAvatarDataUri();
+            const saved = localStorage.getItem("clashPushupV3");
+            if (saved) {
+                userData = JSON.parse(saved);
+                migrateUserData();
+                initMenu();
+            }
+            initPoseModel();
+            initArenaRotate();
+        };
+
+        // ===================== MENU =====================
+        function initMenu() {
+            showScreen('menu-screen');
+            document.getElementById('menu-username').innerText = userData.username;
+            document.getElementById('menu-username').style.fontFamily = userData.font;
+            document.getElementById('menu-pfp').src = userData.pfp;
+            document.getElementById('menu-trophies').innerText = userData.trophies;
+            document.getElementById('menu-trophies-mini').innerText = userData.trophies;
+
+            let currentArena = arenas.find(a => userData.trophies >= a.min && userData.trophies < a.max) || arenas[arenas.length - 1];
+            document.getElementById('menu-arena-name').innerText = currentArena.name;
+            document.getElementById('next-arena-trophies').innerText = currentArena.max;
+            currentBotInterval = currentArena.interval;
+
+            document.getElementById('arena-surface').style.background = currentArena.surface;
+            document.getElementById('arena-surface').innerText = currentArena.icon;
+
+            const decorBox = document.getElementById('arena-decor');
+            decorBox.innerHTML = '';
+            currentArena.decor.forEach(([emoji, left, top], i) => {
+                const span = document.createElement('span');
+                span.innerText = emoji;
+                span.style.left = left + '%';
+                span.style.top = top + '%';
+                span.style.animationDelay = (i * 0.4) + 's';
+                decorBox.appendChild(span);
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'menu-screen'));
+        }
+
+        // ===================== ROTATION DE L'ARENE AU DOIGT =====================
+        let arenaRotation = 0, dragging = false, dragStartX = 0;
+        function initArenaRotate() {
+            const island = document.getElementById('arena-island');
+            const onStart = x => { dragging = true; dragStartX = x; island.style.transition = 'none'; island.style.cursor = 'grabbing'; };
+            const onMove = x => {
+                if (!dragging) return;
+                const delta = x - dragStartX;
+                dragStartX = x;
+                arenaRotation += delta * 0.4;
+                island.style.transform = `rotateX(60deg) rotateZ(${-45 + arenaRotation}deg)`;
+            };
+            const onEnd = () => { dragging = false; island.style.transition = 'transform 0.3s ease'; island.style.cursor = 'grab'; };
+
+            island.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
+            island.addEventListener('touchmove', e => { onMove(e.touches[0].clientX); }, { passive: true });
+            island.addEventListener('touchend', onEnd);
+            island.addEventListener('mousedown', e => onStart(e.clientX));
+            window.addEventListener('mousemove', e => onMove(e.clientX));
+            window.addEventListener('mouseup', onEnd);
+        }
+
+        // ===================== MODAL PROFIL / STATS =====================
+        function openProfileModal() {
+            document.getElementById('modal-pfp').src = userData.pfp;
+            document.getElementById('modal-username').innerText = userData.username;
+            document.getElementById('modal-username').style.fontFamily = userData.font;
+            const total = userData.wins + userData.losses;
+            const winrate = total > 0 ? Math.round((userData.wins / total) * 100) : 0;
+            document.getElementById('stat-wins').innerText = userData.wins;
+            document.getElementById('stat-losses').innerText = userData.losses;
+            document.getElementById('stat-winrate').innerText = winrate + '%';
+            document.getElementById('stat-total').innerText = userData.totalPushups;
+            document.getElementById('stat-best').innerText = userData.bestDuelPushups;
+            document.getElementById('stat-trophies').innerText = Math.max(userData.highestTrophies, userData.trophies);
+            document.getElementById('profile-modal').classList.add('active');
+        }
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.remove('active');
+        }
+
+        // ===================== REGLAGES =====================
+        function openSettings() {
+            document.getElementById('settings-username-input').value = userData.username;
+            document.getElementById('settings-font-select').value = userData.font;
+            document.getElementById('settings-pfp-preview').src = userData.pfp;
+        }
+        function saveSettings() {
+            const newName = document.getElementById('settings-username-input').value.trim();
+            if (newName.length < 3) return alert("Pseudo trop court.");
+            userData.username = newName;
+            userData.font = document.getElementById('settings-font-select').value;
+            saveData();
+            initMenu();
+            alert("Sauvegardé !");
+        }
+        function resetData() {
+            if (!confirm("Réinitialiser toutes tes données ? Cette action est irréversible.")) return;
+            localStorage.removeItem("clashPushupV3");
+            location.reload();
+        }
+
+        // ===================== CLAN / AMIS =====================
+        function renderClan() {
+            const box = document.getElementById('clan-info');
+            if (userData.clan) {
+                box.innerHTML = `<p>Clan : <b>${escapeHtml(userData.clan.name)}</b></p><p>Code : <b>${escapeHtml(userData.clan.code)}</b></p>`;
+            } else {
+                box.innerHTML = '<p style="opacity:0.7;">Tu n\'as pas encore de clan.</p>';
+            }
+            const list = document.getElementById('friends-list');
+            list.innerHTML = '';
+            (userData.friends || []).forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'friend-row';
+                const nameSpan = document.createElement('span');
+                nameSpan.innerText = f.name;
+                const btn = document.createElement('button');
+                btn.className = 'cr-button blue';
+                btn.style.cssText = 'width:auto;padding:8px 16px;font-size:1rem;margin:0;';
+                btn.innerText = 'Défier';
+                btn.onclick = () => challengeFriend(f.code);
+                row.appendChild(nameSpan);
+                row.appendChild(btn);
+                list.appendChild(row);
+            });
+        }
+        function createClan() {
+            const name = document.getElementById('clan-name-input').value.trim();
+            if (name.length < 3) return alert("Nom trop court.");
+            userData.clan = { name, code: generateCode() };
+            saveData();
+            document.getElementById('clan-name-input').value = '';
+            renderClan();
+        }
+        function addFriend() {
+            const name = document.getElementById('friend-name-input').value.trim();
+            const code = document.getElementById('friend-code-input').value.trim().toUpperCase();
+            if (!name || code.length < 4) return alert("Remplis le pseudo et un code valide.");
+            userData.friends.push({ name, code });
+            saveData();
+            document.getElementById('friend-name-input').value = '';
+            document.getElementById('friend-code-input').value = '';
+            renderClan();
+        }
+        function challengeFriend(code) {
+            openDuelScreen();
+            document.getElementById('duel-code-input').value = code;
+            joinDuel();
+        }
+
+        // ===================== CAMERA =====================
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        let poseModel;
+
+        function initPoseModel() {
+            poseModel = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+            poseModel.setOptions({ modelComplexity: 0, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            poseModel.onResults(onResults);
+
+            poseModel.initialize().then(() => {
+                const btn = document.getElementById('btn-combat');
+                btn.disabled = false;
+                btn.innerText = "COMBAT";
+            });
+        }
+
+        async function ensureCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: 640, height: 480 } });
+                videoElement.srcObject = stream;
+                await videoElement.play();
+                return true;
+            } catch (err) {
+                alert("Erreur caméra (autorise l'accès) : " + err.message);
+                return false;
+            }
+        }
+
+        async function flipCamera() {
+            currentFacing = currentFacing === 'user' ? 'environment' : 'user';
+            const old = videoElement.srcObject;
+            if (old) old.getTracks().forEach(t => t.stop());
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacing, width: 640, height: 480 } });
+                videoElement.srcObject = stream;
+                await videoElement.play();
+            } catch (err) {
+                alert("Impossible de changer de caméra : " + err.message);
+            }
+        }
+
+        async function detectFrame() {
+            if (gameActive && videoElement.readyState >= 2) {
+                await poseModel.send({ image: videoElement });
+            }
+            if (gameActive) requestAnimationFrame(detectFrame);
+        }
+
+        // ===================== JAUGE DE PROFONDEUR =====================
+        function angleToPercent(angle) {
+            const TOP = 160, BOTTOM = 75;
+            let p = ((TOP - angle) / (TOP - BOTTOM)) * 100;
+            return Math.max(0, Math.min(100, p));
+        }
+        function updateDepthGauge(percent) {
+            const fillEl = document.getElementById('depth-fill');
+            fillEl.style.height = percent + '%';
+            fillEl.style.background = percent >= 80 ? 'linear-gradient(#ffcc00,#ff6600)' : 'linear-gradient(#4287f5,#195ac2)';
+            document.getElementById('depth-percent').innerText = Math.round(percent);
+        }
+        function flashHint(text, ok) {
+            const hint = document.getElementById('depth-hint');
+            hint.innerText = text;
+            hint.style.color = ok ? '#7CFC00' : '#f54242';
+            hint.style.opacity = '1';
+            clearTimeout(window.__hintTimeout);
+            window.__hintTimeout = setTimeout(() => { hint.style.opacity = '0'; }, 1200);
+        }
+        function spawnPlusPopup() {
+            const wrap = document.getElementById('camera-wrapper');
+            const el = document.createElement('div');
+            el.className = 'plus-popup';
+            el.innerText = '+1';
+            el.style.left = '50%';
+            el.style.top = '45%';
+            wrap.appendChild(el);
+            setTimeout(() => el.remove(), 900);
+        }
+
+        function onResults(results) {
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.poseLandmarks && gameActive) {
+                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#ffffff', lineWidth: 4 });
+                drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#ffcc00', lineWidth: 2, radius: 4 });
+
+                const shoulder = results.poseLandmarks[11];
+                const elbow = results.poseLandmarks[13];
+                const wrist = results.poseLandmarks[15];
+
+                if (shoulder.visibility > 0.6 && elbow.visibility > 0.6 && wrist.visibility > 0.6) {
+                    let radians = Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x) - Math.atan2(shoulder.y - elbow.y, shoulder.x - elbow.x);
+                    let angle = Math.abs(radians * 180.0 / Math.PI);
+                    if (angle > 180.0) angle = 360 - angle;
+
+                    const percent = angleToPercent(angle);
+                    updateDepthGauge(percent);
+                    if (percent > repMaxPercent) repMaxPercent = percent;
+
+                    if (angle < 100) {
+                        isDown = true;
+                    } else if (angle > 150 && isDown) {
+                        isDown = false;
+                        if (repMaxPercent >= 80) {
+                            playerScore++;
+                            document.getElementById('player-score').innerText = playerScore;
+                            spawnPlusPopup();
+                            updateCompareBar();
+                            if (isMultiplayer && scoreAction) scoreAction.send({ score: playerScore });
+                        } else {
+                            flashHint('Pas assez profond (min 80%)', false);
+                        }
+                        repMaxPercent = 0;
+                    }
+                }
+            }
+            canvasCtx.restore();
+        }
+
+        function updateCompareBar() {
+            const total = playerScore + botScore;
+            const pct = total === 0 ? 50 : (playerScore / total * 100);
+            document.getElementById('compare-fill').style.width = pct + '%';
+            document.getElementById('compare-left').innerText = playerScore;
+            document.getElementById('compare-right').innerText = botScore;
+        }
+
+        // ===================== MATCHMAKING BOT =====================
+        async function startMatchmaking() {
+            const ok = await ensureCamera();
+            if (!ok) return;
+            showScreen('matchmaking-screen');
+            const bots = ["DarkSlayer99", "AlphaWolf", "GymBro", "TryHarder", "ElFamoso"];
+            const botName = bots[Math.floor(Math.random() * bots.length)];
+
+            setTimeout(() => {
+                document.getElementById('mm-bot-name').innerText = botName;
+                setTimeout(() => startBattle(botName, false), 1500);
+            }, 1000);
+        }
+
+        // ===================== MULTIJOUEUR (Trystero, sans serveur) =====================
+        function trysteroLib() {
+            return new Promise(resolve => {
+                if (window.__trystero) return resolve(window.__trystero);
+                window.addEventListener('trystero-ready', () => resolve(window.__trystero), { once: true });
+            });
+        }
+
+        function openDuelScreen() {
+            document.getElementById('duel-setup').style.display = 'block';
+            document.getElementById('duel-lobby').style.display = 'none';
+            document.getElementById('duel-code-input').value = '';
+            showScreen('duel-screen');
+        }
+
+        async function createDuel() {
+            const code = generateCode();
+            document.getElementById('duel-setup').style.display = 'none';
+            document.getElementById('duel-lobby').style.display = 'block';
+            document.getElementById('duel-code-display').innerText = code;
+            document.getElementById('duel-status').innerText = "En attente d'un ami...";
+            const ok = await ensureCamera();
+            if (!ok) { leaveDuel(); return; }
+            await connectRoom(code, true);
+        }
+
+        async function joinDuel() {
+            const code = document.getElementById('duel-code-input').value.trim().toUpperCase();
+            if (code.length < 4) return alert("Entre un code valide.");
+            document.getElementById('duel-setup').style.display = 'none';
+            document.getElementById('duel-lobby').style.display = 'block';
+            document.getElementById('duel-code-display').innerText = code;
+            document.getElementById('duel-status').innerText = "Connexion...";
+            const ok = await ensureCamera();
+            if (!ok) { leaveDuel(); return; }
+            await connectRoom(code, false);
+        }
+
+        async function connectRoom(code, host) {
+            const { joinRoom } = await trysteroLib();
+            isHost = host; duelCode = code; localReady = false; remoteReady = false;
+            opponentPeerId = null; opponentName = "Ami";
+
+            room = joinRoom({ appId: TRYSTERO_APP_ID }, code);
+            scoreAction = room.makeAction('score');
+            profileAction = room.makeAction('profile');
+            readyAction = room.makeAction('ready');
+            startAction = room.makeAction('start');
+
+            room.onPeerJoin = peerId => {
+                opponentPeerId = peerId;
+                profileAction.send({ name: userData.username });
+                document.getElementById('duel-status').innerText = "Ami connecté ! Appuie sur Prêt.";
+                document.getElementById('duel-ready-btn').disabled = false;
+            };
+            room.onPeerLeave = peerId => {
+                if (peerId === opponentPeerId) {
+                    opponentPeerId = null;
+                    if (gameActive) {
+                        endBattle();
+                    } else {
+                        alert("Ton ami a quitté le duel.");
+                        document.getElementById('duel-status').innerText = "En attente d'un ami...";
+                        document.getElementById('duel-ready-btn').disabled = true;
+                    }
+                }
+            };
+            profileAction.onMessage = data => { opponentName = (data && data.name) || "Ami"; };
+            readyAction.onMessage = () => { remoteReady = true; tryStartSync(); };
+            startAction.onMessage = data => { scheduleMultiplayerStart(data.ts); };
+            scoreAction.onMessage = data => {
+                if (isMultiplayer && gameActive) {
+                    botScore = data.score;
+                    document.getElementById('bot-score').innerText = botScore;
+                    updateCompareBar();
+                }
+            };
+        }
+
+        function markReady() {
+            if (!room) return;
+            localReady = true;
+            const btn = document.getElementById('duel-ready-btn');
+            btn.disabled = true;
+            btn.innerText = "En attente de l'ami...";
+            readyAction.send({});
+            tryStartSync();
+        }
+        function tryStartSync() {
+            if (localReady && remoteReady && isHost) {
+                const ts = Date.now() + 3000;
+                startAction.send({ ts });
+                scheduleMultiplayerStart(ts);
+            }
+        }
+        function scheduleMultiplayerStart(ts) {
+            document.getElementById('duel-status').innerText = "Le duel commence...";
+            const delay = Math.max(0, ts - Date.now());
+            setTimeout(() => startBattle(opponentName, true), delay);
+        }
+
+        function leaveDuel() {
+            if (room) { try { room.leave(); } catch (e) {} room = null; }
+            const stream = videoElement.srcObject;
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            document.getElementById('duel-ready-btn').disabled = true;
+            document.getElementById('duel-ready-btn').innerText = 'Prêt';
+            switchTab('menu-screen');
+        }
+
+        // ===================== BATAILLE (commune bot / ami) =====================
+        function startBattle(oppName, multiplayer) {
+            isMultiplayer = !!multiplayer;
+            currentOpponentLabel = oppName;
+            showScreen('battle-screen');
+            document.getElementById('hud-player-name').innerText = userData.username;
+            document.getElementById('hud-bot-name').innerText = oppName;
+            document.getElementById('hud-player-pfp').src = userData.pfp || defaultAvatarDataUri();
+            document.getElementById('hud-bot-pfp').src = defaultAvatarDataUri();
+
+            playerScore = 0; botScore = 0; time = 30; isDown = false; repMaxPercent = 0; forfeited = false; gameActive = true;
+            document.getElementById('player-score').innerText = 0;
+            document.getElementById('bot-score').innerText = 0;
+            document.getElementById('timer').innerText = time;
+            updateCompareBar();
+
+            detectFrame();
+
+            timerInterval = setInterval(() => {
+                time--; document.getElementById('timer').innerText = time;
+                if (time <= 0) endBattle();
+            }, 1000);
+
+            if (!isMultiplayer) {
+                botInterval = setInterval(() => {
+                    if (gameActive) {
+                        botScore++;
+                        document.getElementById('bot-score').innerText = botScore;
+                        updateCompareBar();
+                    }
+                }, currentBotInterval);
+            }
+        }
+
+        function abandonBattle() {
+            if (!confirm("Abandonner le duel ?")) return;
+            forfeited = true;
+            endBattle();
+        }
+
+        function endBattle() {
+            if (!gameActive) return;
+            gameActive = false;
+            clearInterval(timerInterval); clearInterval(botInterval);
+
+            const stream = videoElement.srcObject;
+            if (stream) stream.getTracks().forEach(track => track.stop());
+
+            if (isMultiplayer && scoreAction) {
+                try { scoreAction.send({ score: playerScore }); } catch (e) {}
+            }
+
+            showScreen('result-screen');
+            const title = document.getElementById('result-title');
+            const trophiesTxt = document.getElementById('result-trophies');
+            document.getElementById('result-recap').innerText = `Toi : ${playerScore}  —  ${currentOpponentLabel} : ${botScore}`;
+
+            let win = false, tie = false;
+            if (forfeited) {
+                win = false;
+            } else if (playerScore > botScore) {
+                win = true;
+            } else if (playerScore < botScore) {
+                win = false;
+            } else {
+                tie = true;
+            }
+
+            if (tie) {
+                title.innerText = "ÉGALITÉ"; title.style.color = "white";
+                trophiesTxt.innerText = "0 🏆"; trophiesTxt.style.color = "white";
+            } else if (win) {
+                title.innerText = "VICTOIRE"; title.style.color = "#4287f5";
+                userData.trophies += 30; trophiesTxt.innerText = "+30 🏆"; trophiesTxt.style.color = "lightgreen";
+                userData.wins++;
+            } else {
+                title.innerText = forfeited ? "ABANDON" : "DÉFAITE"; title.style.color = "#f54242";
+                let loss = Math.min(userData.trophies, 20);
+                userData.trophies -= loss; trophiesTxt.innerText = "-" + loss + " 🏆"; trophiesTxt.style.color = "#f54242";
+                userData.losses++;
+            }
+
+            userData.totalPushups += playerScore;
+            userData.bestDuelPushups = Math.max(userData.bestDuelPushups, playerScore);
+            userData.highestTrophies = Math.max(userData.highestTrophies, userData.trophies);
+            saveData();
+
+            if (isMultiplayer && room) {
+                setTimeout(() => { if (room) { try { room.leave(); } catch (e) {} room = null; } }, 500);
+            }
+        }
+
+        function resetToMenu() {
+            initMenu();
+        }
+    </script>
+
+    <script type="module">
+        import { joinRoom } from 'https://esm.run/trystero';
+        window.__trystero = { joinRoom };
+        window.dispatchEvent(new Event('trystero-ready'));
+    </script>
+</body>
+</html>
