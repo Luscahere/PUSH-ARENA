@@ -45,7 +45,12 @@ input,textarea{font-family:inherit;-webkit-appearance:none;border-radius:0}
 .gold{color:var(--acc)}
 
 /* ---------- caméra source : hors écran mais RENDUE (indispensable sur iOS) ---------- */
+/* Au repos : hors écran mais RENDUE (display:none bloque le décodage sur iOS). */
 #cam{position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1}
+/* Affichée : iOS n'autorise qu'UN seul <video> par flux caméra, donc on déplace
+   ce même élément dans l'écran qui doit le montrer. */
+#cam.camfeed{position:absolute;inset:0;width:100%;height:100%;opacity:1;z-index:0;
+  object-fit:cover;pointer-events:none}
 
 /* ---------- chargement ---------- */
 #boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;
@@ -1399,6 +1404,22 @@ const TR=(()=>{
   function camStop(){if(T.stream){T.stream.getTracks().forEach(t=>t.stop());T.stream=null;}
     if(V.el)V.el.srcObject=null;}
 
+  /* iOS Safari ne joue un flux caméra que dans UN seul <video>. On ne duplique
+     donc jamais le srcObject : on déplace l'élément unique là où il doit être vu. */
+  function attach(host){
+    if(!V.el)V.el=$('#cam');
+    if(!V.el||!host)return;
+    V.el.classList.add('camfeed');
+    host.insertBefore(V.el,host.firstChild);   // sous le canvas du squelette
+    V.el.play().catch(()=>{});
+  }
+  function detach(){
+    if(!V.el)return;
+    V.el.classList.remove('camfeed');
+    V.el.style.transform='';
+    if(V.el.parentNode!==document.body)document.body.appendChild(V.el);
+  }
+
   /* ---------- chargement du modèle ---------- */
   let detector=null;
   function loadScript(src){return new Promise((res,rej)=>{
@@ -1637,7 +1658,8 @@ const TR=(()=>{
     Bus.emit('tracker:start',T.mode);
     return T.mode;
   }
-  function stop(q){T.active=0;if(loopOff){loopOff();loopOff=null;}camStop();if(!q)Bus.emit('tracker:stop');}
+  function stop(q){T.active=0;if(loopOff){loopOff();loopOff=null;}camStop();detach();
+    if(!q)Bus.emit('tracker:stop');}
   function manualRep(){
     const now=performance.now();
     if(now-T.lastRepAt<200)return 0;
@@ -1752,7 +1774,7 @@ const TR=(()=>{
     feedPose(analyse(kp),t==null?performance.now():t);
     return{elbow:T.elbow,body:T.body,form:T.form,state:T.state,reps:T.reps};}
   Object.assign(T,{start,stop,reset,manualRep,drawSkeleton,drawWave,modeLabel,thresholds,
-    loadModel,preload,feedKeypoints,KP});
+    loadModel,preload,feedKeypoints,attach,detach,KP});
   Object.defineProperty(T,'video',{get(){return V.el;}});
   Object.defineProperty(T,'vw',{get(){return V.w;}});
   Object.defineProperty(T,'vh',{get(){return V.h;}});
@@ -2981,8 +3003,7 @@ const DUEL=(()=>{
   }
 
   function duelHtml(mode,me,opp){
-    return '<div class="stage"><video id="dv" playsinline webkit-playsinline muted autoplay></video>'+
-      '<canvas id="dsk"></canvas></div><div class="vig"></div>'+
+    return '<div class="stage"><canvas id="dsk"></canvas></div><div class="vig"></div>'+
 
       '<div class="dTop"><div class="hud"><div class="hudR">'+
         '<div class="pl me" id="fme"><div class="plav"><div class="av">'+me.avatar+'</div></div>'+
@@ -3033,13 +3054,11 @@ const DUEL=(()=>{
     reflect(el,mode);
     D.upg=Bus.on('tracker:upgrade',()=>{reflect(el,'pose');
       FX.toast('Squelette IA activé','g','🦴');});
-    const v=el.querySelector('#dv');
-    if(mode!=='manual'&&TR.video&&TR.video.srcObject){
-      v.srcObject=TR.video.srcObject;v.setAttribute('playsinline','');v.play().catch(()=>{});
-      el.classList.add('camon');
-    }
+    // on DÉPLACE l'unique élément vidéo dans la scène (pas de second <video>)
+    if(mode!=='manual')TR.attach(el.querySelector('.stage'));
     const mir=S.settings.mirror?'scaleX(-1)':'none';
-    v.style.transform=mir;el.querySelector('#dsk').style.transform=mir;
+    if(TR.video)TR.video.style.transform=mir;
+    el.querySelector('#dsk').style.transform=mir;
 
     TR.onRep=onRep;
     TR.onState=s=>{
@@ -3322,7 +3341,7 @@ const DUEL=(()=>{
   async function setupFlow(){
     const box=h('<div class="cal">'+
       '<div class="calT">Réglage de la caméra</div>'+
-      '<div class="calCam"><video id="cv" playsinline muted autoplay></video><canvas id="cc"></canvas></div>'+
+      '<div class="calCam"><canvas id="cc"></canvas></div>'+
       '<div class="pchk" id="pk"></div>'+
       '<div class="calX" id="cx">Pose le téléphone <b style="color:var(--gold-200)">au sol, sur le côté</b>, '+
       'à 1–2 m de toi, calé contre un mur. Il doit voir tout ton corps de profil.</div>'+
@@ -3338,10 +3357,10 @@ const DUEL=(()=>{
       let m='manual';
       try{m=await TR.start({mode:'pose',facing,onProg:(p,t)=>{cx.textContent=t+' '+Math.round(p*100)+'%';}});}
       catch(e){cx.innerHTML='<b style="color:#ff8d78">Caméra indisponible.</b><br>'+esc(TR.error||'');return;}
-      const v=box.querySelector('#cv');
-      if(TR.video&&TR.video.srcObject){v.srcObject=TR.video.srcObject;v.play().catch(()=>{});}
+      TR.attach(box.querySelector('.calCam'));
       const mir=S.settings.mirror?'scaleX(-1)':'none';
-      v.style.transform=mir;box.querySelector('#cc').style.transform=mir;
+      if(TR.video)TR.video.style.transform=mir;
+      box.querySelector('#cc').style.transform=mir;
       if(m!=='pose'){cx.innerHTML='<b style="color:#ffd24a">Le modèle IA n\'a pas pu être chargé.</b><br>'+
         'Mode simple utilisé (moins précis mais fonctionnel).';return;}
       cx.innerHTML='Mets-toi en position de pompes. Les voyants passent au vert quand tout est bon.';
@@ -3373,7 +3392,7 @@ const DUEL=(()=>{
   async function testFlow(){
     const box=h('<div class="cal">'+
       '<div class="calT">Test de détection</div>'+
-      '<div class="calCam"><video id="tv" playsinline muted autoplay></video><canvas id="tc"></canvas></div>'+
+      '<div class="calCam"><canvas id="tc"></canvas></div>'+
       '<div style="display:flex;align-items:center;gap:14px">'+
       '<div class="calBig" id="tn">0</div><div style="text-align:left">'+
       '<div class="post up" id="tp"><i></i><span>PRÊT</span></div>'+
@@ -3394,11 +3413,11 @@ const DUEL=(()=>{
     const cnt=box.querySelector('#tn'),po=box.querySelector('#tp'),inf=box.querySelector('#ti');
     let m='manual';
     try{m=await TR.start({onProg:(p,t)=>{inf.textContent=t;}});}catch(e){}
-    const v=box.querySelector('#tv');
-    if(TR.video&&TR.video.srcObject){v.srcObject=TR.video.srcObject;v.play().catch(()=>{});}
+    if(m!=='manual')TR.attach(box.querySelector('.calCam'));
     else box.querySelector('.calCam').style.display='none';
     const mir=S.settings.mirror?'scaleX(-1)':'none';
-    v.style.transform=mir;box.querySelector('#tc').style.transform=mir;
+    if(TR.video)TR.video.style.transform=mir;
+    box.querySelector('#tc').style.transform=mir;
     TR.onRep=n=>{cnt.textContent=n;
       cnt.animate([{transform:'scale(1.4)'},{transform:'scale(1)'}],{duration:280,easing:'cubic-bezier(.2,1.4,.35,1)'});
       SND.play('rep');vibrate(20);};
