@@ -1,819 +1,93 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Push Arena - Complete Edition</title>
-    <!-- MediaPipe Pose & PeerJS Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    
-    <style>
-        :root {
-            --bg-main: #0b0f19;
-            --bg-card: #151c2e;
-            --accent: #00e5ff;
-            --accent-glow: rgba(0, 229, 255, 0.4);
-            --text-main: #f1f5f9;
-            --text-sub: #94a3b8;
-            --danger: #ef4444;
-            --gold: #ffd700;
-            
-            --brz-gem: #cd7f32; --brz-glow: rgba(205, 127, 50, 0.5);
-            --arg-gem: #c0c0c0; --arg-glow: rgba(192, 192, 192, 0.5);
-            --or-gem: #ffd700;  --or-glow: rgba(255, 215, 0, 0.5);
-            --plt-gem: #e5e4e2; --plt-glow: rgba(229, 228, 226, 0.5);
-            --dia-gem: #b9f2ff; --dia-glow: rgba(185, 242, 255, 0.5);
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #030712; color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
-
-        #app-window {
-            width: 100%; max-width: 420px; height: 100vh; max-height: 880px;
-            background: var(--bg-main); border-radius: 20px; position: relative;
-            display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: 0 0 40px rgba(0, 229, 255, 0.15); border: 1px solid #1e293b;
-        }
-
-        /* HEADER */
-        header {
-            padding: 15px 20px; background: var(--bg-card); display: flex;
-            justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; z-index: 10;
-        }
-        .user-pill { display: flex; align-items: center; gap: 10px; }
-        .avatar { width: 40px; height: 40px; background: #1e293b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 2px solid var(--accent); }
-        .rank-badge { padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.75rem; background: var(--or-gem); color: #000; box-shadow: 0 0 10px var(--or-glow); cursor: pointer; }
-
-        /* VIEWPORT & SWIPE CONTAINER */
-        .viewport { flex: 1; overflow: hidden; position: relative; }
-        #swipe-container { display: flex; width: 400%; height: 100%; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
-        .tab-page { width: 25%; height: 100%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-
-        /* NAVIGATION BAR */
-        nav { display: flex; background: var(--bg-card); border-top: 1px solid #1e293b; padding: 10px 0; z-index: 10; }
-        .nav-btn { flex: 1; text-align: center; background: none; border: none; color: var(--text-sub); font-size: 0.8rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-        .nav-btn.active { color: var(--accent); font-weight: bold; }
-
-        /* UI CARDS & BUTTONS */
-        .card { background: var(--bg-card); padding: 18px; border-radius: 16px; border: 1px solid #1e293b; }
-        .btn-action { background: linear-gradient(135deg, var(--accent), #0099ff); color: #000; font-weight: bold; padding: 14px; border: none; border-radius: 12px; cursor: pointer; width: 100%; text-align: center; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 15px var(--accent-glow); transition: transform 0.1s; }
-        .btn-action:active { transform: scale(0.97); }
-
-        /* OVERLAYS & MODALS */
-        .overlay { position: absolute; inset: 0; background: rgba(11, 15, 25, 0.95); backdrop-filter: blur(10px); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; gap: 20px; text-align: center; }
-        .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; width: 100%; max-width: 250px; }
-        .pin-btn { width: 60px; height: 60px; border-radius: 50%; background: #1e293b; border: 1px solid #334155; color: #fff; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: auto; }
-        .pin-dots { display: flex; gap: 12px; justify-content: center; }
-        .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); }
-        .pin-dot.filled { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
-
-        /* CAMERA & BATTLE SCREEN */
-        .cam-wrapper { position: relative; width: 100%; height: 260px; border-radius: 16px; overflow: hidden; background: #000; border: 2px solid var(--accent); }
-        #video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        #canvas { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
-        .rep-popup { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 4rem; font-weight: 900; color: var(--accent); text-shadow: 0 0 20px var(--accent); pointer-events: none; opacity: 0; transition: transform 0.2s, opacity 0.2s; }
-        .rep-popup.active { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
-        .cam-flash { position: absolute; inset: 0; background: rgba(0, 229, 255, 0.3); opacity: 0; pointer-events: none; transition: opacity 0.1s; }
-        .cam-flash.active { opacity: 1; }
-
-        input, textarea { width: 100%; padding: 12px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; margin-bottom: 10px; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1830">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Pompes Royale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone.svg">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/game.css">
+<link rel="stylesheet" href="css/duel.css">
 </head>
 <body>
 
-    <div id="app-window">
-        <!-- HEADER -->
-        <header>
-            <div class="user-pill">
-                <div class="avatar" id="display-avatar">🦍</div>
-                <div>
-                    <div id="display-username" style="font-weight: bold; font-size: 0.9rem;">JOUEUR</div>
-                    <div style="font-size: 0.75rem; color: var(--text-sub);"><span id="display-elo">1000</span> ELO</div>
-                </div>
-            </div>
-            <div class="rank-badge" id="rank-gem" onclick="openRankViewer()">OR</div>
-        </header>
-
-        <!-- VIEWPORT PAGE CONTAINER -->
-        <div class="viewport">
-            <div id="swipe-container">
-                
-                <!-- TAB 0: ARENA -->
-                <div class="tab-page">
-                    <h2 style="font-size: 1.2rem;">⚡ BATAILLE D'ARÈNE</h2>
-                    <div class="card" style="text-align: center;">
-                        <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">Affrontez des adversaires en temps réel ou entraînez-vous contre l'IA.</p>
-                        <button class="btn-action" onclick="startSmartMatchmaking()">Trouver un match</button>
-                    </div>
-                    <div class="card">
-                        <h3 style="font-size: 0.95rem; margin-bottom: 8px;">📊 Statut Actuel</h3>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub);">
-                            <span>Rang: <b id="rank-name" style="color: var(--accent);">OR</b></span>
-                            <span>Victoires: <b id="stat-games-won">0</b></span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB 1: MULTIJOUEUR / AMIS -->
-                <div class="tab-page">
-                    <h2 style="font-size: 1.2rem;">👥 MULTIJOUEUR P2P</h2>
-                    <div class="card">
-                        <button class="btn-action" onclick="shareFriendLink()">Inviter / Rejoindre un Ami</button>
-                    </div>
-                    <div class="card">
-                        <h3 style="font-size: 0.95rem; margin-bottom: 10px;">Liste d'amis</h3>
-                        <div id="friends-catalog-list"></div>
-                    </div>
-                </div>
-
-                <!-- TAB 2: LEADERBOARD -->
-                <div class="tab-page">
-                    <h2 style="font-size: 1.2rem;">🏆 CLASSEMENT GLOBAL</h2>
-                    <div class="card">
-                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155;">
-                            <span>1. TITAN_FIT</span>
-                            <span style="color: var(--gold);">2450 ELO</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155;">
-                            <span>2. CYBER_PUMP</span>
-                            <span style="color: var(--plt-gem);">2100 ELO</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; padding: 8px 0;">
-                            <span>3. VOUS</span>
-                            <span style="color: var(--accent);"><span id="stat-current-elo">1000</span> ELO</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB 3: PROFIL & STATS -->
-                <div class="tab-page">
-                    <h2 style="font-size: 1.2rem;">👤 PROFIL COMBATTANT</h2>
-                    <div class="card" style="text-align: center;">
-                        <div class="avatar" id="profile-pdp" style="margin: 0 auto 10px; width: 60px; height: 60px; font-size: 1.8rem;">🦍</div>
-                        <h3 id="profile-username">JOUEUR</h3>
-                        <p id="profile-tier" style="font-size: 0.8rem; color: var(--accent);">Guerrier Débutant</p>
-                        <p id="profile-bio" style="font-size: 0.75rem; color: var(--text-sub); margin-top: 5px;">"Prêt à tout écraser !"</p>
-                    </div>
-                    <div class="card" style="height: 160px; position: relative;">
-                        <h4 style="font-size: 0.85rem; margin-bottom: 10px; color: var(--text-sub);">Progression des Pompes</h4>
-                        <canvas id="pushupChart"></canvas>
-                    </div>
-                    <div class="card">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.8rem; text-align: center;">
-                            <div>Record ELO: <b id="stat-max-elo">1000</b></div>
-                            <div>Parties: <b id="stat-games-played">0</b></div>
-                        </div>
-                    </div>
-                    <button style="background: var(--danger); border: none; color: white; padding: 10px; border-radius: 8px; cursor: pointer;" onclick="resetAccount()">Réinitialiser Compte</button>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- NAVIGATION -->
-        <nav>
-            <button class="nav-btn active" onclick="goToTab(0)"><span>⚡</span><span>Arène</span></button>
-            <button class="nav-btn" onclick="goToTab(1)"><span>👥</span><span>Social</span></button>
-            <button class="nav-btn" onclick="goToTab(2)"><span>🏆</span><span>Ladder</span></button>
-            <button class="nav-btn" onclick="goToTab(3)"><span>👤</span><span>Profil</span></button>
-        </nav>
-
-        <!-- OVERLAY AUTHENTIFICATION -->
-        <div class="overlay" id="auth-overlay">
-            <div id="pin-screen" style="width: 100%;">
-                <div class="avatar" id="auth-pdp" style="margin: 0 auto 10px; width: 60px; height: 60px; font-size: 1.8rem;">🦍</div>
-                <h3 id="auth-username-title">JOUEUR</h3>
-                <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px;">Entrez votre PIN à 4 chiffres</p>
-                <div class="pin-dots">
-                    <div class="pin-dot" id="dot-0"></div>
-                    <div class="pin-dot" id="dot-1"></div>
-                    <div class="pin-dot" id="dot-2"></div>
-                    <div class="pin-dot" id="dot-3"></div>
-                </div>
-                <div class="pin-grid">
-                    <button class="pin-btn" onclick="pressPin('1')">1</button>
-                    <button class="pin-btn" onclick="pressPin('2')">2</button>
-                    <button class="pin-btn" onclick="pressPin('3')">3</button>
-                    <button class="pin-btn" onclick="pressPin('4')">4</button>
-                    <button class="pin-btn" onclick="pressPin('5')">5</button>
-                    <button class="pin-btn" onclick="pressPin('6')">6</button>
-                    <button class="pin-btn" onclick="pressPin('7')">7</button>
-                    <button class="pin-btn" onclick="pressPin('8')">8</button>
-                    <button class="pin-btn" onclick="pressPin('9')">9</button>
-                    <button class="pin-btn" style="grid-column: 2;" onclick="pressPin('0')">0</button>
-                </div>
-            </div>
-
-            <div id="reg-screen" style="width: 100%; display: none;">
-                <h2>Créer un Profil</h2>
-                <input type="text" id="reg-pseudo" placeholder="Pseudo Ex: TITAN">
-                <input type="email" id="reg-email" placeholder="Email (Optionnel)">
-                <input type="password" id="reg-pass" placeholder="Mot de passe">
-                <input type="password" id="reg-pin" maxlength="4" placeholder="Code PIN (4 chiffres)">
-                <textarea id="reg-bio" placeholder="Bio / Citation"></textarea>
-                <button class="btn-action" onclick="submitRegister()">Valider</button>
-            </div>
-        </div>
-
-        <!-- OVERLAY MATCHMAKING -->
-        <div class="overlay" id="screen-matchmaking" style="display: none;">
-            <div style="font-size: 3rem;" class="shake-mini">🔍</div>
-            <h3 id="mm-status">RECHERCHE D'ADVERSAIRE...</h3>
-            <button style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 8px 16px; border-radius: 8px; cursor: pointer;" onclick="cancelMatchmaking()">Annuler</button>
-        </div>
-
-        <!-- OVERLAY BATTLE -->
-        <div class="overlay" id="screen-battle" style="display: none;">
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                <div>VOUS: <b id="p1-score" style="color: var(--accent); font-size: 1.5rem;">0</b></div>
-                <div style="font-size: 2rem; font-weight: bold; color: var(--gold);" id="battle-timer">30</div>
-                <div><span id="p2-name">ADV</span>: <b id="p2-score" style="color: var(--danger); font-size: 1.5rem;">0</b></div>
-            </div>
-
-            <div class="cam-wrapper">
-                <video id="video" playsinline muted></video>
-                <canvas id="canvas"></canvas>
-                <div class="rep-popup" id="rep-popup">+1</div>
-                <div class="cam-flash" id="cam-flash"></div>
-            </div>
-            
-            <p style="font-size: 0.75rem; color: var(--text-sub);">Positionnez-vous face à la caméra et effectuez des pompes complètes.</p>
-        </div>
-
-        <!-- OVERLAY RESULT -->
-        <div class="overlay" id="screen-result" style="display: none;">
-            <h2 id="res-title" style="font-size: 2rem;">VICTOIRE !</h2>
-            <div style="font-size: 1.2rem;">Score: <span id="res-p1">0</span> - <span id="res-p2">0</span></div>
-            <div style="font-size: 1rem; color: var(--gold);">Gain ELO: <span id="res-elo">+30</span></div>
-            <button class="btn-action" onclick="returnToMenu()">Continuer</button>
-        </div>
-
-        <!-- MODAL RANKS -->
-        <div class="overlay" id="modal-ranks" style="display: none;">
-            <h3>Gradients & Niveaux</h3>
-            <div style="text-align: left; width: 100%; font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
-                <div>BRONZE : 0 - 499 ELO</div>
-                <div>ARGENT : 500 - 999 ELO</div>
-                <div>OR : 1000 - 1499 ELO</div>
-                <div>PLATINE : 1500 - 1999 ELO</div>
-                <div>DIAMANT : 2000+ ELO</div>
-            </div>
-            <button class="btn-action" onclick="closeModals()">Fermer</button>
-        </div>
-
-    </div>
-
-    <!-- LOGIQUE JAVASCRIPT -->
-    <script>
-        // ===================== ETAT ET DATA DU JOUEUR =====================
-        let user = {
-            username: "JOUEUR",
-            email: "",
-            pass: "",
-            pin: "1234",
-            avatar: "🦍",
-            bio: "Guerrier prêt au combat !",
-            levelTitle: "Combattant",
-            elo: 1000,
-            maxElo: 1000,
-            gamesPlayed: 0,
-            gamesWon: 0,
-            history: [10, 15, 12, 18, 22, 20, 25]
-        };
-        
-        const RANKS = [
-            { name: "BRONZE", min: 0, color: "var(--brz-gem)", glow: "var(--brz-glow)" },
-            { name: "ARGENT", min: 500, color: "var(--arg-gem)", glow: "var(--arg-glow)" },
-            { name: "OR", min: 1000, color: "var(--or-gem)", glow: "var(--or-glow)" },
-            { name: "PLATINE", min: 1500, color: "var(--plt-gem)", glow: "var(--plt-glow)" },
-            { name: "DIAMANT", min: 2000, color: "var(--dia-gem)", glow: "var(--dia-glow)" }
-        ];
-
-        let pinInput = "";
-
-        // ===================== MULTIJOUEUR (PEERJS) =====================
-        let peer = null;
-        let peerConnection = null;
-        let myPeerId = null;
-        let friendList = JSON.parse(localStorage.getItem('pushArenaFriends')) || [];
-
-        // ===================== ETAT DU JEU (BATTLE) =====================
-        let battleState = {
-            active: false,
-            mode: "bot", // 'bot' ou 'p2p'
-            myScore: 0,
-            opponentScore: 0,
-            timeLeft: 30,
-            timerInterval: null
-        };
-
-        // ===================== MEDIAPIPE & CAMERA =====================
-        let pose, camera;
-        let isCamRunning = false;
-        let pushupState = "up"; // 'up' ou 'down'
-        const videoElement = document.getElementById('video');
-        const canvasElement = document.getElementById('canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-
-        // ===================== INITIALISATION =====================
-        window.onload = () => {
-            loadUserData();
-            initPeerJS();
-            renderFriendsList();
-            renderChart();
-            updateUI();
-            injectDynamicCSS();
-        };
-
-        // ===================== SYSTEME DE NAVIGATION =====================
-        function goToTab(index) {
-            document.getElementById('swipe-container').style.transform = `translateX(-${index * 25}%)`;
-            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
-                if(i === index) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
-            if (index === 3) renderChart();
-        }
-
-        // ===================== AUTHENTIFICATION =====================
-        function loadUserData() {
-            const saved = localStorage.getItem('pushArenaUser');
-            if (saved) {
-                user = JSON.parse(saved);
-                document.getElementById('auth-username-title').innerText = user.username;
-                document.getElementById('auth-pdp').innerText = user.avatar;
-                document.getElementById('reg-screen').style.display = 'none';
-                document.getElementById('pin-screen').style.display = 'block';
-            } else {
-                document.getElementById('pin-screen').style.display = 'none';
-                document.getElementById('reg-screen').style.display = 'block';
-            }
-        }
-
-        function saveUser() {
-            localStorage.setItem('pushArenaUser', JSON.stringify(user));
-            updateUI();
-        }
-
-        function submitRegister() {
-            const pseudo = document.getElementById('reg-pseudo').value;
-            const email = document.getElementById('reg-email').value;
-            const pass = document.getElementById('reg-pass').value;
-            const pin = document.getElementById('reg-pin').value;
-            const bio = document.getElementById('reg-bio').value;
-            
-            if(!pseudo || !pin || pin.length !== 4) return alert("Remplissez le Pseudo et un PIN de 4 chiffres !");
-            
-            user.username = pseudo.toUpperCase();
-            user.email = email;
-            user.pass = pass;
-            user.pin = pin;
-            user.bio = bio || user.bio;
-            
-            saveUser();
-            document.getElementById('auth-overlay').style.display = 'none';
-            playSuccessVFX();
-        }
-
-        function pressPin(num) {
-            if (pinInput.length < 4) {
-                pinInput += num;
-                document.getElementById(`dot-${pinInput.length - 1}`).classList.add('filled');
-            }
-            if (pinInput.length === 4) {
-                setTimeout(() => {
-                    if (pinInput === user.pin) {
-                        document.getElementById('auth-overlay').style.display = 'none';
-                        playSuccessVFX();
-                    } else {
-                        triggerScreenShake();
-                        clearPin();
-                    }
-                }, 200);
-            }
-        }
-
-        function clearPin() {
-            pinInput = "";
-            document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('filled'));
-        }
-
-        function resetAccount() {
-            if(confirm("Êtes-vous sûr de vouloir réinitialiser toutes vos données ?")) {
-                localStorage.clear();
-                location.reload();
-            }
-        }
-
-        // ===================== MISE A JOUR UI & GRADES =====================
-        function updateUI() {
-            document.getElementById('display-username').innerText = user.username;
-            document.getElementById('display-avatar').innerText = user.avatar;
-            document.getElementById('display-elo').innerText = user.elo;
-            
-            document.getElementById('profile-username').innerText = user.username;
-            document.getElementById('profile-pdp').innerText = user.avatar;
-            document.getElementById('profile-bio').innerText = `"${user.bio}"`;
-            document.getElementById('profile-tier').innerText = user.levelTitle;
-            
-            document.getElementById('stat-current-elo').innerText = user.elo;
-            document.getElementById('stat-max-elo').innerText = user.maxElo;
-            document.getElementById('stat-games-played').innerText = user.gamesPlayed;
-            document.getElementById('stat-games-won').innerText = user.gamesWon;
-
-            let currentRank = RANKS[0];
-            for(let i=RANKS.length-1; i>=0; i--) {
-                if(user.elo >= RANKS[i].min) { currentRank = RANKS[i]; break; }
-            }
-            
-            document.getElementById('rank-name').innerText = currentRank.name;
-            document.getElementById('rank-gem').innerText = currentRank.name.substring(0,3);
-            document.getElementById('rank-gem').style.background = currentRank.color;
-            document.getElementById('rank-gem').style.boxShadow = `0 0 25px ${currentRank.glow}`;
-        }
-
-        // ===================== PEERJS (MULTIJOUEUR P2P) =====================
-        function initPeerJS() {
-            peer = new Peer();
-            peer.on('open', (id) => {
-                myPeerId = id;
-            });
-
-            peer.on('connection', (conn) => {
-                peerConnection = conn;
-                setupPeerEvents();
-                startBattle("p2p", "ADVERSAIRE (P2P)");
-            });
-        }
-
-        function setupPeerEvents() {
-            peerConnection.on('data', (data) => {
-                if(data.type === 'score_update') {
-                    battleState.opponentScore = data.score;
-                    document.getElementById('p2-score').innerText = battleState.opponentScore;
-                    createParticleExplosion(window.innerWidth - 50, 100, '#ef4444');
-                }
-            });
-        }
-
-        function shareFriendLink() {
-            if(!myPeerId) return alert("Connexion au serveur en cours...");
-            const joinCode = prompt(`Ton code d'invitation est :\n${myPeerId}\n\nEntre le code d'un ami pour le rejoindre :`);
-            if (joinCode && joinCode !== myPeerId) {
-                peerConnection = peer.connect(joinCode);
-                peerConnection.on('open', () => {
-                    setupPeerEvents();
-                    startBattle("p2p", "AMI");
-                });
-            }
-        }
-
-        function renderFriendsList() {
-            const container = document.getElementById('friends-catalog-list');
-            container.innerHTML = '';
-            if(friendList.length === 0) {
-                container.innerHTML = '<div style="font-size:0.8rem; color:#aaa; text-align:center;">Aucun ami pour le moment. Partage ton code !</div>';
-            }
-        }
-
-        // ===================== MATCHMAKING =====================
-        let mmTimeout;
-        function startSmartMatchmaking() {
-            document.getElementById('screen-matchmaking').style.display = 'flex';
-            document.getElementById('mm-status').innerText = "ANALYSE DE VOTRE NIVEAU...";
-            
-            mmTimeout = setTimeout(() => {
-                document.getElementById('mm-status').innerText = "ADVERSAIRE TROUVÉ !";
-                setTimeout(() => {
-                    startBattle("bot", "COMBATTANT INCONNU");
-                }, 1000);
-            }, 3000 + Math.random() * 3000);
-        }
-
-        function cancelMatchmaking() {
-            clearTimeout(mmTimeout);
-            document.getElementById('screen-matchmaking').style.display = 'none';
-        }
-
-        // ===================== LOGIQUE DE BATAILLE =====================
-        function startBattle(mode, oppName) {
-            document.getElementById('screen-matchmaking').style.display = 'none';
-            document.getElementById('screen-battle').style.display = 'flex';
-            
-            battleState = {
-                active: true,
-                mode: mode,
-                myScore: 0,
-                opponentScore: 0,
-                timeLeft: 30,
-                timerInterval: null
-            };
-
-            document.getElementById('p1-score').innerText = "0";
-            document.getElementById('p2-score').innerText = "0";
-            document.getElementById('battle-timer').innerText = "30";
-            document.getElementById('p2-name').innerText = oppName;
-
-            initCamera();
-
-            battleState.timerInterval = setInterval(() => {
-                battleState.timeLeft--;
-                document.getElementById('battle-timer').innerText = battleState.timeLeft;
-                
-                if(battleState.timeLeft <= 5 && battleState.timeLeft > 0) {
-                    document.getElementById('battle-timer').style.color = "#ef4444";
-                    document.getElementById('battle-timer').style.transform = "scale(1.5)";
-                    setTimeout(() => document.getElementById('battle-timer').style.transform = "scale(1)", 200);
-                }
-
-                if (battleState.mode === "bot" && battleState.timeLeft % Math.floor(Math.random() * 3 + 1) === 0) {
-                    battleState.opponentScore++;
-                    document.getElementById('p2-score').innerText = battleState.opponentScore;
-                    triggerMiniShake();
-                }
-
-                if (battleState.timeLeft <= 0) {
-                    endSimulationBattle();
-                }
-            }, 1000);
-        }
-
-        function registerPushup() {
-            if (!battleState.active) return;
-            battleState.myScore++;
-            document.getElementById('p1-score').innerText = battleState.myScore;
-            
-            if (battleState.mode === "p2p" && peerConnection) {
-                peerConnection.send({ type: 'score_update', score: battleState.myScore });
-            }
-
-            triggerScreenShake();
-            showRepPopup();
-            flashCamera();
-            createParticleExplosion(50, 100, '#00e5ff');
-        }
-
-        function endSimulationBattle() {
-            if(!battleState.active) return;
-            battleState.active = false;
-            clearInterval(battleState.timerInterval);
-            if(camera) camera.stop();
-            
-            document.getElementById('screen-battle').style.display = 'none';
-            document.getElementById('screen-result').style.display = 'flex';
-            
-            document.getElementById('res-p1').innerText = battleState.myScore;
-            document.getElementById('res-p2').innerText = battleState.opponentScore;
-
-            user.gamesPlayed++;
-            
-            if (battleState.myScore > battleState.opponentScore) {
-                document.getElementById('res-title').innerText = "VICTOIRE !";
-                document.getElementById('res-title').style.color = "#00e5ff";
-                document.getElementById('res-elo').innerText = "+30";
-                user.elo += 30;
-                user.gamesWon++;
-                playSuccessVFX();
-            } else if (battleState.myScore < battleState.opponentScore) {
-                document.getElementById('res-title').innerText = "DÉFAITE...";
-                document.getElementById('res-title').style.color = "#ef4444";
-                document.getElementById('res-elo').innerText = "-15";
-                user.elo = Math.max(0, user.elo - 15);
-            } else {
-                document.getElementById('res-title').innerText = "ÉGALITÉ";
-                document.getElementById('res-title').style.color = "#fff";
-                document.getElementById('res-elo').innerText = "+5";
-                user.elo += 5;
-            }
-
-            if(user.elo > user.maxElo) user.maxElo = user.elo;
-            
-            user.history.shift();
-            user.history.push(battleState.myScore);
-            
-            saveUser();
-            updateUI();
-        }
-
-        function returnToMenu() {
-            document.getElementById('screen-result').style.display = 'none';
-        }
-
-        // ===================== VISION PAR ORDINATEUR (MEDIAPIPE) =====================
-        function initCamera() {
-            if (isCamRunning) return;
-            
-            pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
-            pose.setOptions({
-                modelComplexity: 0, 
-                smoothLandmarks: true,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.5
-            });
-            pose.onResults(onPoseResults);
-
-            camera = new Camera(videoElement, {
-                onFrame: async () => { await pose.send({image: videoElement}); },
-                width: 640, height: 480
-            });
-            camera.start();
-            isCamRunning = true;
-        }
-
-        function calculateAngle(a, b, c) {
-            const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-            let angle = Math.abs(radians * 180.0 / Math.PI);
-            if (angle > 180.0) angle = 360 - angle;
-            return angle;
-        }
-
-        function onPoseResults(results) {
-            canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasElement.width = videoElement.videoWidth;
-            canvasElement.height = videoElement.videoHeight;
-            
-            if (results.poseLandmarks) {
-                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00e5ff', lineWidth: 4});
-                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffd700', lineWidth: 2, radius: 4});
-
-                const shoulder = results.poseLandmarks[11];
-                const elbow = results.poseLandmarks[13];
-                const wrist = results.poseLandmarks[15];
-
-                if (shoulder.visibility > 0.5 && elbow.visibility > 0.5 && wrist.visibility > 0.5) {
-                    const angle = calculateAngle(shoulder, elbow, wrist);
-                    
-                    if (angle < 90 && pushupState === "up") {
-                        pushupState = "down";
-                        canvasElement.style.filter = "brightness(0.7) contrast(1.2)";
-                    }
-                    if (angle > 150 && pushupState === "down") {
-                        pushupState = "up";
-                        canvasElement.style.filter = "none";
-                        registerPushup();
-                    }
-                }
-            }
-            canvasCtx.restore();
-        }
-
-        // ===================== EFFETS VISUELS =====================
-        function injectDynamicCSS() {
-            const style = document.createElement('style');
-            style.innerHTML = `
-                @keyframes heavyShake {
-                    0% { transform: translate(1px, 1px) rotate(0deg); }
-                    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-                    20% { transform: translate(-3px, 0px) rotate(1deg); }
-                    30% { transform: translate(3px, 2px) rotate(0deg); }
-                    40% { transform: translate(1px, -1px) rotate(1deg); }
-                    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-                    60% { transform: translate(-3px, 1px) rotate(0deg); }
-                    70% { transform: translate(3px, 1px) rotate(-1deg); }
-                    80% { transform: translate(-1px, -1px) rotate(1deg); }
-                    90% { transform: translate(1px, 2px) rotate(0deg); }
-                    100% { transform: translate(1px, -2px) rotate(-1deg); }
-                }
-                .shake-hard { animation: heavyShake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
-                .shake-mini { animation: heavyShake 0.15s cubic-bezier(.36,.07,.19,.97) both; opacity: 0.8; }
-                
-                .particle {
-                    position: absolute; pointer-events: none;
-                    border-radius: 50%; z-index: 1000;
-                    animation: pop 0.6s ease-out forwards;
-                }
-                @keyframes pop {
-                    0% { transform: scale(1) translate(0, 0); opacity: 1; }
-                    100% { transform: scale(0) translate(var(--tx), var(--ty)); opacity: 0; }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-
-        function triggerScreenShake() {
-            const app = document.getElementById('app-window');
-            app.classList.remove('shake-hard');
-            void app.offsetWidth;
-            app.classList.add('shake-hard');
-            setTimeout(() => app.classList.remove('shake-hard'), 300);
-        }
-
-        function triggerMiniShake() {
-            const app = document.getElementById('app-window');
-            app.classList.remove('shake-mini');
-            void app.offsetWidth;
-            app.classList.add('shake-mini');
-            setTimeout(() => app.classList.remove('shake-mini'), 150);
-        }
-
-        function showRepPopup() {
-            const popup = document.getElementById('rep-popup');
-            popup.innerText = `+1`;
-            popup.classList.remove('active');
-            void popup.offsetWidth;
-            popup.classList.add('active');
-            setTimeout(() => popup.classList.remove('active'), 400);
-        }
-
-        function flashCamera() {
-            const flash = document.getElementById('cam-flash');
-            flash.classList.remove('active');
-            void flash.offsetWidth;
-            flash.classList.add('active');
-            setTimeout(() => flash.classList.remove('active'), 200);
-        }
-
-        function playSuccessVFX() {
-            for(let i=0; i<30; i++) {
-                setTimeout(() => createParticleExplosion(window.innerWidth/2, window.innerHeight/2, '#ffd700'), i*20);
-            }
-        }
-
-        function createParticleExplosion(x, y, color) {
-            for(let i=0; i<8; i++) {
-                const p = document.createElement('div');
-                p.className = 'particle';
-                p.style.backgroundColor = color;
-                p.style.width = Math.random() * 15 + 5 + 'px';
-                p.style.height = p.style.width;
-                p.style.left = x + 'px';
-                p.style.top = y + 'px';
-                
-                const angle = Math.random() * Math.PI * 2;
-                const distance = Math.random() * 100 + 50;
-                p.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
-                p.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
-                
-                document.body.appendChild(p);
-                setTimeout(() => p.remove(), 600);
-            }
-        }
-
-        // ===================== GRAPHIC CANVAS =====================
-        function renderChart() {
-            const canvas = document.getElementById('pushupChart');
-            if(!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const width = canvas.parentElement.clientWidth - 20;
-            const height = canvas.parentElement.clientHeight - 40;
-            
-            canvas.width = width;
-            canvas.height = height;
-            
-            ctx.clearRect(0, 0, width, height);
-            
-            const data = user.history;
-            const maxVal = Math.max(...data, 10);
-            const stepX = width / (data.length - 1);
-            
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, height); ctx.lineTo(width, height);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.moveTo(0, height - (data[0] / maxVal) * height);
-            
-            for(let i = 1; i < data.length; i++) {
-                const x = i * stepX;
-                const y = height - (data[i] / maxVal) * height;
-                ctx.lineTo(x, y);
-            }
-            
-            ctx.strokeStyle = '#00e5ff';
-            ctx.lineWidth = 4;
-            ctx.lineJoin = 'round';
-            ctx.stroke();
-
-            ctx.lineTo(width, height);
-            ctx.lineTo(0, height);
-            ctx.closePath();
-            
-            let gradient = ctx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, 'rgba(0, 229, 255, 0.4)');
-            gradient.addColorStop(1, 'rgba(0, 229, 255, 0)');
-            ctx.fillStyle = gradient;
-            ctx.fill();
-
-            for(let i = 0; i < data.length; i++) {
-                const x = i * stepX;
-                const y = height - (data[i] / maxVal) * height;
-                ctx.beginPath();
-                ctx.arc(x, y, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                ctx.strokeStyle = '#00e5ff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-        }
-
-        function openRankViewer() { document.getElementById('modal-ranks').style.display = 'flex'; }
-        function closeModals() { document.getElementById('modal-ranks').style.display = 'none'; }
-    </script>
+<!-- ============ ÉCRAN DE CHARGEMENT ============ -->
+<div id="boot">
+  <div class="boot__logo">
+    <div class="boot__crown">👑</div>
+    <h1 class="boot__title">POMPES<span>ROYALE</span></h1>
+  </div>
+  <div class="boot__bar"><i></i></div>
+  <div class="boot__tip">Chargement de l'arène…</div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+  <canvas id="bgfx" aria-hidden="true"></canvas>
+  <div id="bgscene" aria-hidden="true">
+    <div class="bg-layer bg-layer--far"></div>
+    <div class="bg-layer bg-layer--mid"></div>
+    <div class="bg-layer bg-layer--near"></div>
+    <div class="bg-glow"></div>
+  </div>
+
+  <!-- Barre du haut -->
+  <header id="topbar"></header>
+
+  <!-- Écrans -->
+  <main id="screens">
+    <section class="screen" data-screen="shop"></section>
+    <section class="screen" data-screen="talents"></section>
+    <section class="screen" data-screen="arena"></section>
+    <section class="screen" data-screen="social"></section>
+    <section class="screen" data-screen="clan"></section>
+    <section class="screen" data-screen="profile"></section>
+    <section class="screen" data-screen="stats"></section>
+    <section class="screen" data-screen="pass"></section>
+    <section class="screen" data-screen="quests"></section>
+    <section class="screen" data-screen="ranking"></section>
+    <section class="screen" data-screen="settings"></section>
+  </main>
+
+  <!-- Navigation basse -->
+  <nav id="nav"></nav>
+</div>
+
+<!-- Couches flottantes -->
+<div id="overlays"></div>
+<div id="toasts"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div id="netbadge" class="netbadge hidden"><i></i><span>hors-ligne</span></div>
+
+<!-- Éléments techniques du tracker -->
+<video id="camfeed" playsinline muted autoplay class="hidden"></video>
+<canvas id="camwork" class="hidden" width="128" height="96"></canvas>
+
+<!-- ============ SCRIPTS ============ -->
+<script src="js/util.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/net.js"></script>
+<script src="js/tracker.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/screen_arena.js"></script>
+<script src="js/screen_shop.js"></script>
+<script src="js/screen_talents.js"></script>
+<script src="js/screen_social.js"></script>
+<script src="js/screen_clan.js"></script>
+<script src="js/screen_profile.js"></script>
+<script src="js/duel.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
