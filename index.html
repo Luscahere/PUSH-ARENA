@@ -1,530 +1,4 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Push Arena - Complete Edition</title>
-
-    <!-- Polices 3D et Arcade -->
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
-    <style>
-        :root {
-            --brz-gem: #d46f1d; --brz-glow: rgba(212, 111, 29, 0.8);
-            --arg-gem: #e0e0e0; --arg-glow: rgba(220, 220, 220, 0.8);
-            --or-gem: #ffd700;  --or-glow: rgba(255, 215, 0, 0.9);
-            --plt-gem: #00e5ff; --plt-glow: rgba(0, 229, 255, 0.8);
-            --dia-gem: #b900ff; --dia-glow: rgba(185, 0, 255, 0.9);
-        }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
-
-        body {
-            margin: 0; padding: 0; font-family: 'Luckiest Guy', cursive;
-            background-color: #030712; color: white;
-            display: flex; justify-content: center; height: 100vh; overflow: hidden;
-        }
-
-        /* TEXTE 3D GLOBAL */
-        .text-3d {
-            font-family: 'Luckiest Guy', cursive; text-transform: uppercase; color: #ffffff;
-            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
-                         0 4px 0 #111, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.7);
-            letter-spacing: 1px;
-        }
-
-        .text-3d-gold {
-            color: #ffe44d;
-            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
-                         0 4px 0 #b38600, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.8);
-        }
-
-        .pseudo-font {
-            font-family: 'Bangers', cursive; font-size: 1.8rem; letter-spacing: 2px; color: #ffffff;
-            text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, 0 4px 10px rgba(0,229,255,0.6);
-        }
-
-        /* SCENE 3D */
-        #app-window {
-            width: 100%; max-width: 500px; height: 100%; position: relative;
-            overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.9); background: #091326;
-        }
-
-        .bg-3d-scene {
-            position: absolute; width: 100%; height: 100%; top:0; left:0; z-index:0;
-            perspective: 600px; overflow: hidden;
-            background: radial-gradient(circle at 50% 30%, #1e3a8a 0%, #030712 100%);
-        }
-
-        .bg-grid-3d {
-            position: absolute; width: 200%; height: 200%; top: -50%; left: -50%;
-            background-image: linear-gradient(rgba(0, 229, 255, 0.2) 2px, transparent 2px),
-                              linear-gradient(90deg, rgba(0, 229, 255, 0.2) 2px, transparent 2px);
-            background-size: 50px 50px; transform: rotateX(65deg);
-            animation: gridMove 6s linear infinite;
-        }
-        @keyframes gridMove { from { transform: rotateX(65deg) translateY(0); } to { transform: rotateX(65deg) translateY(50px); } }
-
-        /* AUTHENTIFICATION & PIN OVERLAY */
-        .auth-overlay {
-            position: absolute; top:0; left:0; width:100%; height:100%; z-index:500;
-            background: rgba(3, 7, 18, 0.98); backdrop-filter: blur(15px);
-            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px;
-            overflow-y: auto;
-        }
-        
-        .pin-display {
-            display: flex; gap: 12px; margin: 20px 0; justify-content: center;
-        }
-        .pin-dot {
-            width: 20px; height: 20px; border-radius: 50%; border: 2px solid #00e5ff; background: transparent;
-            transition: all 0.2s;
-        }
-        .pin-dot.filled { background: #00e5ff; box-shadow: 0 0 10px #00e5ff; }
-
-        .pin-keypad {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 280px;
-        }
-        .pin-btn {
-            background: rgba(30, 41, 59, 0.8); border: 2px solid #334155; border-radius: 15px;
-            padding: 15px; font-size: 1.5rem; color: #fff; cursor: pointer; text-align: center;
-            box-shadow: 0 4px 0 #000; transition: all 0.1s;
-        }
-        .pin-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #000; }
-
-        /* INPUTS AUTH */
-        .auth-input-group { width: 100%; margin-bottom: 12px; text-align: left; }
-        .auth-input-group label { font-size: 0.75rem; color: #00e5ff; display: block; margin-bottom: 4px; }
-        .auth-input {
-            width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #334155;
-            background: #0f172a; color: #fff; font-family: 'Roboto', sans-serif; font-weight: bold;
-        }
-
-        /* CONTENEUR PAGES (SWIPE HORIZONTAL) */
-        #swipe-container {
-            display: flex; width: 400%; height: calc(100% - 85px); position: relative; z-index: 2;
-            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-
-        .page {
-            width: 25%; height: 100%; position: relative;
-            display: flex; flex-direction: column; overflow-y: auto; padding: 15px;
-        }
-
-        /* NAVBAR BOTTOM */
-        .menu-bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 85px;
-            display: flex; background: rgba(10, 15, 30, 0.95); border-top: 4px solid #00e5ff; z-index: 50;
-            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px);
-        }
-
-        .nav-btn {
-            flex: 1; margin: 8px 4px; border-radius: 12px; background: linear-gradient(to bottom, #1f2937, #111827);
-            border: 2px solid #374151; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.85rem; cursor: pointer; color: #9ca3af; box-shadow: inset 0 2px 0 rgba(255,255,255,0.1), 0 4px 0 #000;
-            transition: all 0.2s;
-        }
-
-        .nav-btn.active {
-            background: linear-gradient(to bottom, #00e5ff, #0088cc); border-color: #ffffff; color: #ffffff;
-            box-shadow: inset 0 2px 0 rgba(255,255,255,0.5), 0 4px 0 #004466, 0 0 15px rgba(0,229,255,0.6);
-            transform: translateY(-4px);
-        }
-
-        /* HEADER & PASS */
-        .menu-top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .menu-user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .menu-profile-pic {
-            width: 65px; height: 65px; border: 3px solid #00e5ff; border-radius: 50%;
-            background: radial-gradient(circle, #1e293b, #0f172a); display: flex; justify-content: center; align-items: center;
-            font-size: 2.2rem; box-shadow: 0 0 15px rgba(0,229,255,0.4), inset 0 0 10px rgba(0,0,0,0.8);
-        }
-        .header-right-block { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        .bp-mini-widget {
-            background: linear-gradient(135deg, #2b1055, #751581); border: 2px solid #ffd700; border-radius: 10px; padding: 4px 10px;
-            display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 10px rgba(255,215,0,0.3);
-        }
-        .bp-mini-title { font-size: 0.75rem; color: #ffd700; }
-        .bp-mini-bar { width: 60px; height: 8px; background: #000; border-radius: 5px; overflow: hidden; border: 1px solid #ffd700; }
-        .bp-mini-fill { width: 60%; height: 100%; background: linear-gradient(90deg, #ffcc00, #ff0055); }
-        .menu-trophies-container { text-align: right; }
-        .menu-trophies-value { font-size: 1.6rem; color: #ffd700; }
-
-        /* EMBLEM RANK */
-        .menu-center { display: flex; flex-direction: column; align-items: center; flex: 1; justify-content: center; }
-        .rank-emblem-3d {
-            width: 240px; height: 180px; position: relative; display: flex; justify-content: center; align-items: center;
-            margin: 10px 0; perspective: 1000px; cursor: pointer; transition: transform 0.2s;
-        }
-        .rank-emblem-3d:active { transform: scale(0.95); }
-        .rank-stars { position: absolute; top: 0; display: flex; gap: 5px; z-index: 5; }
-        .star { font-size: 1.3rem; filter: drop-shadow(0 2px 4px #000); }
-        .rank-wings-3d {
-            position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom, #f8fafc, #64748b);
-            clip-path: polygon(0% 25%, 20% 10%, 40% 35%, 50% 15%, 60% 35%, 80% 10%, 100% 25%, 85% 75%, 50% 100%, 15% 75%);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6); transition: all 0.5s;
-        }
-        .rank-shield-3d {
-            position: absolute; width: 110px; height: 120px; background: linear-gradient(135deg, #1e293b, #0f172a);
-            border: 4px solid #ffd700; border-radius: 10px 10px 50px 50px; z-index: 2; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-            display: flex; justify-content: center; align-items: center;
-        }
-        .rank-gem-3d {
-            position: relative; z-index: 3; width: 65px; height: 65px; background: var(--arg-gem); box-shadow: 0 0 25px var(--arg-glow);
-            clip-path: polygon(50% 0%, 100% 25%, 50% 100%, 0% 25%); border: 3px solid #fff; display: flex; justify-content: center; align-items: center;
-            font-size: 1.3rem; text-shadow: 2px 2px 0 #000; transition: all 0.5s;
-        }
-        .rank-banner-3d {
-            position: absolute; bottom: -10px; z-index: 4; background: linear-gradient(to bottom, #ef4444, #991b1b);
-            border: 2px solid #fff; border-radius: 8px; padding: 4px 20px; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-        }
-
-        /* JOUER BTN */
-        .play-btn {
-            background: linear-gradient(45deg, #ff3b3b, #ff0055); border: 4px solid #111; border-radius: 15px; color: white;
-            font-family: 'Roboto', sans-serif; font-weight: 900; font-size: 2.2rem; padding: 12px 60px;
-            text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 0 #111, 0 15px 25px rgba(255,0,85,0.6);
-            transition: all 0.1s; animation: pulsePlay 2s infinite; margin-top: 15px;
-        }
-        .play-btn:active { transform: translateY(8px); box-shadow: 0 2px 0 #111; animation: none; }
-        @keyframes pulsePlay { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* PROFIL UI & LEADERBOARD */
-        .profile-card-3d {
-            background: rgba(15, 23, 42, 0.85); border: 3px solid #00e5ff; border-radius: 20px; padding: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 10px;
-        }
-        .stats-grid-3d { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .stat-box-3d { background: rgba(30, 41, 59, 0.8); border: 2px solid #334155; border-radius: 12px; padding: 8px; text-align: center; }
-        .stat-value { font-size: 1.2rem; color: #00e5ff; margin-top: 2px; }
-
-        .chart-container {
-            background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; border-radius: 12px;
-            padding: 10px; text-align: center; height: 150px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; width: 100%; position: relative;
-        }
-        #pushupChart { width: 100%; height: 100%; flex: 1; }
-
-        /* LISTE LEADERBOARD & AMIS */
-        .list-container {
-            background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; border-radius: 15px;
-            padding: 10px; max-height: 220px; overflow-y: auto;
-        }
-        .list-item {
-            display: flex; align-items: center; justify-content: space-between;
-            background: #1e293b; border: 1px solid #334155; padding: 8px 12px; border-radius: 10px; margin-bottom: 6px;
-        }
-        .list-item.online { border-color: #00e5ff; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #4caf50; display: inline-block; margin-right: 5px; }
-        .status-dot.offline { background: #64748b; }
-
-        /* MODALS & OVERLAYS */
-        .modal-overlay { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(3, 7, 18, 0.95); z-index: 100; display: none; 
-            flex-direction: column; justify-content: center; align-items: center; padding: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .cr-button-3d {
-            background: linear-gradient(to bottom, #ffe44d, #ffcc00); border: 3px solid #000; border-radius: 12px;
-            color: #000; padding: 12px; width: 100%; margin: 8px 0; cursor: pointer;
-            box-shadow: 0 5px 0 #b38600, 0 8px 10px rgba(0,0,0,0.5); transition: 0.1s; font-family: 'Luckiest Guy';
-        }
-        .cr-button-3d:active { transform: translateY(4px); box-shadow: 0 1px 0 #b38600; }
-
-        /* GAME SCREEN & POP-UP ANIMS */
-        .full-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: none; flex-direction: column;
-        }
-        #camera-wrapper { flex: 1; position: relative; overflow: hidden; pointer-events: none; }
-        video { display: none; }
-        canvas.cam-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .battle-hud { display: flex; justify-content: space-between; padding: 15px; position: absolute; top:0; width: 100%; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
-
-        /* VISUAL REP FEEDBACK POPUP */
-        .rep-popup {
-            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
-            font-size: 5rem; color: #00e5ff; text-shadow: 0 0 20px #00e5ff, 3px 3px 0 #000;
-            pointer-events: none; opacity: 0; z-index: 30; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .rep-popup.active { opacity: 1; transform: translate(-50%, -60%) scale(1.2); }
-
-        .cam-flash {
-            position: absolute; top:0; left:0; width:100%; height:100%; border: 10px solid #00e5ff;
-            box-sizing: border-box; opacity:0; pointer-events:none; z-index: 25; transition: opacity 0.2s;
-        }
-        .cam-flash.active { opacity: 1; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-    </style>
-</head>
-<body>
-
-    <div id="app-window">
-        <!-- ARRIERE PLAN 3D -->
-        <div class="bg-3d-scene"><div class="bg-grid-3d"></div></div>
-
-        <!-- AUTHENTIFICATION / PIN / RESET OVERLAY -->
-        <div id="auth-overlay" class="auth-overlay">
-            
-            <!-- ECRAN PIN (SI COMPTE EXISTE) -->
-            <div id="pin-screen" style="display:none; text-align:center; width:100%;">
-                <div class="menu-profile-pic" id="auth-pdp" style="margin: 0 auto 10px auto;">🦍</div>
-                <h2 class="text-3d" id="auth-username-title" style="color:#00e5ff; margin: 0;">LUSCAH</h2>
-                <p class="text-3d" style="font-size: 0.75rem; color: #aaa;">ENTREZ VOTRE CODE PIN</p>
-                <div class="pin-display">
-                    <div class="pin-dot" id="dot-0"></div>
-                    <div class="pin-dot" id="dot-1"></div>
-                    <div class="pin-dot" id="dot-2"></div>
-                    <div class="pin-dot" id="dot-3"></div>
-                </div>
-                <div class="pin-keypad" style="margin: 0 auto;">
-                    <div class="pin-btn" onclick="pressPin('1')">1</div>
-                    <div class="pin-btn" onclick="pressPin('2')">2</div>
-                    <div class="pin-btn" onclick="pressPin('3')">3</div>
-                    <div class="pin-btn" onclick="pressPin('4')">4</div>
-                    <div class="pin-btn" onclick="pressPin('5')">5</div>
-                    <div class="pin-btn" onclick="pressPin('6')">6</div>
-                    <div class="pin-btn" onclick="pressPin('7')">7</div>
-                    <div class="pin-btn" onclick="pressPin('8')">8</div>
-                    <div class="pin-btn" onclick="pressPin('9')">9</div>
-                    <div class="pin-btn" style="background:#ef4444;" onclick="clearPin()">C</div>
-                    <div class="pin-btn" onclick="pressPin('0')">0</div>
-                    <div class="pin-btn" style="font-size:0.8rem; display:flex; align-items:center; justify-content:center;" onclick="switchAuthMode('login')">MDP</div>
-                </div>
-                <!-- BOUTON MOT DE PASSE OUBLIÉ -->
-                <button class="cr-button-3d" style="background: #475569; font-size: 0.75rem; margin-top: 15px;" onclick="showResetScreen()">CODE OU MOT DE PASSE OUBLIÉ ?</button>
-            </div>
-
-            <!-- ECRAN REGISTRATION / LOGIN -->
-            <div id="reg-screen" style="display:none; width:100%; max-width:320px; text-align:center;">
-                <h2 class="text-3d-gold" style="font-size: 1.8rem; margin-top:0;">CRÉATION DU COMPTE</h2>
-                
-                <div class="auth-input-group">
-                    <label>PSEUDO</label>
-                    <input type="text" id="reg-pseudo" class="auth-input" placeholder="Ton Pseudo Ex: PushMaster">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>E-MAIL DE RÉCUPÉRATION</label>
-                    <input type="email" id="reg-email" class="auth-input" placeholder="ton.email@gmail.com">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>MOT DE PASSE</label>
-                    <input type="password" id="reg-pass" class="auth-input" placeholder="••••••••">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>CODE PIN (4 CHIFFRES)</label>
-                    <input type="number" id="reg-pin" class="auth-input" placeholder="1234" maxlength="4">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>TA BIO DE GUERRIER</label>
-                    <input type="text" id="reg-bio" class="auth-input" placeholder="Prêt à faire trembler le sol !">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>TON NIVEAU EN POMPES</label>
-                    <select id="reg-level" class="auth-input" style="color:#ffd700;">
-                        <option value="0-4">0 à 4 : Poussin Molasson 🐥</option>
-                        <option value="4-8">4 à 8 : Pousseur du Dimanche 🛋️</option>
-                        <option value="8-12">8 à 12 : Machine à Pompes ⚙️</option>
-                        <option value="12-20">12 à 20 : Titan du Sol 🏋️</option>
-                        <option value="20+">20+ : Lévitateur Suprême ⚡</option>
-                    </select>
-                </div>
-
-                <button class="cr-button-3d" onclick="submitRegister()">VALIDER LE COMPTE</button>
-            </div>
-
-            <!-- ECRAN RÉCUPÉRATION PAR EMAIL -->
-            <div id="reset-screen" style="display:none; width:100%; max-width:320px; text-align:center;">
-                <h2 class="text-3d-gold" style="font-size: 1.5rem; margin-top:0;">RÉCUPÉRATION</h2>
-                
-                <!-- Étape 1 : Saisie de l'email -->
-                <div id="reset-step-1">
-                    <p style="font-size: 0.8rem; color: #ccc;">Entrez votre e-mail d'inscription pour recevoir un code.</p>
-                    <div class="auth-input-group">
-                        <input type="email" id="reset-email-input" class="auth-input" placeholder="ton.email@gmail.com">
-                    </div>
-                    <button class="cr-button-3d" onclick="sendResetEmail()">ENVOYER LE CODE</button>
-                </div>
-
-                <!-- Étape 2 : Vérification du code -->
-                <div id="reset-step-2" style="display:none;">
-                    <p style="font-size: 0.8rem; color: #ccc;">Saisissez le code à 6 chiffres envoyé à votre adresse.</p>
-                    <div class="auth-input-group">
-                        <input type="text" id="reset-code-input" class="auth-input" placeholder="123456" maxlength="6">
-                    </div>
-                    <button class="cr-button-3d" onclick="verifyResetCode()">VÉRIFIER LE CODE</button>
-                </div>
-
-                <!-- Étape 3 : Nouveaux identifiants -->
-                <div id="reset-step-3" style="display:none;">
-                    <div class="auth-input-group">
-                        <label>NOUVEAU MOT DE PASSE</label>
-                        <input type="password" id="new-pass-input" class="auth-input" placeholder="••••••••">
-                    </div>
-                    <div class="auth-input-group">
-                        <label>NOUVEAU CODE PIN (4 CHIFFRES)</label>
-                        <input type="number" id="new-pin-input" class="auth-input" placeholder="1234" maxlength="4">
-                    </div>
-                    <button class="cr-button-3d" onclick="saveNewCredentials()">VALIDER LES CHANGEMENTS</button>
-                </div>
-
-                <button class="cr-button-3d" style="background:#64748b; font-size:0.75rem;" onclick="cancelReset()">ANNULER</button>
-            </div>
-        </div>
-
-        <!-- CONTAINER PRINCIPAL POUR LE SWIPE HORIZONTAL -->
-        <div id="swipe-container">
-            
-            <!-- PAGE 1: SHOP -->
-            <div class="page" id="page-shop">
-                <h1 class="text-3d-gold" style="font-size: 2.2rem; text-align: center; margin-top: 10px;">SHOP ROYALE</h1>
-                <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                    <div style="background: rgba(30,41,59,0.9); border: 2px solid #ffd700; border-radius: 15px; padding: 20px; text-align: center; width: 100%;">
-                        <div style="font-size: 3rem;">👑</div>
-                        <div class="text-3d-gold" style="font-size: 1.2rem;">AURA DE FEU</div>
-                        <button class="cr-button-3d" style="font-size:0.9rem;" onclick="alert('Bientôt disponible !')">500 TROPHÉES</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PAGE 2: ARÈNE (MENU PRINCIPAL) -->
-            <div class="page" id="page-main">
-                <div class="menu-top-bar">
-                    <div class="menu-user-info" onclick="goToTab(3)">
-                        <div class="menu-profile-pic" id="display-avatar">🦍</div>
-                        <div class="pseudo-font" id="display-username">LUSCAH</div>
-                    </div>
-                    <div class="header-right-block">
-                        <div class="bp-mini-widget" onclick="alert('Pass de combat bientôt !')">
-                            <div style="font-size: 1.2rem;">📜</div>
-                            <div>
-                                <div class="bp-mini-title text-3d-gold">PASS POMPES</div>
-                                <div class="bp-mini-bar"><div class="bp-mini-fill"></div></div>
-                            </div>
-                        </div>
-                        <div class="menu-trophies-container">
-                            <div class="text-3d" style="font-size: 0.65rem; color: #aaa;">NOMBRE DE TROPHETS</div>
-                            <div class="menu-trophies-value text-3d-gold" id="display-elo">1000</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-center">
-                    <div class="text-3d" style="font-size: 1.1rem; color: #00e5ff;">VOTRE RANK</div>
-                    <div class="rank-emblem-3d" onclick="openRankViewer()">
-                        <div class="rank-stars"><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span></div>
-                        <div class="rank-wings-3d" id="rank-wings"></div>
-                        <div class="rank-shield-3d"><div class="rank-gem-3d text-3d" id="rank-gem">ARG</div></div>
-                        <div class="rank-banner-3d text-3d" id="rank-name">ARGENT</div>
-                    </div>
-                    <button class="play-btn" onclick="startSmartMatchmaking()">JOUER</button>
-                </div>
-            </div>
-
-            <!-- PAGE 3: DUEL, AMIS & LEADERBOARD -->
-            <div class="page" id="page-duels">
-                <h1 class="text-3d" style="font-size: 2rem; text-align: center; color: #00e5ff; margin-top: 5px;">COMMUNAUTÉ</h1>
-                
-                <!-- CATALOGUE D'AMIS & INVITATION -->
-                <div>
-                    <div class="text-3d" style="font-size: 0.8rem; color: #00e5ff; margin-bottom: 5px;">👥 MES AMIS & LOBBY</div>
-                    <div class="list-container" id="friends-catalog-list" style="max-height: 120px;">
-                        <!-- Généré en JS -->
-                    </div>
-                    <button class="cr-button-3d" style="font-size: 0.8rem; padding: 8px;" onclick="shareFriendLink()">REJOINDRE OU PARTAGER MON LOBBY 🔗</button>
-                </div>
-            </div>
-
-            <!-- PAGE 4: PROFIL -->
-            <div class="page" id="page-profile">
-                <h1 class="text-3d-gold" style="font-size: 2rem; text-align: center; margin-top: 5px; margin-bottom: 5px;">PROFIL JOUEUR</h1>
-                <div class="profile-card-3d">
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <div class="menu-profile-pic" id="profile-pdp" style="width:60px; height:60px; font-size:2rem;">🦍</div>
-                        <div>
-                            <div class="pseudo-font" id="profile-username" style="font-size:1.5rem;">LUSCAH</div>
-                            <div class="text-3d-gold" id="profile-tier" style="font-size:0.75rem;">Machine à Pompes ⚙️</div>
-                            <div style="font-size:0.7rem; color:#aaa; font-style:italic;" id="profile-bio">"Prêt à faire trembler le sol !"</div>
-                        </div>
-                    </div>
-
-                    <div class="stats-grid-3d">
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">TROPHÉES</div><div class="stat-value text-3d-gold" id="stat-current-elo">1000</div></div>
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">TROPHÉES MAX</div><div class="stat-value text-3d-gold" id="stat-max-elo">1250</div></div>
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">PARTIES JOUÉES</div><div class="stat-value text-3d" id="stat-games-played">0</div></div>
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">PARTIES GAGNÉES</div><div class="stat-value text-3d" style="color:#4caf50;" id="stat-games-won">0</div></div>
-                    </div>
-
-                    <!-- GRAPH CANVAS -->
-                    <div class="chart-container">
-                        <div class="text-3d" style="font-size:0.75rem; color:#00e5ff; margin-bottom:5px;">POMPES / JOUR (7 DERNIERS)</div>
-                        <canvas id="pushupChart"></canvas>
-                    </div>
-
-                    <button class="cr-button-3d" style="background:linear-gradient(to bottom, #ef4444, #991b1b); color:#fff; font-size:0.8rem; padding: 6px;" onclick="resetAccount()">DÉCONNEXION / RESET COMPTE</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- NAVBAR -->
-        <div class="menu-bottom-nav">
-            <div class="nav-btn" data-idx="0" onclick="goToTab(0)"><div style="font-size:1.2rem;">🛒</div><div class="text-3d">SHOP</div></div>
-            <div class="nav-btn active" data-idx="1" onclick="goToTab(1)"><div style="font-size:1.2rem;">⚔️</div><div class="text-3d">ARÈNE</div></div>
-            <div class="nav-btn" data-idx="2" onclick="goToTab(2)"><div style="font-size:1.2rem;">👥</div><div class="text-3d">SOCIAL</div></div>
-            <div class="nav-btn" data-idx="3" onclick="goToTab(3)"><div style="font-size:1.2rem;">👤</div><div class="text-3d">PROFIL</div></div>
-        </div>
-
-        <!-- MODALS -->
-        <div id="modal-ranks" class="modal-overlay">
-            <h2 class="text-3d" style="color:#00e5ff; margin-bottom: 10px;">CHEMIN DES RANGS</h2>
-            <div class="rank-swipe-container" style="width:100%; max-width:320px; height:70%; overflow-y:auto;" id="rank-scroll-area"></div>
-            <button class="cr-button-3d" style="max-width: 200px; margin-top: 15px;" onclick="closeModals()">RETOUR</button>
-        </div>
-
-        <!-- ECRAN MATCHMAKING -->
-        <div id="screen-matchmaking" class="full-screen" style="justify-content: center; align-items: center; text-align: center;">
-            <h1 class="text-3d" style="font-size: 2.5rem; color: #00e5ff;">RECHERCHE...</h1>
-            <p class="text-3d" id="mm-status" style="font-size: 0.8rem; color: #aaa;">RECHERCHE D'ADVERSAIRE EN LIGNE</p>
-            <div style="width: 70px; height: 70px; border: 6px solid rgba(255,255,255,0.1); border-top-color: #00e5ff; border-radius: 50%; animation: spin 1s infinite linear; margin: 20px auto;"></div>
-            <button class="cr-button-3d" style="width: 180px; background: #ef4444; color: white;" onclick="cancelMatchmaking()">ANNULER</button>
-        </div>
-
-        <!-- ECRAN BATAILLE -->
-        <div id="screen-battle" class="full-screen">
-            <div id="camera-wrapper">
-                <div class="cam-flash" id="cam-flash"></div>
-                <div class="rep-popup" id="rep-popup">+1</div>
-                <div class="battle-hud">
-                    <div><div class="pseudo-font" id="p1-name" style="color:#00e5ff;">MOI</div><div class="text-3d" id="p1-score" style="font-size: 3rem; color: #00e5ff;">0</div></div>
-                    <div class="text-3d-gold" id="battle-timer" style="font-size: 2.8rem;">30</div>
-                    <div style="text-align: right;"><div class="pseudo-font" id="p2-name" style="color:#ef4444;">ADVERSAIRE</div><div class="text-3d" id="p2-score" style="font-size: 3rem; color: #ef4444;">0</div></div>
-                </div>
-                <video id="video" playsinline autoplay muted></video>
-                <canvas id="canvas" class="cam-canvas"></canvas>
-            </div>
-            <!-- Bouton pour quitter la simulation de partie -->
-            <button class="cr-button-3d" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 200px; z-index: 50;" onclick="endSimulationBattle()">TERMINER LA PARTIE</button>
-        </div>
-
-        <!-- ECRAN RESULTAT -->
-        <div id="screen-result" class="full-screen" style="justify-content: center; align-items: center; text-align: center; background: rgba(0,0,0,0.95);">
-            <h1 class="text-3d" id="res-title" style="font-size: 3.5rem;">VICTOIRE</h1>
-            <div class="text-3d" style="font-size: 2rem; margin: 15px 0;"><span style="color:#00e5ff;" id="res-p1">0</span> - <span style="color:#ef4444;" id="res-p2">0</span></div>
-            <div class="text-3d-gold" style="font-size: 1.5rem; margin-bottom: 20px;">TROPHÉES : <span id="res-elo">+30</span></div>
-            <button class="cr-button-3d" style="max-width: 220px;" onclick="returnToMenu()">CONTINUER</button>
-        </div>
-    </div>
-
-    <script>
+<script>
         // ===================== ETAT ET AUTHENTIFICATION =====================
         let user = { 
             username: "", pass: "", pin: "", email: "", avatar: "🦍", bio: "Prêt à en découdre !", levelTitle: "Machine à Pompes ⚙️",
@@ -548,14 +22,10 @@
             if (savedData) {
                 user = JSON.parse(savedData);
                 document.getElementById('auth-username-title').innerText = user.username;
-                
-                // On affiche l'écran PIN pour vérifier l'identité (et tester le bouton mot de passe oublié)
                 document.getElementById('reg-screen').style.display = 'none';
                 document.getElementById('pin-screen').style.display = 'block';
                 document.getElementById('auth-overlay').style.display = 'flex';
-                
             } else {
-                // Pas de compte : on affiche l'inscription
                 document.getElementById('reg-screen').style.display = 'block';
                 document.getElementById('pin-screen').style.display = 'none';
                 document.getElementById('auth-overlay').style.display = 'flex';
@@ -568,10 +38,7 @@
             if (currentPinEntry.length < 4) {
                 currentPinEntry += num;
                 document.getElementById(`dot-${currentPinEntry.length - 1}`).classList.add('filled');
-                
-                if (currentPinEntry.length === 4) {
-                    setTimeout(checkPin, 200);
-                }
+                if (currentPinEntry.length === 4) setTimeout(checkPin, 200);
             }
         }
 
@@ -585,18 +52,15 @@
                 document.getElementById('auth-overlay').style.display = 'none';
                 updateUI();
                 initMultiplayer();
-                goToTab(1); // Aller directement à l'arène
+                goToTab(1);
             } else {
                 alert("Code PIN incorrect !");
                 clearPin();
             }
         }
 
-        function switchAuthMode(mode) {
-            alert("Connexion par mot de passe classique en cours de développement.");
-        }
+        function switchAuthMode(mode) { alert("Connexion par mot de passe classique en cours de développement."); }
 
-        // ===================== CREATION & RESET COMPTE =====================
         function submitRegister() {
             const pseudo = document.getElementById('reg-pseudo').value;
             const pass = document.getElementById('reg-pass').value;
@@ -604,37 +68,29 @@
             const email = document.getElementById('reg-email').value;
             
             if (!pseudo || !pass || pin.length !== 4 || !email.includes('@')) {
-                alert("Veuillez remplir tous les champs correctement (Email valide + PIN à 4 chiffres).");
-                return;
+                alert("Veuillez remplir tous les champs correctement (Email valide + PIN à 4 chiffres)."); return;
             }
 
-            user.username = pseudo;
-            user.pass = pass;
-            user.pin = pin;
-            user.email = email;
+            user.username = pseudo; user.pass = pass; user.pin = pin; user.email = email;
             user.bio = document.getElementById('reg-bio').value || user.bio;
             
             localStorage.setItem('pushArenaUser', JSON.stringify(user));
             document.getElementById('auth-overlay').style.display = 'none';
             
-            updateUI();
-            initMultiplayer();
-            goToTab(1); // Aller à l'arène
+            updateUI(); initMultiplayer(); goToTab(1);
         }
 
         function resetAccount() {
-            if (confirm("Es-tu sûr de vouloir supprimer ton compte ? Toutes tes statistiques seront perdues.")) {
-                localStorage.removeItem('pushArenaUser');
-                location.reload();
+            if (confirm("Es-tu sûr de vouloir supprimer ton compte ?")) {
+                localStorage.removeItem('pushArenaUser'); location.reload();
             }
         }
 
-        // ===================== RECUPERATION MOT DE PASSE (OUBLI) =====================
+        // ===================== RECUPERATION MOT DE PASSE =====================
         function showResetScreen() {
             document.getElementById('pin-screen').style.display = 'none';
             document.getElementById('reg-screen').style.display = 'none';
             document.getElementById('reset-screen').style.display = 'block';
-            
             document.getElementById('reset-step-1').style.display = 'block';
             document.getElementById('reset-step-2').style.display = 'none';
             document.getElementById('reset-step-3').style.display = 'none';
@@ -642,71 +98,41 @@
 
         function cancelReset() {
             document.getElementById('reset-screen').style.display = 'none';
-            if (user.username) {
-                document.getElementById('pin-screen').style.display = 'block';
-            } else {
-                document.getElementById('reg-screen').style.display = 'block';
-            }
+            if (user.username) document.getElementById('pin-screen').style.display = 'block';
+            else document.getElementById('reg-screen').style.display = 'block';
         }
 
         function sendResetEmail() {
             const inputEmail = document.getElementById('reset-email-input').value.trim();
-
-            if (!user.email) {
-                alert("Aucun compte enregistré n'a été trouvé sur ce navigateur.");
-                return;
+            if (!user.email || inputEmail.toLowerCase() !== user.email.toLowerCase()) {
+                alert("Erreur: Adresse email introuvable ou incorrecte."); return;
             }
-
-            if (inputEmail.toLowerCase() !== user.email.toLowerCase()) {
-                alert("Cette adresse email ne correspond pas à celle inscrite sur ce compte.");
-                return;
-            }
-
             resetState.generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-            resetState.targetEmail = inputEmail;
-
-            // SIMULATION D'ENVOI DE MAIL (Pour de vrai, utilisez EmailJS ici)
-            alert(`[SIMULATION E-MAIL]\nUn e-mail a été envoyé à ${inputEmail}.\nVotre code de réinitialisation est : ${resetState.generatedCode}`);
-
+            alert(`[SIMULATION E-MAIL]\nUn e-mail a été envoyé à ${inputEmail}.\nVotre code : ${resetState.generatedCode}`);
             document.getElementById('reset-step-1').style.display = 'none';
             document.getElementById('reset-step-2').style.display = 'block';
         }
 
         function verifyResetCode() {
-            const enteredCode = document.getElementById('reset-code-input').value.trim();
-
-            if (enteredCode === resetState.generatedCode) {
-                alert("Code validé ! Vous pouvez maintenant saisir vos nouveaux identifiants.");
+            if (document.getElementById('reset-code-input').value.trim() === resetState.generatedCode) {
+                alert("Code validé !");
                 document.getElementById('reset-step-2').style.display = 'none';
                 document.getElementById('reset-step-3').style.display = 'block';
-            } else {
-                alert("Code incorrect. Veuillez réessayez.");
-            }
+            } else { alert("Code incorrect."); }
         }
 
         function saveNewCredentials() {
             const newPass = document.getElementById('new-pass-input').value;
             const newPin = document.getElementById('new-pin-input').value;
-
-            if (!newPass || newPin.length !== 4) {
-                alert("Veuillez renseigner un mot de passe valide et un PIN à 4 chiffres.");
-                return;
-            }
-
-            user.pass = newPass;
-            user.pin = newPin;
-
+            if (!newPass || newPin.length !== 4) return alert("Mot de passe ou PIN invalide.");
+            user.pass = newPass; user.pin = newPin;
             localStorage.setItem('pushArenaUser', JSON.stringify(user));
-            alert("Vos identifiants ont été réinitialisés avec succès !");
-
-            resetState.generatedCode = null;
+            alert("Identifiants réinitialisés !");
             document.getElementById('auth-overlay').style.display = 'none';
-            updateUI();
-            initMultiplayer();
-            goToTab(1);
+            updateUI(); initMultiplayer(); goToTab(1);
         }
 
-        // ===================== NAVIGATION & UI =====================
+        // ===================== NAVIGATION & RANGS =====================
         function updateUI() {
             document.getElementById('display-username').innerText = user.username;
             document.getElementById('profile-username').innerText = user.username;
@@ -719,21 +145,14 @@
 
         function goToTab(index) {
             document.getElementById('swipe-container').style.transform = `translateX(-${index * 25}%)`;
-            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
-                btn.classList.toggle('active', i === index);
-            });
+            document.querySelectorAll('.nav-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
         }
 
-        function closeModals() {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-        }
+        function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
 
-        // ===================== GESTION DES RANGS =====================
         function updateRankDisplay() {
             let currentRank = RANKS[0];
-            for (let r of RANKS) {
-                if (user.elo >= r.min) currentRank = r;
-            }
+            for (let r of RANKS) if (user.elo >= r.min) currentRank = r;
             document.getElementById('rank-gem').innerText = currentRank.short;
             document.getElementById('rank-gem').style.background = currentRank.gem;
             document.getElementById('rank-gem').style.boxShadow = `0 0 25px ${currentRank.glow}`;
@@ -741,9 +160,7 @@
         }
 
         function openRankViewer() {
-            const container = document.getElementById('rank-scroll-area');
-            container.innerHTML = ''; 
-            
+            const container = document.getElementById('rank-scroll-area'); container.innerHTML = ''; 
             RANKS.forEach(r => {
                 const isCurrent = user.elo >= r.min && user.elo <= r.max;
                 container.innerHTML += `
@@ -757,113 +174,240 @@
                     </div>
                 `;
             });
-            
             document.getElementById('modal-ranks').style.display = 'flex';
         }
 
-        // ===================== MULTIJOUEUR (PEERJS) & AMIS =====================
+        // ===================== MULTIJOUEUR PEERJS & MATCHMAKING =====================
         let peer;
         let activeConnection = null;
+        let isSearching = false;
+        let aiTimeout = null;
+        
+        // Les canaux publics pour le matchmaking
+        let currentHubIndex = 0;
+        const HUBS = ['pa-hub-1', 'pa-hub-2', 'pa-hub-3'];
 
         function initMultiplayer() {
-            peer = new Peer(); // Crée un ID unique pour cette session
+            if (peer) peer.destroy();
+            peer = new Peer(); // ID aléatoire classique pour être invité par un ami
             
             peer.on('open', (id) => {
                 user.myCode = id;
-                user.currentLobby = "Lobby de " + user.username;
-                console.log("Mon Lobby (ID) : " + id);
                 renderFriendsList();
             });
 
-            // Quand quelqu'un essaie de rejoindre notre lobby
+            // GESTION DES REQUETES ENTRANTES (Amis ou Matchmaking)
             peer.on('connection', (conn) => {
-                if (confirm(`Le joueur ${conn.metadata.username || 'Un joueur'} souhaite te rejoindre en duel ! Accepter ?`)) {
-                    activeConnection = conn;
-                    setupGameConnection(conn);
-                    conn.send({ type: 'ACCEPTED' });
-                    
-                    document.getElementById('screen-matchmaking').style.display = 'none';
-                    document.getElementById('screen-battle').style.display = 'flex';
-                } else {
-                    conn.send({ type: 'REJECTED' });
-                    setTimeout(() => conn.close(), 500);
+                // BUG CORRIGÉ : On attend l'ouverture du tunnel AVANT de confirmer/envoyer
+                conn.on('open', () => {
+                    // Si c'est un joueur aléatoire qui nous trouve sur un canal public
+                    if (conn.metadata && conn.metadata.type === 'random') {
+                        if (isSearching) {
+                            clearTimeout(aiTimeout); isSearching = false;
+                            activeConnection = conn; setupGameConnection(conn);
+                            conn.send({ type: 'ACCEPTED', username: user.username });
+                            startGameUI(conn.metadata.username || "Inconnu");
+                        } else {
+                            conn.send({ type: 'REJECTED' }); // Nous sommes en jeu, on refuse.
+                        }
+                        return;
+                    }
+
+                    // Si c'est un ami
+                    if (confirm(`Le joueur ${conn.metadata?.username || 'Un ami'} te défie ! Accepter ?`)) {
+                        activeConnection = conn; setupGameConnection(conn);
+                        conn.send({ type: 'ACCEPTED', username: user.username });
+                        startGameUI(conn.metadata?.username || "Ami");
+                    } else {
+                        conn.send({ type: 'REJECTED' });
+                        setTimeout(() => conn.close(), 500);
+                    }
+                });
+            });
+
+            // GESTION DES ERREURS DE MATCHMAKING (Canal vide)
+            peer.on('error', (err) => {
+                if (err.type === 'peer-unavailable') {
+                    if (isSearching) {
+                        // Le canal public ciblé est vide : On le réquisitionne !
+                        becomeHub(HUBS[currentHubIndex]);
+                    } else {
+                        alert("Joueur introuvable ou hors ligne.");
+                        cancelMatchmaking();
+                    }
+                } else if (err.type === 'unavailable-id' && isSearching) {
+                    currentHubIndex++; tryNextHub(); // Quelqu'un a volé le canal à la dernière ms
                 }
             });
         }
 
-        function shareFriendLink() {
-            if (!user.myCode) return alert("Connexion au serveur en cours... Réessayez dans 2 secondes.");
-            
-            const code = prompt("Voici ton ID de Lobby à partager avec un ami. \nOu bien, colle ici l'ID de ton ami pour le rejoindre :", user.myCode);
-            
-            if (code && code !== user.myCode) {
-                joinFriendLobby(code);
+        // --- MATCHMAKING ALÉATOIRE SANS SERVEUR ---
+        function startSmartMatchmaking() {
+            document.getElementById('screen-matchmaking').style.display = 'flex';
+            isSearching = true; currentHubIndex = 0;
+            tryNextHub();
+        }
+
+        function tryNextHub() {
+            if (!isSearching) return;
+            if (currentHubIndex >= HUBS.length) {
+                startAIGame(); return; // Plus de canaux libres -> On lance l'IA
             }
+            
+            document.getElementById('mm-status').innerText = `Recherche (Canal ${currentHubIndex + 1}/${HUBS.length})...`;
+            const conn = peer.connect(HUBS[currentHubIndex], { metadata: { username: user.username, type: 'random' } });
+            
+            conn.on('data', (data) => {
+                if (data.type === 'REJECTED') {
+                    // L'hôte du canal est déjà en combat, on passe au suivant
+                    currentHubIndex++; tryNextHub();
+                } else if (data.type === 'ACCEPTED') {
+                    isSearching = false; clearTimeout(aiTimeout);
+                    activeConnection = conn; setupGameConnection(conn);
+                    startGameUI(data.username || "Adversaire");
+                }
+            });
+        }
+
+        function becomeHub(hubId) {
+            document.getElementById('mm-status').innerText = "Attente d'un adversaire... (Max 30s)";
+            peer.destroy(); // On lâche notre ID d'ami
+            
+            setTimeout(() => {
+                peer = new Peer(hubId); // On devient le Canal Public
+                peer.on('open', () => {
+                    // Si personne ne rejoint dans les 30s, on lance l'IA
+                    aiTimeout = setTimeout(() => { if (isSearching) startAIGame(); }, 30000);
+                });
+                // peer.on('connection') s'occupera de la suite grâce à initMultiplayer (qui doit être réattribué ici)
+                peer.on('connection', (conn) => {
+                    conn.on('open', () => {
+                        if (conn.metadata && conn.metadata.type === 'random' && isSearching) {
+                            clearTimeout(aiTimeout); isSearching = false;
+                            activeConnection = conn; setupGameConnection(conn);
+                            conn.send({ type: 'ACCEPTED', username: user.username });
+                            startGameUI(conn.metadata.username || "Adversaire");
+                        } else { conn.send({ type: 'REJECTED' }); }
+                    });
+                });
+            }, 500);
+        }
+
+        // --- MATCHMAKING AMIS ---
+        function shareFriendLink() {
+            if (!user.myCode) return alert("Connexion en cours...");
+            const code = prompt("Copie ton ID, ou colle celui d'un ami pour le rejoindre :", user.myCode);
+            if (code && code !== user.myCode) joinFriendLobby(code);
         }
 
         function joinFriendLobby(friendId) {
-            document.getElementById('mm-status').innerText = "Connexion au lobby de l'ami...";
             document.getElementById('screen-matchmaking').style.display = 'flex';
+            document.getElementById('mm-status').innerText = "Connexion à l'ami...";
+            isSearching = false; // Ce n'est pas aléatoire
 
-            const conn = peer.connect(friendId, { metadata: { username: user.username } });
+            const conn = peer.connect(friendId, { metadata: { username: user.username, type: 'friend' } });
+            conn.on('open', () => document.getElementById('mm-status').innerText = "En attente de l'hôte...");
             
-            conn.on('open', () => {
-                document.getElementById('mm-status').innerText = "En attente de l'acceptation de l'hôte...";
-            });
-
             conn.on('data', (data) => {
                 if (data.type === 'REJECTED') {
-                    alert("L'invitation a été refusée ou le lobby est plein.");
-                    cancelMatchmaking();
+                    alert("L'invitation a été refusée."); cancelMatchmaking();
                 } else if (data.type === 'ACCEPTED') {
-                    activeConnection = conn;
-                    setupGameConnection(conn);
-                    document.getElementById('screen-matchmaking').style.display = 'none';
-                    document.getElementById('screen-battle').style.display = 'flex';
+                    activeConnection = conn; setupGameConnection(conn);
+                    startGameUI(data.username || "Ami");
                 }
             });
-        }
-
-        function setupGameConnection(conn) {
-            conn.on('data', (data) => {
-                if (data.type === 'SCORE_UPDATE') {
-                    document.getElementById('p2-score').innerText = data.score;
-                }
-            });
-        }
-
-        function startSmartMatchmaking() {
-            shareFriendLink(); 
         }
 
         function cancelMatchmaking() {
+            isSearching = false; clearTimeout(aiTimeout);
             document.getElementById('screen-matchmaking').style.display = 'none';
+            peer.destroy(); setTimeout(initMultiplayer, 500); // Retour au lobby classique
         }
 
         function renderFriendsList() {
-            const container = document.getElementById('friends-catalog-list');
-            container.innerHTML = `
+            document.getElementById('friends-catalog-list').innerHTML = `
                 <div class="list-item">
-                    <div style="display:flex; align-items:center;">
-                        <span class="status-dot"></span>
-                        <span class="text-3d" style="font-size: 0.9rem;">Mon Lobby</span>
-                    </div>
-                    <div style="font-size: 0.7rem; color: #aaa;">ID: ${user.myCode.substring(0,8)}...</div>
-                </div>
-            `;
+                    <div style="display:flex; align-items:center;"><span class="status-dot"></span><span class="text-3d" style="font-size: 0.9rem;">Mon ID (Copier)</span></div>
+                    <div style="font-size: 0.7rem; color: #aaa;">${user.myCode}</div>
+                </div>`;
         }
 
-        // ===================== SIMULATION DE FIN DE PARTIE =====================
+        // ===================== LOGIQUE DU JEU ET I.A =====================
+        let battleTimerInterval = null;
+        let aiInterval = null;
+        let myScore = 0;
+
+        function setupGameConnection(conn) {
+            conn.on('data', (data) => {
+                if (data.type === 'SCORE_UPDATE') document.getElementById('p2-score').innerText = data.score;
+            });
+        }
+
+        function startGameUI(opponentName) {
+            document.getElementById('screen-matchmaking').style.display = 'none';
+            document.getElementById('screen-battle').style.display = 'flex';
+            
+            document.getElementById('p1-name').innerText = user.username.substring(0, 10);
+            document.getElementById('p2-name').innerText = opponentName.substring(0, 10);
+            
+            myScore = 0;
+            document.getElementById('p1-score').innerText = "0";
+            document.getElementById('p2-score').innerText = "0";
+            
+            let timeLeft = 30;
+            document.getElementById('battle-timer').innerText = timeLeft;
+            
+            clearInterval(battleTimerInterval);
+            battleTimerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('battle-timer').innerText = timeLeft;
+                if(timeLeft <= 0) {
+                    clearInterval(battleTimerInterval);
+                    endSimulationBattle();
+                }
+            }, 1000);
+        }
+
+        function startAIGame() {
+            isSearching = false; clearTimeout(aiTimeout);
+            
+            const randomId = Math.floor(1000 + Math.random() * 9000);
+            const aiName = "Joueur_" + randomId;
+            startGameUI(aiName);
+
+            // Simulation intelligente de l'IA (vitesse calquée sur ton classement)
+            let aiScore = 0;
+            let aiSpeed = 2500; // 2.5 secondes par pompe de base
+            if (user.elo > 1500) aiSpeed = 1500;
+            else if (user.elo > 1000) aiSpeed = 2000;
+
+            clearInterval(aiInterval);
+            aiInterval = setInterval(() => {
+                if(Math.random() > 0.2) { // 80% de chance d'incrémenter à chaque tick
+                    aiScore++;
+                    document.getElementById('p2-score').innerText = aiScore;
+                }
+            }, aiSpeed);
+        }
+
         function endSimulationBattle() {
             document.getElementById('screen-battle').style.display = 'none';
             document.getElementById('screen-result').style.display = 'flex';
             
+            // Nettoyage complet
+            if (activeConnection) { activeConnection.close(); activeConnection = null; }
+            clearInterval(aiInterval);
+            clearInterval(battleTimerInterval);
+            
+            // Attribution des points (Simulation de +30)
             user.elo += 30;
             if(user.elo > user.maxElo) user.maxElo = user.elo;
-            user.gamesPlayed++;
-            user.gamesWon++;
-            
+            user.gamesPlayed++; user.gamesWon++;
             localStorage.setItem('pushArenaUser', JSON.stringify(user));
+            
+            // Restauration de l'identité P2P initiale
+            peer.destroy();
+            setTimeout(initMultiplayer, 500); 
         }
 
         function returnToMenu() {
@@ -871,9 +415,7 @@
             updateUI();
         }
 
-        // Lancement initial au chargement de la page
+        // Lancement
         window.onload = loadAccount;
 
     </script>
-</body>
-</html>
