@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Clash of Pushups - 3D Edition</title>
+    <title>Clash of Pushups - 3D Edition V2</title>
 
     <!-- Polices 3D et Arcade -->
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Black+Ops+One&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
@@ -20,7 +20,7 @@
             --dia-gem: #b900ff; --dia-glow: rgba(185, 0, 255, 0.9);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
 
         body {
             margin: 0; padding: 0; font-family: 'Luckiest Guy', cursive;
@@ -28,38 +28,30 @@
             display: flex; justify-content: center; height: 100vh; overflow: hidden;
         }
 
-        /* EFFECT TEXTE 3D GLOBAL */
+        /* TEXTE 3D GLOBAL */
         .text-3d {
-            font-family: 'Luckiest Guy', cursive;
-            text-transform: uppercase;
-            color: #ffffff;
-            text-shadow: 
-                2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
-                0 4px 0 #111, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.7);
+            font-family: 'Luckiest Guy', cursive; text-transform: uppercase; color: #ffffff;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
+                         0 4px 0 #111, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.7);
             letter-spacing: 1px;
         }
 
         .text-3d-gold {
             color: #ffe44d;
-            text-shadow: 
-                2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
-                0 4px 0 #b38600, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.8);
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
+                         0 4px 0 #b38600, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.8);
         }
 
-        /* POLICE SPECIFIQUE PSEUDO */
+        /* POLICE PSEUDO */
         .pseudo-font {
-            font-family: 'Bangers', cursive;
-            font-size: 1.8rem;
-            letter-spacing: 2px;
-            color: #ffffff;
+            font-family: 'Bangers', cursive; font-size: 1.8rem; letter-spacing: 2px; color: #ffffff;
             text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, 0 4px 10px rgba(0,229,255,0.6);
         }
 
-        /* SCENE & ARRIERE-PLAN 3D */
+        /* SCENE 3D */
         #app-window {
             width: 100%; max-width: 500px; height: 100%; position: relative;
-            overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.9);
-            background: #091326;
+            overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.9); background: #091326;
         }
 
         .bg-3d-scene {
@@ -72,20 +64,15 @@
             position: absolute; width: 200%; height: 200%; top: -50%; left: -50%;
             background-image: linear-gradient(rgba(0, 229, 255, 0.2) 2px, transparent 2px),
                               linear-gradient(90deg, rgba(0, 229, 255, 0.2) 2px, transparent 2px);
-            background-size: 50px 50px;
-            transform: rotateX(65deg);
+            background-size: 50px 50px; transform: rotateX(65deg);
             animation: gridMove 6s linear infinite;
         }
+        @keyframes gridMove { from { transform: rotateX(65deg) translateY(0); } to { transform: rotateX(65deg) translateY(50px); } }
 
-        @keyframes gridMove {
-            from { transform: rotateX(65deg) translateY(0); }
-            to { transform: rotateX(65deg) translateY(50px); }
-        }
-
-        /* SWIPE CONTAINER */
+        /* CONTENEUR PAGES (SWIPE HORIZONTAL) */
         #swipe-container {
             display: flex; width: 400%; height: calc(100% - 85px); position: relative; z-index: 2;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .page {
@@ -93,139 +80,104 @@
             display: flex; flex-direction: column; overflow-y: auto; padding: 15px;
         }
 
-        /* NAVBAR EN BAS (STYLE ARCADE 3D) */
+        /* NAVBAR BOTTOM */
         .menu-bottom-nav {
             position: absolute; bottom: 0; left: 0; width: 100%; height: 85px;
-            display: flex; background: rgba(10, 15, 30, 0.95);
-            border-top: 4px solid #00e5ff; z-index: 50;
-            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
+            display: flex; background: rgba(10, 15, 30, 0.95); border-top: 4px solid #00e5ff; z-index: 50;
+            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px);
         }
 
         .nav-btn {
-            flex: 1; margin: 8px 4px; border-radius: 12px;
-            background: linear-gradient(to bottom, #1f2937, #111827);
-            border: 2px solid #374151;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.85rem; cursor: pointer; color: #9ca3af;
-            box-shadow: inset 0 2px 0 rgba(255,255,255,0.1), 0 4px 0 #000;
+            flex: 1; margin: 8px 4px; border-radius: 12px; background: linear-gradient(to bottom, #1f2937, #111827);
+            border: 2px solid #374151; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.85rem; cursor: pointer; color: #9ca3af; box-shadow: inset 0 2px 0 rgba(255,255,255,0.1), 0 4px 0 #000;
             transition: all 0.2s;
         }
 
         .nav-btn.active {
-            background: linear-gradient(to bottom, #00e5ff, #0088cc);
-            border-color: #ffffff; color: #ffffff;
+            background: linear-gradient(to bottom, #00e5ff, #0088cc); border-color: #ffffff; color: #ffffff;
             box-shadow: inset 0 2px 0 rgba(255,255,255,0.5), 0 4px 0 #004466, 0 0 15px rgba(0,229,255,0.6);
             transform: translateY(-4px);
         }
 
-        /* HEADER AVEC PASS DE COMBAT ET TROPHÉES */
+        /* HEADER & PASS */
         .menu-top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        
         .menu-user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .menu-profile-pic {
             width: 65px; height: 65px; border: 3px solid #00e5ff; border-radius: 50%;
-            background: radial-gradient(circle, #1e293b, #0f172a);
-            display: flex; justify-content: center; align-items: center; font-size: 2.2rem;
-            box-shadow: 0 0 15px rgba(0,229,255,0.4), inset 0 0 10px rgba(0,0,0,0.8);
+            background: radial-gradient(circle, #1e293b, #0f172a); display: flex; justify-content: center; align-items: center;
+            font-size: 2.2rem; box-shadow: 0 0 15px rgba(0,229,255,0.4), inset 0 0 10px rgba(0,0,0,0.8);
         }
-
         .header-right-block { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-
-        /* WIDGET PASS DE COMBAT EN HAUT */
         .bp-mini-widget {
-            background: linear-gradient(135deg, #2b1055, #751581);
-            border: 2px solid #ffd700; border-radius: 10px; padding: 4px 10px;
-            display: flex; align-items: center; gap: 8px; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 10px rgba(255,215,0,0.3);
-            transition: transform 0.2s;
+            background: linear-gradient(135deg, #2b1055, #751581); border: 2px solid #ffd700; border-radius: 10px; padding: 4px 10px;
+            display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 10px rgba(255,215,0,0.3);
         }
-        .bp-mini-widget:active { transform: scale(0.95); }
         .bp-mini-title { font-size: 0.75rem; color: #ffd700; }
         .bp-mini-bar { width: 60px; height: 8px; background: #000; border-radius: 5px; overflow: hidden; border: 1px solid #ffd700; }
         .bp-mini-fill { width: 60%; height: 100%; background: linear-gradient(90deg, #ffcc00, #ff0055); }
-
         .menu-trophies-container { text-align: right; }
         .menu-trophies-value { font-size: 1.6rem; color: #ffd700; }
 
-        /* EMBLEM DE RANKING EN 3D ENRICHI */
+        /* EMBLEM RANK (CLICABLE) */
         .menu-center { display: flex; flex-direction: column; align-items: center; flex: 1; justify-content: center; }
-        
         .rank-emblem-3d {
-            width: 240px; height: 180px; position: relative;
-            display: flex; justify-content: center; align-items: center;
-            margin: 10px 0; perspective: 1000px;
+            width: 240px; height: 180px; position: relative; display: flex; justify-content: center; align-items: center;
+            margin: 10px 0; perspective: 1000px; cursor: pointer; transition: transform 0.2s;
         }
-
+        .rank-emblem-3d:active { transform: scale(0.95); }
         .rank-stars { position: absolute; top: 0; display: flex; gap: 5px; z-index: 5; }
         .star { font-size: 1.3rem; filter: drop-shadow(0 2px 4px #000); }
-
         .rank-wings-3d {
-            position: absolute; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, #f8fafc, #64748b);
+            position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom, #f8fafc, #64748b);
             clip-path: polygon(0% 25%, 20% 10%, 40% 35%, 50% 15%, 60% 35%, 80% 10%, 100% 25%, 85% 75%, 50% 100%, 15% 75%);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-            transition: all 0.5s;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6); transition: all 0.5s;
         }
-
         .rank-shield-3d {
-            position: absolute; width: 110px; height: 120px;
-            background: linear-gradient(135deg, #1e293b, #0f172a);
-            border: 4px solid #ffd700; border-radius: 10px 10px 50px 50px;
-            z-index: 2; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
+            position: absolute; width: 110px; height: 120px; background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 4px solid #ffd700; border-radius: 10px 10px 50px 50px; z-index: 2; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
             display: flex; justify-content: center; align-items: center;
         }
-
         .rank-gem-3d {
-            position: relative; z-index: 3; width: 65px; height: 65px;
-            background: var(--arg-gem); box-shadow: 0 0 25px var(--arg-glow);
-            clip-path: polygon(50% 0%, 100% 25%, 50% 100%, 0% 25%);
-            border: 3px solid #fff; display: flex; justify-content: center; align-items: center;
+            position: relative; z-index: 3; width: 65px; height: 65px; background: var(--arg-gem); box-shadow: 0 0 25px var(--arg-glow);
+            clip-path: polygon(50% 0%, 100% 25%, 50% 100%, 0% 25%); border: 3px solid #fff; display: flex; justify-content: center; align-items: center;
             font-size: 1.3rem; text-shadow: 2px 2px 0 #000; transition: all 0.5s;
         }
-
         .rank-banner-3d {
-            position: absolute; bottom: -10px; z-index: 4;
-            background: linear-gradient(to bottom, #ef4444, #991b1b);
-            border: 2px solid #fff; border-radius: 8px; padding: 4px 20px;
-            font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            position: absolute; bottom: -10px; z-index: 4; background: linear-gradient(to bottom, #ef4444, #991b1b);
+            border: 2px solid #fff; border-radius: 8px; padding: 4px 20px; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
         }
 
-        /* BOUTON JOUER (GARDÉ D'ORIGINE SANS LA POLICE 3D) */
+        /* JOUER BTN */
         .play-btn {
-            background: linear-gradient(45deg, #ff3b3b, #ff0055);
-            border: 4px solid #111; border-radius: 15px; color: white;
+            background: linear-gradient(45deg, #ff3b3b, #ff0055); border: 4px solid #111; border-radius: 15px; color: white;
             font-family: 'Roboto', sans-serif; font-weight: 900; font-size: 2.2rem; padding: 12px 60px;
-            text-transform: uppercase; cursor: pointer;
-            box-shadow: 0 10px 0 #111, 0 15px 25px rgba(255,0,85,0.6);
+            text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 0 #111, 0 15px 25px rgba(255,0,85,0.6);
             transition: all 0.1s; animation: pulsePlay 2s infinite; margin-top: 15px;
         }
         .play-btn:active { transform: translateY(8px); box-shadow: 0 2px 0 #111; animation: none; }
         @keyframes pulsePlay { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
-        /* UI PROFIL & STATS */
+        /* PROFIL UI & CORRECTION GRAPHIQUE */
         .profile-card-3d {
-            background: rgba(15, 23, 42, 0.85); border: 3px solid #00e5ff;
-            border-radius: 20px; padding: 15px; margin-bottom: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+            background: rgba(15, 23, 42, 0.85); border: 3px solid #00e5ff; border-radius: 20px; padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 10px;
         }
+        .stats-grid-3d { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat-box-3d { background: rgba(30, 41, 59, 0.8); border: 2px solid #334155; border-radius: 12px; padding: 8px; text-align: center; }
+        .stat-value { font-size: 1.2rem; color: #00e5ff; margin-top: 2px; }
 
-        .stats-grid-3d {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 0;
-        }
-        .stat-box-3d {
-            background: rgba(30, 41, 59, 0.8); border: 2px solid #334155;
-            border-radius: 12px; padding: 10px; text-align: center;
-        }
-        .stat-value { font-size: 1.4rem; color: #00e5ff; margin-top: 4px; }
-
-        /* GRAPH CANVAS PAR JOUR */
+        /* CORRECTION DU CHART CONTAINER */
         .chart-container {
-            background: rgba(15, 23, 42, 0.9); border: 2px solid #334155;
-            border-radius: 15px; padding: 10px; margin-top: 10px; text-align: center;
+            background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; border-radius: 12px;
+            padding: 10px; text-align: center; height: 160px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; width: 100%; position: relative;
+        }
+        #pushupChart {
+            width: 100%; height: 100%; flex: 1; image-rendering: pixelated;
         }
 
-        /* CATALOGUE PASS DE COMBAT MODAL */
+        /* MODALS & OVERLAYS */
         .modal-overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(3, 7, 18, 0.95); z-index: 100; display: none; 
@@ -233,39 +185,53 @@
             backdrop-filter: blur(10px);
         }
 
-        .bp-catalog-container {
-            width: 100%; max-width: 400px; height: 80%; background: #0f172a;
-            border: 3px solid #ffd700; border-radius: 20px; padding: 20px;
-            display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+        /* VUE DES RANGS (SWIPE VERTICAL) */
+        .rank-swipe-container {
+            width: 100%; max-width: 350px; height: 75%; background: #0f172a;
+            border: 3px solid #00e5ff; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.3); position: relative;
         }
+        .rank-scroll-area {
+            flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; display: flex; flex-direction: column;
+            scroll-behavior: smooth;
+        }
+        .rank-page-item {
+            min-height: 100%; width: 100%; scroll-snap-align: start; display: flex;
+            flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+        }
+        /* Jauge Progression Rangs */
+        .progress-container {
+            width: 80%; height: 25px; background: #1e293b; border: 2px solid #fff; border-radius: 15px;
+            margin-top: 20px; position: relative; overflow: hidden; box-shadow: inset 0 4px 10px rgba(0,0,0,0.8);
+        }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #00e5ff, #b900ff); width: 0%; transition: width 0.5s; }
+        .progress-text { position: absolute; width: 100%; text-align: center; top: 2px; font-size: 0.9rem; color: #fff; text-shadow: 1px 1px 0 #000; }
 
+        .bp-catalog-container {
+            width: 100%; max-width: 400px; height: 80%; background: #0f172a; border: 3px solid #ffd700;
+            border-radius: 20px; padding: 20px; display: flex; flex-direction: column; overflow: hidden;
+        }
         .bp-track-scroll { flex: 1; overflow-y: auto; margin: 15px 0; padding-right: 5px; }
-
         .bp-level-card {
-            display: flex; align-items: center; justify-content: space-between;
-            background: #1e293b; border: 2px solid #334155; border-radius: 12px;
-            padding: 12px; margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: space-between; background: #1e293b;
+            border: 2px solid #334155; border-radius: 12px; padding: 12px; margin-bottom: 10px;
         }
         .bp-level-card.unlocked { border-color: #ffd700; background: linear-gradient(90deg, #1e293b, #3b2d54); }
 
-        /* BOUTONS AVEC EFFETS */
         .cr-button-3d {
-            background: linear-gradient(to bottom, #ffe44d, #ffcc00);
-            border: 3px solid #000; border-radius: 12px; color: #000;
-            padding: 12px; width: 100%; margin: 8px 0; cursor: pointer;
-            box-shadow: 0 5px 0 #b38600, 0 8px 10px rgba(0,0,0,0.5); transition: 0.1s;
+            background: linear-gradient(to bottom, #ffe44d, #ffcc00); border: 3px solid #000; border-radius: 12px;
+            color: #000; padding: 12px; width: 100%; margin: 8px 0; cursor: pointer;
+            box-shadow: 0 5px 0 #b38600, 0 8px 10px rgba(0,0,0,0.5); transition: 0.1s; font-family: 'Luckiest Guy';
         }
         .cr-button-3d:active { transform: translateY(4px); box-shadow: 0 1px 0 #b38600; }
 
         /* GAME SCREEN */
         .full-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 200; display: none; flex-direction: column;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: none; flex-direction: column;
         }
         #camera-wrapper { flex: 1; position: relative; overflow: hidden; }
         video { display: none; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        canvas.cam-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         .battle-hud { display: flex; justify-content: space-between; padding: 15px; position: absolute; top:0; width: 100%; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
     </style>
 </head>
@@ -273,18 +239,16 @@
 
     <div id="app-window">
         <!-- ARRIERE PLAN 3D -->
-        <div class="bg-3d-scene">
-            <div class="bg-grid-3d"></div>
-        </div>
+        <div class="bg-3d-scene"><div class="bg-grid-3d"></div></div>
 
-        <!-- CONTAINER PRINCIPAL POUR LE SWIPE -->
+        <!-- CONTAINER PRINCIPAL POUR LE SWIPE HORIZONTAL -->
         <div id="swipe-container">
             
             <!-- PAGE 1: SHOP -->
             <div class="page" id="page-shop">
                 <h1 class="text-3d-gold" style="font-size: 2.5rem; text-align: center; margin-top: 10px;">SHOP ROYALE</h1>
                 <p class="text-3d" style="font-size: 0.8rem; text-align: center; color: #00e5ff;">OFFRES DU JOUR</p>
-                <div style="flex:1; display:flex; flex-direction:column; gap:15px; justify-content:center; align-items:center;">
+                <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
                     <div style="background: rgba(30,41,59,0.9); border: 2px solid #ffd700; border-radius: 15px; padding: 20px; text-align: center; width: 100%;">
                         <div style="font-size: 3rem;">👑</div>
                         <div class="text-3d-gold" style="font-size: 1.2rem;">AURA DE FEU</div>
@@ -295,15 +259,12 @@
 
             <!-- PAGE 2: ARÈNE (MENU PRINCIPAL) -->
             <div class="page" id="page-main">
-                <!-- HEADER AVEC PASS DE COMBAT ET TROPHÉES -->
                 <div class="menu-top-bar">
-                    <div class="menu-user-info" onclick="swipeTo(3, document.querySelectorAll('.nav-btn')[3])">
+                    <div class="menu-user-info" onclick="goToTab(3)">
                         <div class="menu-profile-pic" id="display-avatar">🦍</div>
                         <div class="pseudo-font" id="display-username">LUSCAH</div>
                     </div>
-                    
                     <div class="header-right-block">
-                        <!-- WIDGET PASS DE COMBAT (PLAMMENT RESTITUÉ ET DÉPLACÉ) -->
                         <div class="bp-mini-widget" onclick="openBattlePassModal()">
                             <div style="font-size: 1.2rem;">📜</div>
                             <div>
@@ -311,7 +272,6 @@
                                 <div class="bp-mini-bar"><div class="bp-mini-fill"></div></div>
                             </div>
                         </div>
-
                         <div class="menu-trophies-container">
                             <div class="text-3d" style="font-size: 0.65rem; color: #aaa;">NOMBRE DE TROPHETS</div>
                             <div class="menu-trophies-value text-3d-gold" id="display-elo">1000</div>
@@ -319,128 +279,97 @@
                     </div>
                 </div>
 
-                <!-- MILIEU : RANK EN 3D STYLE ENRICHI -->
                 <div class="menu-center">
                     <div class="text-3d" style="font-size: 1.1rem; color: #00e5ff;">VOTRE RANK</div>
-                    
-                    <div class="rank-emblem-3d">
-                        <div class="rank-stars">
-                            <span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span>
-                        </div>
+                    <!-- CLIQUE SUR LE RANG OUVRE LA VUE DÉTAILLÉE -->
+                    <div class="rank-emblem-3d" onclick="openRankViewer()">
+                        <div class="rank-stars"><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span></div>
                         <div class="rank-wings-3d" id="rank-wings"></div>
-                        <div class="rank-shield-3d">
-                            <div class="rank-gem-3d text-3d" id="rank-gem">ARG</div>
-                        </div>
+                        <div class="rank-shield-3d"><div class="rank-gem-3d text-3d" id="rank-gem">ARG</div></div>
                         <div class="rank-banner-3d text-3d" id="rank-name">ARGENT</div>
                     </div>
-                    
-                    <!-- BOUTON JOUER (POLICE ET DESIGN CONSERVÉS) -->
                     <button class="play-btn" onclick="startSmartMatchmaking()">JOUER</button>
                 </div>
             </div>
 
-            <!-- PAGE 3: DUEL (AMIS P2P) -->
+            <!-- PAGE 3: DUEL -->
             <div class="page" id="page-duels">
-                <h1 class="text-3d" style="font-size: 2.5rem; text-align: center; color: #00e5ff; margin-top: 10px;">MODE DUEL</h1>
-                <p class="text-3d" style="font-size: 0.8rem; text-align: center;">AFFRONTE VOS AMIS EN DIRECT</p>
-                
-                <div style="background: rgba(15,23,42,0.9); padding: 20px; border-radius: 20px; border: 2px solid #00e5ff; text-align: center; margin-top: 20px;">
-                    <div class="text-3d" style="font-size: 0.9rem; color: #aaa;">VOTRE CODE AMIS :</div>
+                <h1 class="text-3d" style="font-size: 2.2rem; text-align: center; color: #00e5ff; margin-top: 10px;">MODE DUEL</h1>
+                <p class="text-3d" style="font-size: 0.8rem; text-align: center;">AFFRONTE TES AMIS</p>
+                <div style="background: rgba(15,23,42,0.9); padding: 15px; border-radius: 20px; border: 2px solid #00e5ff; text-align: center; margin-top: 20px;">
+                    <div class="text-3d" style="font-size: 0.9rem; color: #aaa;">VOTRE CODE AMI :</div>
                     <div id="my-peer-code" class="text-3d-gold" style="font-size: 2rem; margin: 10px 0; letter-spacing: 3px;">----</div>
                     <button class="cr-button-3d" style="font-size:0.9rem;" onclick="copyFriendCode()">COPIER LE CODE</button>
                 </div>
-
                 <div style="margin-top: 30px; text-align: center;">
-                    <input type="text" id="friend-code-input" placeholder="ENTRER LE CODE AMIS" style="width:100%; padding:15px; border-radius:12px; border:2px solid #00e5ff; background:#000; color:#fff; font-family:'Luckiest Guy'; text-align:center; font-size:1.2rem;">
+                    <input type="text" id="friend-code-input" placeholder="ENTRER LE CODE AMI" style="width:100%; padding:15px; border-radius:12px; border:2px solid #00e5ff; background:#000; color:#fff; font-family:'Luckiest Guy'; text-align:center; font-size:1.2rem;">
                     <button class="cr-button-3d" style="background: linear-gradient(to bottom, #00e5ff, #0088cc); color:#fff; margin-top:15px;" onclick="inviteFriend()">LANCER LE DUEL</button>
                 </div>
             </div>
 
-            <!-- PAGE 4: PROFIL (REMPLACE RÉGLAGE) -->
+            <!-- PAGE 4: PROFIL (CORRIGÉE) -->
             <div class="page" id="page-profile">
-                <h1 class="text-3d-gold" style="font-size: 2.2rem; text-align: center; margin-top: 5px;">PROFIL JOUEUR</h1>
-                
+                <h1 class="text-3d-gold" style="font-size: 2rem; text-align: center; margin-top: 5px; margin-bottom: 5px;">PROFIL JOUEUR</h1>
                 <div class="profile-card-3d">
                     <div style="display:flex; align-items:center; gap:15px;">
-                        <div class="menu-profile-pic" id="profile-pdp" style="width:75px; height:75px; font-size:2.8rem;">🦍</div>
+                        <div class="menu-profile-pic" id="profile-pdp" style="width:60px; height:60px; font-size:2rem;">🦍</div>
                         <div>
-                            <div class="pseudo-font" id="profile-username" style="font-size:2rem;">LUSCAH</div>
-                            <div class="text-3d" style="font-size:0.8rem; color:#00e5ff;" onclick="openPdpSelector()">[ CHANGER DE PDP ]</div>
+                            <div class="pseudo-font" id="profile-username" style="font-size:1.6rem;">LUSCAH</div>
+                            <div class="text-3d" style="font-size:0.7rem; color:#00e5ff; cursor:pointer;" onclick="openPdpSelector()">[ CHANGER DE PDP ]</div>
                         </div>
                     </div>
 
-                    <!-- STATISTIQUES REQUISES -->
                     <div class="stats-grid-3d">
-                        <div class="stat-box-3d">
-                            <div class="text-3d" style="font-size:0.65rem; color:#aaa;">TROPHÉES ACTUELS</div>
-                            <div class="stat-value text-3d-gold" id="stat-current-elo">1000</div>
-                        </div>
-                        <div class="stat-box-3d">
-                            <div class="text-3d" style="font-size:0.65rem; color:#aaa;">TROPHÉES MAX</div>
-                            <div class="stat-value text-3d-gold" id="stat-max-elo">1250</div>
-                        </div>
-                        <div class="stat-box-3d">
-                            <div class="text-3d" style="font-size:0.65rem; color:#aaa;">PARTIES JOUÉES</div>
-                            <div class="stat-value text-3d" id="stat-games-played">0</div>
-                        </div>
-                        <div class="stat-box-3d">
-                            <div class="text-3d" style="font-size:0.65rem; color:#aaa;">PARTIES GAGNÉES</div>
-                            <div class="stat-value text-3d" style="color:#4caf50;" id="stat-games-won">0</div>
-                        </div>
+                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">TROPHÉES</div><div class="stat-value text-3d-gold" id="stat-current-elo">1000</div></div>
+                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">TROPHÉES MAX</div><div class="stat-value text-3d-gold" id="stat-max-elo">1250</div></div>
+                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">PARTIES JOUÉES</div><div class="stat-value text-3d" id="stat-games-played">0</div></div>
+                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">PARTIES GAGNÉES</div><div class="stat-value text-3d" style="color:#4caf50;" id="stat-games-won">0</div></div>
+                    </div>
+                    <div class="stat-box-3d" style="padding: 5px;">
+                        <div class="text-3d" style="font-size:0.65rem; color:#aaa;">POURCENTAGE DE VICTOIRE</div>
+                        <div class="stat-value text-3d-gold" id="stat-winrate" style="font-size:1.1rem;">0%</div>
                     </div>
 
-                    <div class="stat-box-3d" style="margin-bottom:10px;">
-                        <div class="text-3d" style="font-size:0.7rem; color:#aaa;">POURCENTAGE DE VICTOIRE</div>
-                        <div class="stat-value text-3d-gold" id="stat-winrate">0%</div>
-                    </div>
-
-                    <!-- GRAPHIQUE DES POMPES PAR JOUR -->
+                    <!-- GRAPH CANVAS SÉCURISÉ -->
                     <div class="chart-container">
-                        <div class="text-3d" style="font-size:0.8rem; color:#00e5ff; margin-bottom:5px;">POMPES / JOUR (7 DERNIERS JOURS)</div>
-                        <canvas id="pushupChart" width="300" height="120"></canvas>
+                        <div class="text-3d" style="font-size:0.75rem; color:#00e5ff; margin-bottom:5px;">POMPES / JOUR (7 DERNIERS)</div>
+                        <canvas id="pushupChart"></canvas>
                     </div>
 
-                    <button class="cr-button-3d" style="background:linear-gradient(to bottom, #ef4444, #991b1b); color:#fff; margin-top:15px; font-size:0.8rem;" onclick="resetAccount()">RÉINITIALISER TOUT</button>
+                    <button class="cr-button-3d" style="background:linear-gradient(to bottom, #ef4444, #991b1b); color:#fff; font-size:0.8rem; padding: 8px;" onclick="resetAccount()">RÉINITIALISER TOUT</button>
                 </div>
             </div>
-
         </div>
 
-        <!-- NAVBAR EN BAS REBRANDÉE -->
+        <!-- NAVBAR -->
         <div class="menu-bottom-nav">
-            <div class="nav-btn" onclick="swipeTo(0, this)">
-                <div style="font-size:1.2rem;">🛒</div>
-                <div class="text-3d">SHOP</div>
-            </div>
-            <div class="nav-btn active" onclick="swipeTo(1, this)">
-                <div style="font-size:1.2rem;">⚔️</div>
-                <div class="text-3d">ARÈNE</div>
-            </div>
-            <div class="nav-btn" onclick="swipeTo(2, this)">
-                <div style="font-size:1.2rem;">🔥</div>
-                <div class="text-3d">DUEL</div>
-            </div>
-            <div class="nav-btn" onclick="swipeTo(3, this)">
-                <div style="font-size:1.2rem;">👤</div>
-                <div class="text-3d">PROFIL</div>
-            </div>
+            <div class="nav-btn" data-idx="0" onclick="goToTab(0)"><div style="font-size:1.2rem;">🛒</div><div class="text-3d">SHOP</div></div>
+            <div class="nav-btn active" data-idx="1" onclick="goToTab(1)"><div style="font-size:1.2rem;">⚔️</div><div class="text-3d">ARÈNE</div></div>
+            <div class="nav-btn" data-idx="2" onclick="goToTab(2)"><div style="font-size:1.2rem;">🔥</div><div class="text-3d">DUEL</div></div>
+            <div class="nav-btn" data-idx="3" onclick="goToTab(3)"><div style="font-size:1.2rem;">👤</div><div class="text-3d">PROFIL</div></div>
         </div>
 
-        <!-- MODAL : CATALOGUE DU PASS DE COMBAT -->
+        <!-- MODAL : VUE DÉTAILLÉE DES RANGS (SWIPE VERTICAL) -->
+        <div id="modal-ranks" class="modal-overlay">
+            <h2 class="text-3d" style="color:#00e5ff; margin-bottom: 10px;">CHEMIN DES RANGS</h2>
+            <div class="text-3d" style="font-size: 0.8rem; margin-bottom: 15px; color:#aaa;">(SWIPE HAUT/BAS)</div>
+            <div class="rank-swipe-container">
+                <div class="rank-scroll-area" id="rank-scroll-area">
+                    <!-- Généré en JS -->
+                </div>
+            </div>
+            <button class="cr-button-3d" style="max-width: 200px; margin-top: 20px;" onclick="closeModals()">RETOUR</button>
+        </div>
+
+        <!-- AUTRES MODALS -->
         <div id="modal-pass-catalog" class="modal-overlay">
             <div class="bp-catalog-container">
                 <h2 class="text-3d-gold" style="font-size: 1.8rem; text-align: center;">PASS DE COMBAT</h2>
-                <p class="text-3d" style="font-size: 0.75rem; text-align: center; color: #aaa;">DÉBLOQUE DES RÉCOMPENSES EXCLUSIVES</p>
-                
-                <div class="bp-track-scroll" id="bp-catalog-list">
-                    <!-- Généré dynamiquement en JS -->
-                </div>
-
+                <div class="bp-track-scroll" id="bp-catalog-list"></div>
                 <button class="cr-button-3d" onclick="closeModals()">FERMER</button>
             </div>
         </div>
 
-        <!-- MODAL : CHANGER PDP -->
         <div id="modal-pdp" class="modal-overlay">
             <div style="background:#0f172a; border:3px solid #00e5ff; border-radius:20px; padding:20px; text-align:center; max-width:320px;">
                 <h3 class="text-3d" style="color:#00e5ff;">CHOISIS TON AVATAR</h3>
@@ -456,10 +385,10 @@
             </div>
         </div>
 
-        <!-- ECRAN BATAILLE ET MATCHMAKING -->
+        <!-- ECRAN MATCHMAKING -->
         <div id="screen-matchmaking" class="full-screen" style="justify-content: center; align-items: center; text-align: center;">
             <h1 class="text-3d" style="font-size: 3rem; color: #00e5ff;">RECHERCHE...</h1>
-            <p class="text-3d" style="font-size: 0.9rem; color: #aaa;">RECHERCHE D'UN ADVERSAIRE</p>
+            <p class="text-3d" id="mm-status" style="font-size: 0.9rem; color: #aaa;">CONNEXION AU RÉSEAU</p>
             <div style="width: 80px; height: 80px; border: 6px solid rgba(255,255,255,0.1); border-top-color: #00e5ff; border-radius: 50%; animation: spin 1s infinite linear; margin: 20px auto;"></div>
             <div class="text-3d" style="font-size: 2.5rem;" id="mm-timer">30</div>
             <button class="cr-button-3d" style="width: 200px; background: #ef4444; color: white;" onclick="cancelMatchmaking()">ANNULER</button>
@@ -468,72 +397,49 @@
         <div id="screen-battle" class="full-screen">
             <div id="camera-wrapper">
                 <div class="battle-hud">
-                    <div>
-                        <div class="pseudo-font" id="p1-name" style="color:#00e5ff;">MOI</div>
-                        <div class="text-3d" id="p1-score" style="font-size: 3rem; color: #00e5ff;">0</div>
-                    </div>
+                    <div><div class="pseudo-font" id="p1-name" style="color:#00e5ff;">MOI</div><div class="text-3d" id="p1-score" style="font-size: 3rem; color: #00e5ff;">0</div></div>
                     <div class="text-3d-gold" id="battle-timer" style="font-size: 2.8rem;">30</div>
-                    <div style="text-align: right;">
-                        <div class="pseudo-font" id="p2-name" style="color:#ef4444;">ADVERSAIRE</div>
-                        <div class="text-3d" id="p2-score" style="font-size: 3rem; color: #ef4444;">0</div>
-                    </div>
+                    <div style="text-align: right;"><div class="pseudo-font" id="p2-name" style="color:#ef4444;">ADVERSAIRE</div><div class="text-3d" id="p2-score" style="font-size: 3rem; color: #ef4444;">0</div></div>
                 </div>
                 <video id="video" playsinline autoplay muted></video>
-                <canvas id="canvas"></canvas>
+                <canvas id="canvas" class="cam-canvas"></canvas>
             </div>
         </div>
 
         <div id="screen-result" class="full-screen" style="justify-content: center; align-items: center; text-align: center; background: rgba(0,0,0,0.95);">
             <h1 class="text-3d" id="res-title" style="font-size: 4rem;">VICTOIRE</h1>
-            <div class="text-3d" style="font-size: 2rem; margin: 15px 0;">
-                <span style="color:#00e5ff;" id="res-p1">0</span> - <span style="color:#ef4444;" id="res-p2">0</span>
-            </div>
-            <div class="text-3d-gold" style="font-size: 1.5rem; margin-bottom: 20px;">
-                TROPHÉES : <span id="res-elo">+30</span>
-            </div>
+            <div class="text-3d" style="font-size: 2rem; margin: 15px 0;"><span style="color:#00e5ff;" id="res-p1">0</span> - <span style="color:#ef4444;" id="res-p2">0</span></div>
+            <div class="text-3d-gold" style="font-size: 1.5rem; margin-bottom: 20px;">TROPHÉES : <span id="res-elo">+30</span></div>
             <button class="cr-button-3d" style="max-width: 250px;" onclick="returnToMenu()">CONTINUER</button>
         </div>
-
     </div>
 
     <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
 
     <script>
-        // ===================== ETAT UTILISATEUR =====================
-        let user = {
-            username: "LUSCAH",
-            avatar: "🦍",
-            elo: 1000,
-            maxElo: 1000,
-            gamesPlayed: 0,
-            gamesWon: 0,
-            history: [12, 18, 25, 0, 30, 15, 20] // Pompes des 7 derniers jours
-        };
-
+        // ===================== ETAT & DONNÉES =====================
+        let user = { username: "LUSCAH", avatar: "🦍", elo: 1000, maxElo: 1000, gamesPlayed: 0, gamesWon: 0, history: [12, 18, 25, 0, 30, 15, 20] };
+        
         const RANKS = [
-            { min: 0, name: "BRONZE", short: "BRZ", gem: "var(--brz-gem)", glow: "var(--brz-glow)" },
-            { min: 600, name: "ARGENT", short: "ARG", gem: "var(--arg-gem)", glow: "var(--arg-glow)" },
-            { min: 1200, name: "OR", short: "OR", gem: "var(--or-gem)", glow: "var(--or-glow)" },
-            { min: 1800, name: "PLATINE", short: "PLT", gem: "var(--plt-gem)", glow: "var(--plt-glow)" },
-            { min: 2500, name: "DIAMANT", short: "DIA", gem: "var(--dia-gem)", glow: "var(--dia-glow)" }
+            { min: 0, max: 599, name: "BRONZE", short: "BRZ", gem: "var(--brz-gem)", glow: "var(--brz-glow)" },
+            { min: 600, max: 1199, name: "ARGENT", short: "ARG", gem: "var(--arg-gem)", glow: "var(--arg-glow)" },
+            { min: 1200, max: 1799, name: "OR", short: "OR", gem: "var(--or-gem)", glow: "var(--or-glow)" },
+            { min: 1800, max: 2499, name: "PLATINE", short: "PLT", gem: "var(--plt-gem)", glow: "var(--plt-glow)" },
+            { min: 2500, max: 9999, name: "DIAMANT", short: "DIA", gem: "var(--dia-gem)", glow: "var(--dia-glow)" }
         ];
 
+        let currentTabIndex = 1;
+
         function getRank(elo) {
-            let r = RANKS[0];
-            for(let i=0; i<RANKS.length; i++) if(elo >= RANKS[i].min) r = RANKS[i];
-            return r;
+            return RANKS.find(r => elo >= r.min && elo <= r.max) || RANKS[RANKS.length-1];
         }
 
         function loadData() {
-            let s = localStorage.getItem('cop_user_v3');
+            let s = localStorage.getItem('cop_user_v4');
             if(s) user = JSON.parse(s);
             updateUI();
         }
-
-        function saveData() {
-            localStorage.setItem('cop_user_v3', JSON.stringify(user));
-            updateUI();
-        }
+        function saveData() { localStorage.setItem('cop_user_v4', JSON.stringify(user)); updateUI(); }
 
         function updateUI() {
             document.getElementById('display-username').innerText = user.username;
@@ -553,57 +459,129 @@
             let rank = getRank(user.elo);
             document.getElementById('rank-name').innerText = rank.name;
             let gem = document.getElementById('rank-gem');
-            gem.innerText = rank.short;
-            gem.style.background = rank.gem;
-            gem.style.boxShadow = `0 0 25px ${rank.glow}`;
+            gem.innerText = rank.short; gem.style.background = rank.gem; gem.style.boxShadow = `0 0 25px ${rank.glow}`;
 
-            renderChart();
+            // Rendre le chart en donnant un peu de temps au navigateur d'appliquer le CSS
+            setTimeout(renderChart, 50); 
         }
 
-        // ===================== GRAPH CANVAS DES POMPES =====================
+        // ===================== FIX DU GRAPHIQUE CANVAS =====================
         function renderChart() {
             const canvas = document.getElementById('pushupChart');
+            const container = canvas.parentElement;
+            
+            // Calculer des dimensions fixes en pixels basées sur le conteneur
+            canvas.width = container.clientWidth - 20; 
+            canvas.height = container.clientHeight - 30; // On laisse la place au titre
+            
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const data = user.history;
-            const maxVal = Math.max(...data, 40);
-            const barWidth = 25;
-            const gap = 15;
-            const startX = 15;
+            const maxVal = Math.max(...data, 10); // Minimum 10 pour l'échelle
+            
+            const gap = 10;
+            const startX = 10;
+            const barWidth = (canvas.width - 20 - (gap * (data.length - 1))) / data.length;
 
             for(let i = 0; i < data.length; i++) {
-                const h = (data[i] / maxVal) * 80;
+                // Hauteur relative sécurisée
+                const h = (data[i] / maxVal) * (canvas.height - 20); 
                 const x = startX + i * (barWidth + gap);
-                const y = canvas.height - h - 20;
+                const y = canvas.height - h - 15;
 
-                // Bar
+                // Fond de la barre (ombre)
+                ctx.fillStyle = "rgba(0, 229, 255, 0.1)";
+                ctx.fillRect(x, 15, barWidth, canvas.height - 30);
+
+                // Barre principale
                 ctx.fillStyle = "#00e5ff";
                 ctx.fillRect(x, y, barWidth, h);
 
-                // Text Value
+                // Texte de la valeur (Police standard pour éviter le bug des énormes pixels)
                 ctx.fillStyle = "#ffffff";
-                ctx.font = "10px 'Luckiest Guy'";
-                ctx.fillText(data[i], x + 5, y - 5);
+                ctx.font = "bold 11px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(data[i], x + (barWidth/2), y - 3);
 
-                // Day Label
+                // Texte du jour
                 ctx.fillStyle = "#aaa";
-                ctx.fillText("J" + (i+1), x + 5, canvas.height - 5);
+                ctx.font = "10px sans-serif";
+                ctx.fillText("J" + (i+1), x + (barWidth/2), canvas.height - 2);
             }
         }
 
-        // ===================== NAVIGATION SWIPE =====================
-        function swipeTo(index, btnElement) {
+        // ===================== SWIPE HORIZONTAL (NAVIGATION) =====================
+        function goToTab(index) {
+            currentTabIndex = index;
             document.getElementById('swipe-container').style.transform = `translateX(-${index * 25}%)`;
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            if(btnElement) btnElement.classList.add('active');
+            document.querySelectorAll('.nav-btn').forEach((b, i) => {
+                b.classList.toggle('active', i === index);
+            });
+            if(index === 3) setTimeout(renderChart, 100); // Redraw graph if going to profile
         }
-        setTimeout(() => swipeTo(1, document.querySelectorAll('.nav-btn')[1]), 100);
 
-        // ===================== MODALS & PROFIL =====================
-        function closeModals() {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+        let touchStartX = 0;
+        const swipeContainer = document.getElementById('swipe-container');
+        
+        swipeContainer.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, {passive: true});
+        swipeContainer.addEventListener('touchend', e => {
+            let touchEndX = e.changedTouches[0].clientX;
+            let diff = touchStartX - touchEndX;
+            if(diff > 50 && currentTabIndex < 3) goToTab(currentTabIndex + 1);      // Swipe Gauche
+            else if(diff < -50 && currentTabIndex > 0) goToTab(currentTabIndex - 1); // Swipe Droite
+        }, {passive: true});
+
+        setTimeout(() => goToTab(1), 100);
+
+        // ===================== MODAL DES RANGS (SWIPE VERTICAL) =====================
+        function openRankViewer() {
+            const area = document.getElementById('rank-scroll-area');
+            area.innerHTML = "";
+            let currentR = getRank(user.elo);
+            
+            RANKS.forEach((r, idx) => {
+                let isCurrent = (r.name === currentR.name);
+                let nextR = RANKS[idx + 1];
+                let progressHtml = "";
+
+                if(isCurrent && nextR) {
+                    let progressPercent = ((user.elo - r.min) / (nextR.min - r.min)) * 100;
+                    progressHtml = `
+                        <div class="progress-container">
+                            <div class="progress-fill" style="width: ${progressPercent}%;"></div>
+                            <div class="progress-text">${user.elo} / ${nextR.min} TROPHÉES</div>
+                        </div>
+                    `;
+                } else if(user.elo >= r.min && !nextR) {
+                    progressHtml = `<div class="text-3d-gold" style="margin-top:15px;">RANG MAX ATTEINT</div>`;
+                }
+
+                area.innerHTML += `
+                    <div class="rank-page-item" id="rank-item-${idx}">
+                        <div class="text-3d" style="font-size: 1.5rem; color: ${isCurrent ? '#00e5ff' : '#fff'};">${r.name}</div>
+                        <div class="text-3d" style="font-size: 0.8rem; color: #aaa; margin-bottom: 15px;">${r.min} TROPHÉES MINIMUM</div>
+                        
+                        <div class="rank-emblem-3d" style="transform: scale(0.9); margin:0;">
+                            <div class="rank-shield-3d" style="border-color: ${isCurrent ? '#00e5ff' : '#334155'};">
+                                <div class="rank-gem-3d text-3d" style="background:${r.gem}; box-shadow:0 0 25px ${r.glow};">${r.short}</div>
+                            </div>
+                        </div>
+                        ${progressHtml}
+                    </div>
+                `;
+            });
+
+            document.getElementById('modal-ranks').style.display = 'flex';
+            // Scroll to current rank smoothly after render
+            setTimeout(() => {
+                let activeIdx = RANKS.findIndex(r => r.name === currentR.name);
+                document.getElementById(`rank-item-${activeIdx}`).scrollIntoView({ behavior: "instant" });
+            }, 50);
         }
+
+        // ===================== AUTRES MODALS =====================
+        function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
         function openPdpSelector() { document.getElementById('modal-pdp').style.display = 'flex'; }
         function selectPdp(icon) { user.avatar = icon; saveData(); closeModals(); }
 
@@ -615,39 +593,33 @@
                 list.innerHTML += `
                     <div class="bp-level-card ${unlocked ? 'unlocked' : ''}">
                         <div class="text-3d" style="font-size:0.9rem;">NIV ${i}</div>
-                        <div class="text-3d-gold" style="font-size:0.8rem;">${i % 2 === 0 ? '👑 AURA ROYALE' : '🪙 100 TROPHÉES'}</div>
-                        <div class="text-3d" style="font-size:0.7rem; color:${unlocked ? '#4caf50' : '#888'};">${unlocked ? 'DÉBLOQUÉ' : 'VERROUILLÉ'}</div>
+                        <div class="text-3d-gold" style="font-size:0.8rem;">${i%2===0 ? '👑 AURA ROYALE' : '🪙 100 TROPHÉES'}</div>
+                        <div class="text-3d" style="font-size:0.7rem; color:${unlocked ? '#4caf50' : '#888'};">${unlocked?'DÉBLOQUÉ':'VERROUILLÉ'}</div>
                     </div>
                 `;
             }
             document.getElementById('modal-pass-catalog').style.display = 'flex';
         }
-
         function copyFriendCode() {
-            let code = document.getElementById('my-peer-code').innerText;
-            navigator.clipboard.writeText(code);
-            alert("Code copié dans le presse-papier !");
+            navigator.clipboard.writeText(document.getElementById('my-peer-code').innerText);
+            alert("Code copié !");
         }
-
         function resetAccount() {
-            if(confirm("Réinitialiser toutes tes statistiques ?")) {
-                localStorage.clear();
-                location.reload();
-            }
+            if(confirm("Tout réinitialiser ?")) { localStorage.clear(); location.reload(); }
         }
 
-        // ===================== PEERJS & MATCHMAKING =====================
-        let peer = null, conn = null;
+        // ===================== PEERJS & MATCHMAKING SANS SERVEUR =====================
+        let peer = null, conn = null, isMatchmaker = false;
         let mmTimer, mmTimeLeft = 30;
-        let p1Score = 0, p2Score = 0, gameActive = false;
-        let enemyBotInt = null, enemyName = "Joueur";
+        let p1Score = 0, p2Score = 0, gameActive = false, enemyBotInt = null, enemyName = "Adversaire";
+        const TOTAL_PUBLIC_ROOMS = 5;
 
-        function initPeer() {
+        // Initie un peer de base pour les défis amicaux
+        function initBasePeer() {
             if(!peer) {
-                const myId = "COP-" + Math.random().toString(36).substr(2, 5).toUpperCase();
-                peer = new Peer(myId);
+                peer = new Peer("COP-USR-" + Math.random().toString(36).substr(2, 5).toUpperCase());
                 peer.on('open', (id) => { document.getElementById('my-peer-code').innerText = id; });
-                peer.on('connection', (c) => { conn = c; setupConn(); });
+                peer.on('connection', (c) => { conn = c; setupConn(); enemyName = "Ami(e)"; startMatch(true); });
             }
         }
 
@@ -661,34 +633,70 @@
         }
 
         function inviteFriend() {
-            initPeer();
             let code = document.getElementById('friend-code-input').value.trim();
             if(!code) return alert("ENTREZ UN CODE !");
             conn = peer.connect(code);
-            conn.on('open', () => {
-                setupConn();
-                enemyName = "Ami Privé";
-                startMatch(true);
-            });
+            conn.on('open', () => { setupConn(); enemyName = "Ami(e)"; startMatch(true); });
         }
 
-        function startSmartMatchmaking() {
-            initPeer();
+        // LOGIQUE DE MATCHMAKING PUBLIC SANS SERVEUR 
+        async function startSmartMatchmaking() {
+            if(peer) peer.destroy(); // Réinitialise le peer local
             document.getElementById('screen-matchmaking').style.display = 'flex';
+            document.getElementById('mm-status').innerText = "RECHERCHE DE SALONS OUVERTS...";
             mmTimeLeft = 30; document.getElementById('mm-timer').innerText = mmTimeLeft;
-            
-            mmTimer = setInterval(() => {
-                mmTimeLeft--;
-                document.getElementById('mm-timer').innerText = mmTimeLeft;
-                if(mmTimeLeft <= 0) {
-                    clearInterval(mmTimer);
-                    startMatch(false); // Lancer IA
+
+            let foundOpponent = false;
+            peer = new Peer(); // Peer temporaire sans ID fixe pour la recherche
+
+            await new Promise(r => peer.on('open', r));
+
+            // Tente de se connecter à un des 5 salons publics
+            for(let i=1; i<=TOTAL_PUBLIC_ROOMS; i++) {
+                if(foundOpponent) break;
+                let roomId = "COP-PUBLIC-ROOM-" + i;
+                let tempConn = peer.connect(roomId, {reliable: true});
+                
+                let success = await new Promise(resolve => {
+                    tempConn.on('open', () => resolve(true));
+                    setTimeout(() => resolve(false), 800); // 800ms max par salon
+                });
+
+                if(success) {
+                    foundOpponent = true; conn = tempConn; setupConn();
+                    enemyName = "Joueur En Ligne"; startMatch(true);
                 }
-            }, 1000);
+            }
+
+            // Si on ne trouve personne, on DEVIENT un salon public
+            if(!foundOpponent) {
+                document.getElementById('mm-status').innerText = "CRÉATION D'UN SALON... EN ATTENTE D'UN JOUEUR";
+                peer.destroy();
+                let randomRoom = "COP-PUBLIC-ROOM-" + (Math.floor(Math.random() * TOTAL_PUBLIC_ROOMS) + 1);
+                peer = new Peer(randomRoom);
+                
+                peer.on('connection', (c) => {
+                    if(!gameActive && document.getElementById('screen-matchmaking').style.display === 'flex') {
+                        clearInterval(mmTimer); conn = c; setupConn();
+                        enemyName = "Joueur En Ligne"; startMatch(true);
+                    }
+                });
+
+                // Timer d'attente (Si personne ne rejoint, on joue un bot)
+                mmTimer = setInterval(() => {
+                    mmTimeLeft--; document.getElementById('mm-timer').innerText = mmTimeLeft;
+                    if(mmTimeLeft <= 0) {
+                        clearInterval(mmTimer); document.getElementById('mm-status').innerText = "AUCUN JOUEUR. BOT TROUVÉ.";
+                        setTimeout(() => startMatch(false), 1000);
+                    }
+                }, 1000);
+            }
         }
 
         function cancelMatchmaking() {
             clearInterval(mmTimer);
+            if(peer) peer.destroy();
+            initBasePeer(); // Retour au code ami normal
             document.getElementById('screen-matchmaking').style.display = 'none';
         }
 
@@ -696,52 +704,41 @@
         function startMatch(isReal) {
             cancelMatchmaking();
             document.getElementById('screen-battle').style.display = 'flex';
+            if(!isReal) enemyName = ["GigaChad", "PushBot", "ProPompes", "AlphaMale"][Math.floor(Math.random()*4)];
             
-            if(!isReal) {
-                const bots = ["GigaChad", "PushBot", "ProPompes", "AlphaMale"];
-                enemyName = bots[Math.floor(Math.random()*bots.length)];
-            }
-
             document.getElementById('p1-name').innerText = user.username;
             document.getElementById('p2-name').innerText = enemyName;
             p1Score = 0; p2Score = 0;
             document.getElementById('p1-score').innerText = "0";
             document.getElementById('p2-score').innerText = "0";
 
-            startCamera();
-            runGame(isReal);
+            startCamera(); runGame(isReal);
         }
 
         function runGame(isReal) {
-            gameActive = true;
-            let time = 30;
+            gameActive = true; let time = 30;
             document.getElementById('battle-timer').innerText = time;
 
             if(!isReal) {
                 enemyBotInt = setInterval(() => {
                     if(gameActive && Math.random() > 0.45) {
-                        p2Score++;
-                        document.getElementById('p2-score').innerText = p2Score;
+                        p2Score++; document.getElementById('p2-score').innerText = p2Score;
                     }
                 }, 1400);
             }
 
             let tInt = setInterval(() => {
-                time--;
-                document.getElementById('battle-timer').innerText = time;
+                time--; document.getElementById('battle-timer').innerText = time;
                 if(time <= 0) {
-                    clearInterval(tInt);
-                    if(enemyBotInt) clearInterval(enemyBotInt);
-                    gameActive = false;
-                    endGame();
+                    clearInterval(tInt); if(enemyBotInt) clearInterval(enemyBotInt);
+                    gameActive = false; endGame();
                 }
             }, 1000);
         }
 
         function playerScored() {
             if(!gameActive) return;
-            p1Score++;
-            document.getElementById('p1-score').innerText = p1Score;
+            p1Score++; document.getElementById('p1-score').innerText = p1Score;
             if(conn && conn.open) conn.send({type:'score', score: p1Score});
         }
 
@@ -753,35 +750,23 @@
             document.getElementById('res-p2').innerText = p2Score;
 
             user.gamesPlayed++;
-            user.history[user.history.length - 1] += p1Score; // Ajouter les pompes au jour actuel
+            user.history[user.history.length - 1] += p1Score;
 
             let gain = 0;
-            if(p1Score > p2Score) {
-                document.getElementById('res-title').innerText = "VICTOIRE";
-                document.getElementById('res-title').style.color = "#00e5ff";
-                gain = 30; user.gamesWon++;
-            } else if(p1Score < p2Score) {
-                document.getElementById('res-title').innerText = "DÉFAITE";
-                document.getElementById('res-title').style.color = "#ef4444";
-                gain = -20;
-            } else {
-                document.getElementById('res-title').innerText = "ÉGALITÉ";
-                gain = 0;
-            }
+            if(p1Score > p2Score) { document.getElementById('res-title').innerText = "VICTOIRE"; document.getElementById('res-title').style.color = "#00e5ff"; gain = 30; user.gamesWon++; } 
+            else if(p1Score < p2Score) { document.getElementById('res-title').innerText = "DÉFAITE"; document.getElementById('res-title').style.color = "#ef4444"; gain = -20; } 
+            else { document.getElementById('res-title').innerText = "ÉGALITÉ"; document.getElementById('res-title').style.color = "#fff"; gain = 0; }
 
-            user.elo += gain;
-            if(user.elo < 0) user.elo = 0;
+            user.elo = Math.max(0, user.elo + gain);
             if(user.elo > user.maxElo) user.maxElo = user.elo;
 
             document.getElementById('res-elo').innerText = (gain >= 0 ? "+" : "") + gain;
-            saveData();
+            saveData(); initBasePeer(); // Reset peer pour les amis
         }
 
-        function returnToMenu() {
-            document.getElementById('screen-result').style.display = 'none';
-        }
+        function returnToMenu() { document.getElementById('screen-result').style.display = 'none'; }
 
-        // DETECTEUR CAMERA
+        // CAMERA AI
         const videoElement = document.getElementById('video');
         const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
@@ -792,28 +777,21 @@
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 videoElement.srcObject = stream;
-                
-                const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+                const pose = new Pose({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
                 pose.setOptions({ modelComplexity: 0, smoothLandmarks: true });
                 pose.onResults(onPoseResults);
-
-                const camera = new Camera(videoElement, {
-                    onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480
-                });
+                const camera = new Camera(videoElement, { onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480 });
                 camera.start(); camStarted = true;
             } catch (err) { console.log(err); }
         }
 
         function onPoseResults(results) {
-            canvasElement.width = videoElement.videoWidth || 640;
-            canvasElement.height = videoElement.videoHeight || 480;
+            canvasElement.width = videoElement.videoWidth || 640; canvasElement.height = videoElement.videoHeight || 480;
             canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
             canvasCtx.translate(canvasElement.width, 0); canvasCtx.scale(-1, 1);
             if (results.image) canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
             if (results.poseLandmarks && gameActive) {
-                let sl = results.poseLandmarks[11], sr = results.poseLandmarks[12];
-                let el = results.poseLandmarks[13], er = results.poseLandmarks[14];
+                let sl = results.poseLandmarks[11], sr = results.poseLandmarks[12], el = results.poseLandmarks[13], er = results.poseLandmarks[14];
                 if(sl && sr && el && er) {
                     let avgS = (sl.y + sr.y) / 2, avgE = (el.y + er.y) / 2;
                     if (avgS > avgE - 0.05 && !isDown) isDown = true;
@@ -823,8 +801,10 @@
             canvasCtx.restore();
         }
 
+        // Clic sur caméra = triche/test pour ajouter une pompe
         document.getElementById('camera-wrapper').addEventListener('click', () => { if(gameActive) playerScored(); });
-        window.onload = () => { loadData(); initPeer(); };
+        
+        window.onload = () => { loadData(); initBasePeer(); };
     </script>
 </body>
 </html>
