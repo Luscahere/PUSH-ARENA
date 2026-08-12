@@ -1,421 +1,602 @@
-<script>
-        // ===================== ETAT ET AUTHENTIFICATION =====================
-        let user = { 
-            username: "", pass: "", pin: "", email: "", avatar: "🦍", bio: "Prêt à en découdre !", levelTitle: "Machine à Pompes ⚙️",
-            elo: 1000, maxElo: 1000, gamesPlayed: 0, gamesWon: 0, history: [0, 0, 0, 0, 0, 0, 0],
-            friends: [], myCode: "", currentLobby: "Aucun"
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Clash of Pushups - Ultimate Royale</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe pour la détection de mouvements -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    
+    <!-- PeerJS pour le multijoueur P2P sans serveur -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+    <style>
+        :root {
+            --cr-blue: #2b78e4;
+            --cr-red: #f54242;
+            --cr-gold: #ffcc00;
+            --cr-wood: #5c4033;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background-color: #050a14; color: white;
+            display: flex; justify-content: center;
+            height: 100vh; overflow: hidden;
+            background-image: radial-gradient(#112244 15%, transparent 16%), radial-gradient(#112244 15%, transparent 16%);
+            background-size: 40px 40px; background-position: 0 0, 20px 20px;
+        }
+
+        .screen {
+            display: none; width: 100%; max-width: 500px; height: 100%;
+            flex-direction: column; position: relative; z-index: 1;
+            background: linear-gradient(to bottom, rgba(10,20,40,0.95), rgba(0,0,0,0.98));
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+        .active-screen { display: flex; }
+
+        .cr-button {
+            background: linear-gradient(to bottom, #ffe44d, var(--cr-gold) 40%, #cc9900);
+            border: 3px solid #332200; border-radius: 12px;
+            color: #4a3000; font-family: 'Anton', sans-serif; font-size: 1.2rem;
+            padding: 12px 20px; text-transform: uppercase; cursor: pointer;
+            box-shadow: inset 0 4px 0 rgba(255,255,255,0.6), 0 6px 0 #805500;
+            margin: 10px 0; width: 100%; transition: 0.1s;
+        }
+        .cr-button.blue { background: linear-gradient(to bottom, #69a3ff, var(--cr-blue) 40%, #124d9c); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #092c5c; }
+        .cr-button.red { background: linear-gradient(to bottom, #ff6b6b, var(--cr-red) 40%, #9c1212); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #5c0909; }
+        .cr-button.gray { background: linear-gradient(to bottom, #aaa, #777 40%, #444); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.3), 0 6px 0 #222; }
+        .cr-button:active { transform: translateY(6px); box-shadow: 0 0px 0 #805500; }
+
+        /* DESIGN D'ARÈNE ROYALE */
+        .arena-3d-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; perspective: 1000px; }
+        .arena-island {
+            width: 240px; height: 320px; position: relative;
+            transform-style: preserve-3d; transform: rotateX(55deg) rotateZ(-35deg);
+        }
+        .arena-surface {
+            position: absolute; width: 100%; height: 100%;
+            background: #5da13b; border: 8px solid #8c6239; border-radius: 10px;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.7); overflow: hidden;
+            background-image: linear-gradient(45deg, rgba(0,0,0,0.05) 25%, transparent 25%), linear-gradient(-45deg, rgba(0,0,0,0.05) 25%, transparent 25%);
+            background-size: 30px 30px;
+        }
+        .arena-surface::before {
+            content: ''; position: absolute; top: 45%; left: -10%; width: 120%; height: 10%;
+            background: #2ab7ca; border-top: 3px solid #e0ce9a; border-bottom: 3px solid #e0ce9a;
+            transform: rotate(-5deg);
+        }
+        .bridge { position: absolute; top: 44%; width: 35px; height: 15%; background: #a57147; border: 2px solid #3e2723; }
+        .bridge.left { left: 20%; transform: rotate(-5deg); }
+        .bridge.right { right: 20%; transform: rotate(-5deg); }
+        .arena-island::before {
+            content: ''; position: absolute; width: 100%; height: 25px; background: var(--cr-wood);
+            transform-origin: bottom; transform: rotateX(-90deg) translateY(25px); bottom: 0; border: 2px solid #2a1c0d;
+        }
+        .arena-island::after {
+            content: ''; position: absolute; width: 25px; height: 100%; background: #3a2b1c;
+            transform-origin: right; transform: rotateY(90deg) translateX(25px); right: 0; border: 2px solid #2a1c0d;
+        }
+
+        input {
+            width: 100%; padding: 12px; font-size: 1.1rem; border-radius: 10px;
+            border: 3px solid var(--cr-gold); background: rgba(0,0,0,0.7); color: white;
+            margin-bottom: 10px; text-align: center; font-family: 'Anton';
+        }
+
+        /* ECRAN CONNEXION GOOGLE */
+        #login-screen { justify-content: center; align-items: center; padding: 30px; text-align: center; }
+        .google-btn {
+            background: white; color: #444; border: none; border-radius: 8px;
+            padding: 12px 24px; font-weight: bold; font-size: 1.1rem; display: flex;
+            align-items: center; justify-content: center; gap: 12px; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); width: 100%; margin-top: 20px;
+            transition: 0.2s;
+        }
+        .google-btn:hover { background: #f1f1f1; }
+
+        /* PROFIL & HEADER */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: rgba(0,0,0,0.8); border-bottom: 2px solid #333; }
+        .profile-pic { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--cr-gold); object-fit: cover; }
+
+        /* HUD DUEL & TRACKER VISUEL */
+        #camera-wrapper { flex: 1; position: relative; background: #000; overflow: hidden; border-radius: 12px; margin: 10px; border: 3px solid #333; }
+        video { display: none; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        .battle-hud-top { display: flex; justify-content: space-between; padding: 15px; position: absolute; top:0; width: 100%; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.85), transparent); }
+        .score-counter { font-family: 'Anton'; font-size: 3.2rem; text-shadow: 3px 3px 0 #000; line-height: 1; }
+        .timer-box { font-family: 'Anton'; font-size: 2rem; color: white; text-shadow: 2px 2px #000; background: rgba(0,0,0,0.7); padding: 4px 15px; border-radius: 8px; border: 2px solid var(--cr-gold); }
+
+        /* EFFET VISUEL +1 STYLE CLASH ROYALE */
+        .floating-plus {
+            position: absolute; font-family: 'Anton'; font-size: 3.5rem; color: #00ffcc;
+            text-shadow: 2px 2px 0 #000, 0 0 15px #00ffcc; pointer-events: none; z-index: 25;
+            animation: floatUp 0.8s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            30% { transform: translate(-50%, -100px) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -160px) scale(1); opacity: 0; }
+        }
+
+        /* TRACKER FORM (Cercle de progression de pompe) */
+        .tracker-ring-container {
+            position: absolute; bottom: 20px; left: 20px; z-index: 20;
+            background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 12px;
+            border: 2px solid var(--cr-gold); display: flex; align-items: center; gap: 10px;
+        }
+        .rep-status-dot { width: 15px; height: 15px; border-radius: 50%; background: var(--cr-red); transition: 0.2s; box-shadow: 0 0 8px var(--cr-red); }
+        .rep-status-dot.active { background: #00ffcc; box-shadow: 0 0 12px #00ffcc; }
+
+        .sudden-death { animation: pulseRed 0.5s infinite alternate; }
+        @keyframes pulseRed { from { box-shadow: inset 0 0 0px red; } to { box-shadow: inset 0 0 40px red; } }
+    </style>
+</head>
+<body>
+
+    <!-- 1. ECRAN DE CONNEXION GOOGLE -->
+    <div id="login-screen" class="screen active-screen">
+        <h1 style="font-family: 'Anton'; color: var(--cr-gold); font-size: 3rem; margin-bottom: 10px; text-shadow: 3px 3px #000;">CLASH OF PUSHUPS</h1>
+        <p style="color: #aaa; margin-bottom: 30px;">Affronte tes amis en faisant de vraies pompes !</p>
+        <div style="font-size: 4rem; margin-bottom: 20px;">👑⚔️</div>
+        <button class="google-btn" onclick="loginWithGoogle()">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.14C3.15 21.32 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.62H1.18C.43 8.13 0 9.83 0 11.6s.43 3.47 1.18 4.98l4.09-2.34z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.15 2.68 1.18 6.62l4.09 3.14c.95-2.85 3.6-4.95 6.73-4.95z"/></svg>
+            Se connecter avec Google
+        </button>
+    </div>
+
+    <!-- 2. MENU PRINCIPAL -->
+    <div id="menu-screen" class="screen">
+        <div class="top-bar">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <img id="user-avatar" class="profile-pic" src="" alt="Avatar">
+                <div>
+                    <div id="user-display-name" style="font-family: 'Anton'; font-size: 1.1rem;">Joueur</div>
+                    <div style="font-size: 0.75rem; color: var(--cr-gold);">🏆 <span id="user-trophies">0</span> Trophées</div>
+                </div>
+            </div>
+            <button class="cr-button gray" style="width: auto; padding: 6px 12px; font-size: 0.9rem; margin:0;" onclick="openSettings()">⚙️ Paramètres</button>
+        </div>
+
+        <div class="arena-3d-container">
+            <h2 id="arena-title" style="font-family: 'Anton'; color: var(--cr-gold); margin-bottom: 0;">1. Stade Gobelin</h2>
+            <div class="arena-island">
+                <div class="arena-surface">
+                    <div class="bridge left"></div>
+                    <div class="bridge right"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding: 20px;">
+            <button class="cr-button" onclick="startBotMatch()">JOUER (VS IA)</button>
+            
+            <div style="background: rgba(0,0,0,0.5); border: 2px solid #444; padding: 12px; border-radius: 10px; margin-top: 10px; text-align: center;">
+                <h3 style="margin: 0 0 5px 0; font-family: 'Anton'; font-size: 1rem;">DUEL ENTRE AMIS (P2P)</h3>
+                <button class="cr-button blue" style="margin: 5px 0; padding: 8px;" onclick="hostGame()">CRÉER UN SALON</button>
+                <div style="display: flex; gap: 5px; margin-top: 5px;">
+                    <input type="text" id="friend-code" placeholder="Code salon ami" style="margin:0; font-size: 0.9rem; padding: 8px;">
+                    <button class="cr-button red" style="margin:0; width: 120px; padding: 8px;" onclick="joinGame()">REJOINDRE</button>
+                </div>
+                <div id="my-code-box" style="display:none; margin-top: 8px; font-size: 0.85rem; color: var(--cr-gold);">
+                    Code de salon : <b id="my-code" style="letter-spacing: 2px;">...</b> (En attente...)
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. PARAMETRES (Gestion fixe du Code Ami et de la Sauvegarde) -->
+    <div id="settings-screen" class="screen" style="padding: 20px; justify-content: center;">
+        <h2 style="font-family: 'Anton'; color: var(--cr-gold); text-align: center; font-size: 2rem;">PARAMÈTRES</h2>
+        
+        <div style="background: rgba(0,0,0,0.6); border: 2px solid #444; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+            <label style="font-size: 0.9rem; color: #aaa;">Ton Code Ami Permanent :</label>
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+                <input type="text" id="settings-friend-code" style="margin:0; text-transform: uppercase;" maxlength="10">
+                <button class="cr-button blue" style="margin:0; width: 140px; padding: 10px;" onclick="saveCustomFriendCode()">Modifier</button>
+            </div>
+            <p style="font-size: 0.75rem; color: #888; margin-top: 5px;">C'est ce code fixe que tes amis devront utiliser pour te retrouver.</p>
+        </div>
+
+        <button class="cr-button red" onclick="logout()">DÉCONNEXION</button>
+        <button class="cr-button gray" onclick="closeSettings()" style="margin-top: 10px;">RETOUR</button>
+    </div>
+
+    <!-- 4. BATAILLE -->
+    <div id="battle-screen" class="screen">
+        <div id="camera-wrapper">
+            <div class="battle-hud-top">
+                <div style="text-align: left;">
+                    <div id="p1-name" style="color: var(--cr-blue); font-weight: bold; font-size: 0.9rem;">Toi</div>
+                    <div class="score-counter" id="player-score" style="color: var(--cr-blue);">0</div>
+                </div>
+                <div class="timer-box" id="timer">30</div>
+                <div style="text-align: right;">
+                    <div id="p2-name" style="color: var(--cr-red); font-weight: bold; font-size: 0.9rem;">Ennemi</div>
+                    <div class="score-counter" id="enemy-score" style="color: var(--cr-red);">0</div>
+                </div>
+            </div>
+
+            <video id="video" playsinline autoplay muted></video>
+            <canvas id="canvas"></canvas>
+
+            <!-- TRACKER VISUEL & ETAT DE LA POMPE -->
+            <div class="tracker-ring-container">
+                <div class="rep-status-dot" id="rep-dot"></div>
+                <div>
+                    <div style="font-size: 0.7rem; color: #aaa; font-family: 'Anton';">STATUT POMPE</div>
+                    <div id="rep-status-text" style="font-family: 'Anton'; font-size: 0.9rem; color: #fff;">EN HAUT</div>
+                </div>
+            </div>
+
+            <div id="pose-hint" style="position: absolute; bottom: 20px; width: 100%; text-align: center; font-family: 'Anton'; font-size: 1.3rem; text-shadow: 2px 2px #000; color: var(--cr-gold);">Place-toi de profil face caméra !</div>
+        </div>
+        <div style="padding: 10px 20px;">
+            <button class="cr-button red" style="margin:0; padding: 10px;" onclick="endGame()">ABANDONNER</button>
+        </div>
+    </div>
+
+    <!-- 5. RESULTAT -->
+    <div id="result-screen" class="screen" style="justify-content: center; align-items: center; text-align: center; padding: 20px;">
+        <h1 id="result-title" style="font-family: 'Anton'; font-size: 4rem; text-shadow: 4px 4px 0 #000; margin: 0;">VICTOIRE</h1>
+        <div id="result-trophies-text" style="font-family: 'Anton'; font-size: 2rem; color: var(--cr-gold); margin: 15px 0;">+30 🏆</div>
+        <button class="cr-button" onclick="returnToMenu()">CONTINUER</button>
+    </div>
+
+    <script>
+        // ===================== GESTION DU PROFIL & GOOGLE SIMULATION =====================
+        let userData = {
+            name: "",
+            email: "",
+            avatar: "",
+            trophies: 0,
+            friendCode: ""
         };
 
-        const RANKS = [
-            { min: 0, max: 599, name: "BRONZE", short: "BRZ", gem: "var(--brz-gem)", glow: "var(--brz-glow)" },
-            { min: 600, max: 1199, name: "ARGENT", short: "ARG", gem: "var(--arg-gem)", glow: "var(--arg-glow)" },
-            { min: 1200, max: 1799, name: "OR", short: "OR", gem: "var(--or-gem)", glow: "var(--or-glow)" },
-            { min: 1800, max: 2499, name: "PLATINE", short: "PLT", gem: "var(--plt-gem)", glow: "var(--plt-glow)" },
-            { min: 2500, max: 9999, name: "DIAMANT", short: "DIA", gem: "var(--dia-gem)", glow: "var(--dia-glow)" }
-        ];
-
-        let resetState = { generatedCode: null, targetEmail: null };
-
-        // ===================== SAUVEGARDE ET COMPTE =====================
-        function loadAccount() {
-            const savedData = localStorage.getItem('pushArenaUser');
-            if (savedData) {
-                user = JSON.parse(savedData);
-                document.getElementById('auth-username-title').innerText = user.username;
-                document.getElementById('reg-screen').style.display = 'none';
-                document.getElementById('pin-screen').style.display = 'block';
-                document.getElementById('auth-overlay').style.display = 'flex';
-            } else {
-                document.getElementById('reg-screen').style.display = 'block';
-                document.getElementById('pin-screen').style.display = 'none';
-                document.getElementById('auth-overlay').style.display = 'flex';
+        function loadGameData() {
+            let saved = localStorage.getItem("cop_save_data");
+            if (saved) {
+                userData = JSON.parse(saved);
+                if (userData.email) {
+                    showScreen('menu-screen');
+                    updateMenuUI();
+                }
             }
         }
 
-        // ===================== GESTION DU CLAVIER PIN =====================
-        let currentPinEntry = "";
-        function pressPin(num) {
-            if (currentPinEntry.length < 4) {
-                currentPinEntry += num;
-                document.getElementById(`dot-${currentPinEntry.length - 1}`).classList.add('filled');
-                if (currentPinEntry.length === 4) setTimeout(checkPin, 200);
-            }
+        function saveGameData() {
+            localStorage.setItem("cop_save_data", JSON.stringify(userData));
         }
 
-        function clearPin() {
-            currentPinEntry = "";
-            for(let i=0; i<4; i++) document.getElementById(`dot-${i}`).classList.remove('filled');
-        }
-
-        function checkPin() {
-            if (currentPinEntry === user.pin) {
-                document.getElementById('auth-overlay').style.display = 'none';
-                updateUI();
-                initMultiplayer();
-                goToTab(1);
-            } else {
-                alert("Code PIN incorrect !");
-                clearPin();
-            }
-        }
-
-        function switchAuthMode(mode) { alert("Connexion par mot de passe classique en cours de développement."); }
-
-        function submitRegister() {
-            const pseudo = document.getElementById('reg-pseudo').value;
-            const pass = document.getElementById('reg-pass').value;
-            const pin = document.getElementById('reg-pin').value;
-            const email = document.getElementById('reg-email').value;
+        function loginWithGoogle() {
+            // Simulation de connexion avec les informations associées
+            userData.name = "Lucas Jules Dupont";
+            userData.email = "lucas.jules.dupont@gmail.com";
+            userData.avatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=faces";
             
-            if (!pseudo || !pass || pin.length !== 4 || !email.includes('@')) {
-                alert("Veuillez remplir tous les champs correctement (Email valide + PIN à 4 chiffres)."); return;
+            // Code ami fixe généré par défaut s'il n'existe pas encore
+            if (!userData.friendCode) {
+                userData.friendCode = "P" + Math.random().toString(36).substring(2, 7).toUpperCase();
             }
 
-            user.username = pseudo; user.pass = pass; user.pin = pin; user.email = email;
-            user.bio = document.getElementById('reg-bio').value || user.bio;
-            
-            localStorage.setItem('pushArenaUser', JSON.stringify(user));
-            document.getElementById('auth-overlay').style.display = 'none';
-            
-            updateUI(); initMultiplayer(); goToTab(1);
+            saveGameData();
+            showScreen('menu-screen');
+            updateMenuUI();
         }
 
-        function resetAccount() {
-            if (confirm("Es-tu sûr de vouloir supprimer ton compte ?")) {
-                localStorage.removeItem('pushArenaUser'); location.reload();
+        function updateMenuUI() {
+            document.getElementById('user-display-name').innerText = userData.name;
+            document.getElementById('user-avatar').src = userData.avatar;
+            document.getElementById('user-trophies').innerText = userData.trophies;
+            document.getElementById('settings-friend-code').value = userData.friendCode;
+        }
+
+        function logout() {
+            localStorage.removeItem("cop_save_data");
+            userData = { name: "", email: "", avatar: "", trophies: 0, friendCode: "" };
+            showScreen('login-screen');
+        }
+
+        function openSettings() { showScreen('settings-screen'); }
+        function closeSettings() { showScreen('menu-screen'); }
+
+        function saveCustomFriendCode() {
+            let newCode = document.getElementById('settings-friend-code').value.toUpperCase().trim();
+            if (newCode.length < 3) return alert("Le code ami doit contenir au moins 3 caractères !");
+            userData.friendCode = newCode;
+            saveGameData();
+            alert("Code ami mis à jour avec succès !");
+            closeSettings();
+        }
+
+        function showScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(id).classList.add('active-screen');
+        }
+
+        // ===================== RESEAU P2P (PeerJS avec code ami fixe) =====================
+        let peer = null;
+        let conn = null;
+        let isHost = false;
+        let isMultiplayer = false;
+
+        function initPeerWithCustomID() {
+            if (peer) {
+                peer.destroy(); // Réinitialise si on a changé de code entre temps
             }
-        }
-
-        // ===================== RECUPERATION MOT DE PASSE =====================
-        function showResetScreen() {
-            document.getElementById('pin-screen').style.display = 'none';
-            document.getElementById('reg-screen').style.display = 'none';
-            document.getElementById('reset-screen').style.display = 'block';
-            document.getElementById('reset-step-1').style.display = 'block';
-            document.getElementById('reset-step-2').style.display = 'none';
-            document.getElementById('reset-step-3').style.display = 'none';
-        }
-
-        function cancelReset() {
-            document.getElementById('reset-screen').style.display = 'none';
-            if (user.username) document.getElementById('pin-screen').style.display = 'block';
-            else document.getElementById('reg-screen').style.display = 'block';
-        }
-
-        function sendResetEmail() {
-            const inputEmail = document.getElementById('reset-email-input').value.trim();
-            if (!user.email || inputEmail.toLowerCase() !== user.email.toLowerCase()) {
-                alert("Erreur: Adresse email introuvable ou incorrecte."); return;
-            }
-            resetState.generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-            alert(`[SIMULATION E-MAIL]\nUn e-mail a été envoyé à ${inputEmail}.\nVotre code : ${resetState.generatedCode}`);
-            document.getElementById('reset-step-1').style.display = 'none';
-            document.getElementById('reset-step-2').style.display = 'block';
-        }
-
-        function verifyResetCode() {
-            if (document.getElementById('reset-code-input').value.trim() === resetState.generatedCode) {
-                alert("Code validé !");
-                document.getElementById('reset-step-2').style.display = 'none';
-                document.getElementById('reset-step-3').style.display = 'block';
-            } else { alert("Code incorrect."); }
-        }
-
-        function saveNewCredentials() {
-            const newPass = document.getElementById('new-pass-input').value;
-            const newPin = document.getElementById('new-pin-input').value;
-            if (!newPass || newPin.length !== 4) return alert("Mot de passe ou PIN invalide.");
-            user.pass = newPass; user.pin = newPin;
-            localStorage.setItem('pushArenaUser', JSON.stringify(user));
-            alert("Identifiants réinitialisés !");
-            document.getElementById('auth-overlay').style.display = 'none';
-            updateUI(); initMultiplayer(); goToTab(1);
-        }
-
-        // ===================== NAVIGATION & RANGS =====================
-        function updateUI() {
-            document.getElementById('display-username').innerText = user.username;
-            document.getElementById('profile-username').innerText = user.username;
-            document.getElementById('display-elo').innerText = user.elo;
-            document.getElementById('stat-current-elo').innerText = user.elo;
-            document.getElementById('stat-max-elo').innerText = user.maxElo;
-            document.getElementById('profile-bio').innerText = '"' + user.bio + '"';
-            updateRankDisplay();
-        }
-
-        function goToTab(index) {
-            document.getElementById('swipe-container').style.transform = `translateX(-${index * 25}%)`;
-            document.querySelectorAll('.nav-btn').forEach((btn, i) => btn.classList.toggle('active', i === index));
-        }
-
-        function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }
-
-        function updateRankDisplay() {
-            let currentRank = RANKS[0];
-            for (let r of RANKS) if (user.elo >= r.min) currentRank = r;
-            document.getElementById('rank-gem').innerText = currentRank.short;
-            document.getElementById('rank-gem').style.background = currentRank.gem;
-            document.getElementById('rank-gem').style.boxShadow = `0 0 25px ${currentRank.glow}`;
-            document.getElementById('rank-name').innerText = currentRank.name;
-        }
-
-        function openRankViewer() {
-            const container = document.getElementById('rank-scroll-area'); container.innerHTML = ''; 
-            RANKS.forEach(r => {
-                const isCurrent = user.elo >= r.min && user.elo <= r.max;
-                container.innerHTML += `
-                    <div style="background: ${isCurrent ? 'rgba(0,229,255,0.2)' : 'rgba(30,41,59,0.8)'}; 
-                                border: 2px solid ${isCurrent ? '#00e5ff' : '#334155'}; 
-                                border-radius: 10px; padding: 15px; margin-bottom: 10px; text-align: center;">
-                        <div class="text-3d" style="font-size: 1.5rem; color: ${isCurrent ? '#00e5ff' : '#fff'}; text-shadow: 0 0 10px ${r.glow}">
-                            ${r.name}
-                        </div>
-                        <div style="color: #aaa; font-size: 0.8rem; margin-top: 5px;">${r.min} - ${r.max > 9000 ? 'MAX' : r.max} Trophées</div>
-                    </div>
-                `;
-            });
-            document.getElementById('modal-ranks').style.display = 'flex';
-        }
-
-        // ===================== MULTIJOUEUR PEERJS & MATCHMAKING =====================
-        let peer;
-        let activeConnection = null;
-        let isSearching = false;
-        let aiTimeout = null;
-        
-        // Les canaux publics pour le matchmaking
-        let currentHubIndex = 0;
-        const HUBS = ['pa-hub-1', 'pa-hub-2', 'pa-hub-3'];
-
-        function initMultiplayer() {
-            if (peer) peer.destroy();
-            peer = new Peer(); // ID aléatoire classique pour être invité par un ami
             
+            peer = new Peer(userData.friendCode);
+
             peer.on('open', (id) => {
-                user.myCode = id;
-                renderFriendsList();
+                document.getElementById('my-code').innerText = id;
+                document.getElementById('my-code-box').style.display = 'block';
             });
 
-            // GESTION DES REQUETES ENTRANTES (Amis ou Matchmaking)
-            peer.on('connection', (conn) => {
-                // BUG CORRIGÉ : On attend l'ouverture du tunnel AVANT de confirmer/envoyer
-                conn.on('open', () => {
-                    // Si c'est un joueur aléatoire qui nous trouve sur un canal public
-                    if (conn.metadata && conn.metadata.type === 'random') {
-                        if (isSearching) {
-                            clearTimeout(aiTimeout); isSearching = false;
-                            activeConnection = conn; setupGameConnection(conn);
-                            conn.send({ type: 'ACCEPTED', username: user.username });
-                            startGameUI(conn.metadata.username || "Inconnu");
-                        } else {
-                            conn.send({ type: 'REJECTED' }); // Nous sommes en jeu, on refuse.
-                        }
-                        return;
-                    }
-
-                    // Si c'est un ami
-                    if (confirm(`Le joueur ${conn.metadata?.username || 'Un ami'} te défie ! Accepter ?`)) {
-                        activeConnection = conn; setupGameConnection(conn);
-                        conn.send({ type: 'ACCEPTED', username: user.username });
-                        startGameUI(conn.metadata?.username || "Ami");
-                    } else {
-                        conn.send({ type: 'REJECTED' });
-                        setTimeout(() => conn.close(), 500);
-                    }
-                });
-            });
-
-            // GESTION DES ERREURS DE MATCHMAKING (Canal vide)
             peer.on('error', (err) => {
-                if (err.type === 'peer-unavailable') {
-                    if (isSearching) {
-                        // Le canal public ciblé est vide : On le réquisitionne !
-                        becomeHub(HUBS[currentHubIndex]);
-                    } else {
-                        alert("Joueur introuvable ou hors ligne.");
-                        cancelMatchmaking();
+                if(err.type === 'unavailable-id') {
+                    alert("Ce code ami est déjà en ligne. Déconnecte-toi de tes autres appareils ou change de code dans les paramètres.");
+                }
+            });
+
+            peer.on('connection', (connection) => {
+                conn = connection;
+                setupConnectionListeners();
+            });
+        }
+
+        function hostGame() {
+            isHost = true;
+            isMultiplayer = true;
+            initPeerWithCustomID();
+        }
+
+        function joinGame() {
+            let targetCode = document.getElementById('friend-code').value.toUpperCase().trim();
+            if (!targetCode) return alert("Entre le code d'un ami !");
+            if (targetCode === userData.friendCode) return alert("Tu ne peux pas te rejoindre toi-même !");
+            
+            isHost = false;
+            isMultiplayer = true;
+            
+            if (peer) peer.destroy();
+            peer = new Peer(); // ID aléatoire pour celui qui rejoint
+
+            peer.on('open', () => {
+                conn = peer.connect(targetCode);
+                setupConnectionListeners();
+            });
+            
+            peer.on('error', (err) => {
+                alert("Erreur de connexion : " + err.type);
+            });
+        }
+
+        function setupConnectionListeners() {
+            conn.on('open', () => {
+                // Envoi des infos du profil à l'adversaire
+                conn.send({ type: 'hello', name: userData.name });
+                
+                if (isHost) {
+                    setTimeout(() => {
+                        conn.send({ type: 'start' });
+                        startBattle(userData.name, document.getElementById('p2-name').innerText || "Adversaire");
+                    }, 1500);
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'hello') {
+                    document.getElementById('p2-name').innerText = data.name;
+                    if(!isHost) {
+                        // Si je suis l'invité, j'affiche le nom de l'hôte en attendant que la partie se lance
+                        alert("Connecté à " + data.name + " ! En attente du lancement...");
                     }
-                } else if (err.type === 'unavailable-id' && isSearching) {
-                    currentHubIndex++; tryNextHub(); // Quelqu'un a volé le canal à la dernière ms
+                }
+                if (data.type === 'start' && !isHost) {
+                    startBattle(userData.name, document.getElementById('p2-name').innerText);
+                }
+                if (data.type === 'score') {
+                    enemyScore = data.score;
+                    document.getElementById('enemy-score').innerText = enemyScore;
                 }
             });
         }
 
-        // --- MATCHMAKING ALÉATOIRE SANS SERVEUR ---
-        function startSmartMatchmaking() {
-            document.getElementById('screen-matchmaking').style.display = 'flex';
-            isSearching = true; currentHubIndex = 0;
-            tryNextHub();
-        }
+        // ===================== MOTEUR DE JEU & EFFETS VISUELS =====================
+        let playerScore = 0, enemyScore = 0, time = 30;
+        let gameActive = false, timerInterval, suddenDeath = false;
 
-        function tryNextHub() {
-            if (!isSearching) return;
-            if (currentHubIndex >= HUBS.length) {
-                startAIGame(); return; // Plus de canaux libres -> On lance l'IA
-            }
+        function startBotMatch() {
+            isMultiplayer = false;
+            startBattle(userData.name, "Robot PGM");
             
-            document.getElementById('mm-status').innerText = `Recherche (Canal ${currentHubIndex + 1}/${HUBS.length})...`;
-            const conn = peer.connect(HUBS[currentHubIndex], { metadata: { username: user.username, type: 'random' } });
-            
-            conn.on('data', (data) => {
-                if (data.type === 'REJECTED') {
-                    // L'hôte du canal est déjà en combat, on passe au suivant
-                    currentHubIndex++; tryNextHub();
-                } else if (data.type === 'ACCEPTED') {
-                    isSearching = false; clearTimeout(aiTimeout);
-                    activeConnection = conn; setupGameConnection(conn);
-                    startGameUI(data.username || "Adversaire");
+            let aiInterval = setInterval(() => {
+                if (!gameActive) { clearInterval(aiInterval); return; }
+                if (Math.random() > 0.35 && !suddenDeath) {
+                    enemyScore++;
+                    document.getElementById('enemy-score').innerText = enemyScore;
                 }
-            });
+            }, 1400);
         }
 
-        function becomeHub(hubId) {
-            document.getElementById('mm-status').innerText = "Attente d'un adversaire... (Max 30s)";
-            peer.destroy(); // On lâche notre ID d'ami
+        function startBattle(p1Name, p2Name) {
+            showScreen('battle-screen');
+            document.getElementById('p1-name').innerText = p1Name;
+            document.getElementById('p2-name').innerText = p2Name;
             
-            setTimeout(() => {
-                peer = new Peer(hubId); // On devient le Canal Public
-                peer.on('open', () => {
-                    // Si personne ne rejoint dans les 30s, on lance l'IA
-                    aiTimeout = setTimeout(() => { if (isSearching) startAIGame(); }, 30000);
-                });
-                // peer.on('connection') s'occupera de la suite grâce à initMultiplayer (qui doit être réattribué ici)
-                peer.on('connection', (conn) => {
-                    conn.on('open', () => {
-                        if (conn.metadata && conn.metadata.type === 'random' && isSearching) {
-                            clearTimeout(aiTimeout); isSearching = false;
-                            activeConnection = conn; setupGameConnection(conn);
-                            conn.send({ type: 'ACCEPTED', username: user.username });
-                            startGameUI(conn.metadata.username || "Adversaire");
-                        } else { conn.send({ type: 'REJECTED' }); }
-                    });
-                });
-            }, 500);
-        }
-
-        // --- MATCHMAKING AMIS ---
-        function shareFriendLink() {
-            if (!user.myCode) return alert("Connexion en cours...");
-            const code = prompt("Copie ton ID, ou colle celui d'un ami pour le rejoindre :", user.myCode);
-            if (code && code !== user.myCode) joinFriendLobby(code);
-        }
-
-        function joinFriendLobby(friendId) {
-            document.getElementById('screen-matchmaking').style.display = 'flex';
-            document.getElementById('mm-status').innerText = "Connexion à l'ami...";
-            isSearching = false; // Ce n'est pas aléatoire
-
-            const conn = peer.connect(friendId, { metadata: { username: user.username, type: 'friend' } });
-            conn.on('open', () => document.getElementById('mm-status').innerText = "En attente de l'hôte...");
+            playerScore = 0; enemyScore = 0; time = 30; gameActive = true; suddenDeath = false;
+            document.getElementById('player-score').innerText = 0;
+            document.getElementById('enemy-score').innerText = 0;
+            document.getElementById('timer').innerText = 30;
+            document.getElementById('battle-screen').classList.remove('sudden-death');
             
-            conn.on('data', (data) => {
-                if (data.type === 'REJECTED') {
-                    alert("L'invitation a été refusée."); cancelMatchmaking();
-                } else if (data.type === 'ACCEPTED') {
-                    activeConnection = conn; setupGameConnection(conn);
-                    startGameUI(data.username || "Ami");
-                }
-            });
-        }
+            startCamera();
 
-        function cancelMatchmaking() {
-            isSearching = false; clearTimeout(aiTimeout);
-            document.getElementById('screen-matchmaking').style.display = 'none';
-            peer.destroy(); setTimeout(initMultiplayer, 500); // Retour au lobby classique
-        }
-
-        function renderFriendsList() {
-            document.getElementById('friends-catalog-list').innerHTML = `
-                <div class="list-item">
-                    <div style="display:flex; align-items:center;"><span class="status-dot"></span><span class="text-3d" style="font-size: 0.9rem;">Mon ID (Copier)</span></div>
-                    <div style="font-size: 0.7rem; color: #aaa;">${user.myCode}</div>
-                </div>`;
-        }
-
-        // ===================== LOGIQUE DU JEU ET I.A =====================
-        let battleTimerInterval = null;
-        let aiInterval = null;
-        let myScore = 0;
-
-        function setupGameConnection(conn) {
-            conn.on('data', (data) => {
-                if (data.type === 'SCORE_UPDATE') document.getElementById('p2-score').innerText = data.score;
-            });
-        }
-
-        function startGameUI(opponentName) {
-            document.getElementById('screen-matchmaking').style.display = 'none';
-            document.getElementById('screen-battle').style.display = 'flex';
-            
-            document.getElementById('p1-name').innerText = user.username.substring(0, 10);
-            document.getElementById('p2-name').innerText = opponentName.substring(0, 10);
-            
-            myScore = 0;
-            document.getElementById('p1-score').innerText = "0";
-            document.getElementById('p2-score').innerText = "0";
-            
-            let timeLeft = 30;
-            document.getElementById('battle-timer').innerText = timeLeft;
-            
-            clearInterval(battleTimerInterval);
-            battleTimerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('battle-timer').innerText = timeLeft;
-                if(timeLeft <= 0) {
-                    clearInterval(battleTimerInterval);
-                    endSimulationBattle();
+            timerInterval = setInterval(() => {
+                if (time > 0 && !suddenDeath) {
+                    time--;
+                    document.getElementById('timer').innerText = time;
+                } else if (time === 0 && playerScore === enemyScore) {
+                    suddenDeath = true;
+                    document.getElementById('timer').innerText = "MORT SUBITE";
+                    document.getElementById('battle-screen').classList.add('sudden-death');
+                } else if (time === 0 && playerScore !== enemyScore) {
+                    endGame();
                 }
             }, 1000);
         }
 
-        function startAIGame() {
-            isSearching = false; clearTimeout(aiTimeout);
-            
-            const randomId = Math.floor(1000 + Math.random() * 9000);
-            const aiName = "Joueur_" + randomId;
-            startGameUI(aiName);
-
-            // Simulation intelligente de l'IA (vitesse calquée sur ton classement)
-            let aiScore = 0;
-            let aiSpeed = 2500; // 2.5 secondes par pompe de base
-            if (user.elo > 1500) aiSpeed = 1500;
-            else if (user.elo > 1000) aiSpeed = 2000;
-
-            clearInterval(aiInterval);
-            aiInterval = setInterval(() => {
-                if(Math.random() > 0.2) { // 80% de chance d'incrémenter à chaque tick
-                    aiScore++;
-                    document.getElementById('p2-score').innerText = aiScore;
-                }
-            }, aiSpeed);
+        function triggerVisualEffect() {
+            let wrapper = document.getElementById('camera-wrapper');
+            let plusElem = document.createElement('div');
+            plusElem.className = 'floating-plus';
+            plusElem.innerText = '+1';
+            plusElem.style.left = (40 + Math.random() * 20) + '%';
+            plusElem.style.top = '50%';
+            wrapper.appendChild(plusElem);
+            setTimeout(() => plusElem.remove(), 800);
         }
 
-        function endSimulationBattle() {
-            document.getElementById('screen-battle').style.display = 'none';
-            document.getElementById('screen-result').style.display = 'flex';
+        function playerScored() {
+            if (!gameActive) return;
+            playerScore++;
+            document.getElementById('player-score').innerText = playerScore;
+            triggerVisualEffect();
+
+            if (isMultiplayer && conn) {
+                conn.send({ type: 'score', score: playerScore });
+            }
+
+            if (suddenDeath && playerScore > enemyScore) {
+                setTimeout(endGame, 400);
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
             
-            // Nettoyage complet
-            if (activeConnection) { activeConnection.close(); activeConnection = null; }
-            clearInterval(aiInterval);
-            clearInterval(battleTimerInterval);
-            
-            // Attribution des points (Simulation de +30)
-            user.elo += 30;
-            if(user.elo > user.maxElo) user.maxElo = user.elo;
-            user.gamesPlayed++; user.gamesWon++;
-            localStorage.setItem('pushArenaUser', JSON.stringify(user));
-            
-            // Restauration de l'identité P2P initiale
-            peer.destroy();
-            setTimeout(initMultiplayer, 500); 
+            // Fermeture proprement du P2P pour éviter les bugs si on rejoue
+            if(conn) { conn.close(); conn = null; }
+            if(peer) { peer.destroy(); peer = null; }
+            document.getElementById('my-code-box').style.display = 'none';
+
+            showScreen('result-screen');
+
+            let title = document.getElementById('result-title');
+            let trophiesText = document.getElementById('result-trophies-text');
+
+            if (playerScore > enemyScore) {
+                title.innerText = "VICTOIRE !";
+                title.style.color = "#4caf50";
+                userData.trophies += 30;
+                trophiesText.innerText = "+30 🏆";
+            } else if (playerScore < enemyScore) {
+                title.innerText = "DÉFAITE...";
+                title.style.color = "var(--cr-red)";
+                userData.trophies = Math.max(0, userData.trophies - 15);
+                trophiesText.innerText = "-15 🏆";
+            } else {
+                title.innerText = "ÉGALITÉ";
+                title.style.color = "white";
+                trophiesText.innerText = "0 🏆";
+            }
+            saveGameData();
         }
 
         function returnToMenu() {
-            document.getElementById('screen-result').style.display = 'none';
-            updateUI();
+            showScreen('menu-screen');
+            updateMenuUI();
         }
 
-        // Lancement
-        window.onload = loadAccount;
+        // ===================== MEDIAPIPE TRACKER DE POMPES =====================
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        let isDown = false;
+        let cameraObj = null;
 
+        async function startCamera() {
+            try {
+                // 1. Force la demande de permission AVANT de lancer l'IA
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                videoElement.srcObject = stream;
+                
+                const pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+                pose.setOptions({ modelComplexity: 0, smoothLandmarks: true });
+                pose.onResults(onPoseResults);
+
+                if (cameraObj) cameraObj.stop();
+                cameraObj = new Camera(videoElement, {
+                    onFrame: async () => { await pose.send({image: videoElement}); },
+                    width: 640, height: 480
+                });
+                cameraObj.start();
+            } catch (err) {
+                alert("Impossible d'accéder à la caméra 🎥\nAssure-toi d'être en HTTPS ou sur un serveur local.\nErreur : " + err.message);
+            }
+        }
+
+        function onPoseResults(results) {
+            if (!gameActive) return;
+            canvasElement.width = videoElement.videoWidth || 640;
+            canvasElement.height = videoElement.videoHeight || 480;
+            canvasCtx.save(); 
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.translate(canvasElement.width, 0); 
+            canvasCtx.scale(-1, 1);
+            
+            if (results.image) {
+                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            }
+
+            let dot = document.getElementById('rep-dot');
+            let statusText = document.getElementById('rep-status-text');
+
+            if (results.poseLandmarks) {
+                document.getElementById('pose-hint').style.display = 'none';
+                
+                let shoulderL = results.poseLandmarks[11];
+                let elbowL = results.poseLandmarks[13];
+                let shoulderR = results.poseLandmarks[12];
+                let elbowR = results.poseLandmarks[14];
+
+                if(shoulderL && elbowL && shoulderR && elbowR) {
+                    let avgShoulderY = (shoulderL.y + shoulderR.y) / 2;
+                    let avgElbowY = (elbowL.y + elbowR.y) / 2;
+
+                    // Tracker visuel en temps réel (le repère Y grandit quand on descend)
+                    if (avgShoulderY > avgElbowY - 0.05) {
+                        dot.classList.add('active');
+                        statusText.innerText = "BAS (VALIDE)";
+                        if (!isDown) {
+                            isDown = true;
+                        }
+                    } else if (avgShoulderY < avgElbowY - 0.15) {
+                        dot.classList.remove('active');
+                        statusText.innerText = "HAUT";
+                        if (isDown) {
+                            isDown = false;
+                            playerScored();
+                        }
+                    }
+                }
+            } else {
+                document.getElementById('pose-hint').style.display = 'block';
+            }
+            canvasCtx.restore();
+        }
+
+        // Démarrage : on charge les données locales si elles existent
+        window.onload = loadGameData;
     </script>
+</body>
+</html>
