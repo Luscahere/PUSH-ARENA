@@ -2,878 +2,818 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Push Arena - Complete Edition</title>
-
-    <!-- Polices 3D et Arcade -->
-    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
+    <!-- MediaPipe Pose & PeerJS Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-
+    
     <style>
         :root {
-            --brz-gem: #d46f1d; --brz-glow: rgba(212, 111, 29, 0.8);
-            --arg-gem: #e0e0e0; --arg-glow: rgba(220, 220, 220, 0.8);
-            --or-gem: #ffd700;  --or-glow: rgba(255, 215, 0, 0.9);
-            --plt-gem: #00e5ff; --plt-glow: rgba(0, 229, 255, 0.8);
-            --dia-gem: #b900ff; --dia-glow: rgba(185, 0, 255, 0.9);
+            --bg-main: #0b0f19;
+            --bg-card: #151c2e;
+            --accent: #00e5ff;
+            --accent-glow: rgba(0, 229, 255, 0.4);
+            --text-main: #f1f5f9;
+            --text-sub: #94a3b8;
+            --danger: #ef4444;
+            --gold: #ffd700;
+            
+            --brz-gem: #cd7f32; --brz-glow: rgba(205, 127, 50, 0.5);
+            --arg-gem: #c0c0c0; --arg-glow: rgba(192, 192, 192, 0.5);
+            --or-gem: #ffd700;  --or-glow: rgba(255, 215, 0, 0.5);
+            --plt-gem: #e5e4e2; --plt-glow: rgba(229, 228, 226, 0.5);
+            --dia-gem: #b9f2ff; --dia-glow: rgba(185, 242, 255, 0.5);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #030712; color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
 
-        body {
-            margin: 0; padding: 0; font-family: 'Luckiest Guy', cursive;
-            background-color: #030712; color: white;
-            display: flex; justify-content: center; height: 100vh; overflow: hidden;
-        }
-
-        /* TEXTE 3D GLOBAL */
-        .text-3d {
-            font-family: 'Luckiest Guy', cursive; text-transform: uppercase; color: #ffffff;
-            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
-                         0 4px 0 #111, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.7);
-            letter-spacing: 1px;
-        }
-
-        .text-3d-gold {
-            color: #ffe44d;
-            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000,
-                         0 4px 0 #b38600, 0 6px 0 #000, 0 8px 10px rgba(0,0,0,0.8);
-        }
-
-        .pseudo-font {
-            font-family: 'Bangers', cursive; font-size: 1.8rem; letter-spacing: 2px; color: #ffffff;
-            text-shadow: 3px 3px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, 0 4px 10px rgba(0,229,255,0.6);
-        }
-
-        /* SCENE 3D */
         #app-window {
-            width: 100%; max-width: 500px; height: 100%; position: relative;
-            overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.9); background: #091326;
+            width: 100%; max-width: 420px; height: 100vh; max-height: 880px;
+            background: var(--bg-main); border-radius: 20px; position: relative;
+            display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 0 40px rgba(0, 229, 255, 0.15); border: 1px solid #1e293b;
         }
 
-        .bg-3d-scene {
-            position: absolute; width: 100%; height: 100%; top:0; left:0; z-index:0;
-            perspective: 600px; overflow: hidden;
-            background: radial-gradient(circle at 50% 30%, #1e3a8a 0%, #030712 100%);
+        /* HEADER */
+        header {
+            padding: 15px 20px; background: var(--bg-card); display: flex;
+            justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; z-index: 10;
         }
+        .user-pill { display: flex; align-items: center; gap: 10px; }
+        .avatar { width: 40px; height: 40px; background: #1e293b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 2px solid var(--accent); }
+        .rank-badge { padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 0.75rem; background: var(--or-gem); color: #000; box-shadow: 0 0 10px var(--or-glow); cursor: pointer; }
 
-        .bg-grid-3d {
-            position: absolute; width: 200%; height: 200%; top: -50%; left: -50%;
-            background-image: linear-gradient(rgba(0, 229, 255, 0.2) 2px, transparent 2px),
-                              linear-gradient(90deg, rgba(0, 229, 255, 0.2) 2px, transparent 2px);
-            background-size: 50px 50px; transform: rotateX(65deg);
-            animation: gridMove 6s linear infinite;
-        }
-        @keyframes gridMove { from { transform: rotateX(65deg) translateY(0); } to { transform: rotateX(65deg) translateY(50px); } }
+        /* VIEWPORT & SWIPE CONTAINER */
+        .viewport { flex: 1; overflow: hidden; position: relative; }
+        #swipe-container { display: flex; width: 400%; height: 100%; transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
+        .tab-page { width: 25%; height: 100%; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
 
-        /* AUTHENTIFICATION & PIN OVERLAY */
-        .auth-overlay {
-            position: absolute; top:0; left:0; width:100%; height:100%; z-index:500;
-            background: rgba(3, 7, 18, 0.98); backdrop-filter: blur(15px);
-            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px;
-            overflow-y: auto;
-        }
-        
-        .pin-display {
-            display: flex; gap: 12px; margin: 20px 0; justify-content: center;
-        }
-        .pin-dot {
-            width: 20px; height: 20px; border-radius: 50%; border: 2px solid #00e5ff; background: transparent;
-            transition: all 0.2s;
-        }
-        .pin-dot.filled { background: #00e5ff; box-shadow: 0 0 10px #00e5ff; }
+        /* NAVIGATION BAR */
+        nav { display: flex; background: var(--bg-card); border-top: 1px solid #1e293b; padding: 10px 0; z-index: 10; }
+        .nav-btn { flex: 1; text-align: center; background: none; border: none; color: var(--text-sub); font-size: 0.8rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .nav-btn.active { color: var(--accent); font-weight: bold; }
 
-        .pin-keypad {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 280px;
-        }
-        .pin-btn {
-            background: rgba(30, 41, 59, 0.8); border: 2px solid #334155; border-radius: 15px;
-            padding: 15px; font-size: 1.5rem; color: #fff; cursor: pointer; text-align: center;
-            box-shadow: 0 4px 0 #000; transition: all 0.1s;
-        }
-        .pin-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #000; }
+        /* UI CARDS & BUTTONS */
+        .card { background: var(--bg-card); padding: 18px; border-radius: 16px; border: 1px solid #1e293b; }
+        .btn-action { background: linear-gradient(135deg, var(--accent), #0099ff); color: #000; font-weight: bold; padding: 14px; border: none; border-radius: 12px; cursor: pointer; width: 100%; text-align: center; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 15px var(--accent-glow); transition: transform 0.1s; }
+        .btn-action:active { transform: scale(0.97); }
 
-        /* INPUTS AUTH */
-        .auth-input-group { width: 100%; margin-bottom: 12px; text-align: left; }
-        .auth-input-group label { font-size: 0.75rem; color: #00e5ff; display: block; margin-bottom: 4px; }
-        .auth-input {
-            width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #334155;
-            background: #0f172a; color: #fff; font-family: 'Roboto', sans-serif; font-weight: bold;
-        }
+        /* OVERLAYS & MODALS */
+        .overlay { position: absolute; inset: 0; background: rgba(11, 15, 25, 0.95); backdrop-filter: blur(10px); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 25px; gap: 20px; text-align: center; }
+        .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; width: 100%; max-width: 250px; }
+        .pin-btn { width: 60px; height: 60px; border-radius: 50%; background: #1e293b; border: 1px solid #334155; color: #fff; font-size: 1.4rem; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: auto; }
+        .pin-dots { display: flex; gap: 12px; justify-content: center; }
+        .pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--accent); }
+        .pin-dot.filled { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 
-        /* CONTENEUR PAGES (SWIPE HORIZONTAL) */
-        #swipe-container {
-            display: flex; width: 400%; height: calc(100% - 85px); position: relative; z-index: 2;
-            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-
-        .page {
-            width: 25%; height: 100%; position: relative;
-            display: flex; flex-direction: column; overflow-y: auto; padding: 15px;
-        }
-
-        /* NAVBAR BOTTOM */
-        .menu-bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 85px;
-            display: flex; background: rgba(10, 15, 30, 0.95); border-top: 4px solid #00e5ff; z-index: 50;
-            box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px);
-        }
-
-        .nav-btn {
-            flex: 1; margin: 8px 4px; border-radius: 12px; background: linear-gradient(to bottom, #1f2937, #111827);
-            border: 2px solid #374151; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 0.85rem; cursor: pointer; color: #9ca3af; box-shadow: inset 0 2px 0 rgba(255,255,255,0.1), 0 4px 0 #000;
-            transition: all 0.2s;
-        }
-
-        .nav-btn.active {
-            background: linear-gradient(to bottom, #00e5ff, #0088cc); border-color: #ffffff; color: #ffffff;
-            box-shadow: inset 0 2px 0 rgba(255,255,255,0.5), 0 4px 0 #004466, 0 0 15px rgba(0,229,255,0.6);
-            transform: translateY(-4px);
-        }
-
-        /* HEADER & PASS */
-        .menu-top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .menu-user-info { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-        .menu-profile-pic {
-            width: 65px; height: 65px; border: 3px solid #00e5ff; border-radius: 50%;
-            background: radial-gradient(circle, #1e293b, #0f172a); display: flex; justify-content: center; align-items: center;
-            font-size: 2.2rem; box-shadow: 0 0 15px rgba(0,229,255,0.4), inset 0 0 10px rgba(0,0,0,0.8);
-        }
-        .header-right-block { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
-        .bp-mini-widget {
-            background: linear-gradient(135deg, #2b1055, #751581); border: 2px solid #ffd700; border-radius: 10px; padding: 4px 10px;
-            display: flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5), 0 0 10px rgba(255,215,0,0.3);
-        }
-        .bp-mini-title { font-size: 0.75rem; color: #ffd700; }
-        .bp-mini-bar { width: 60px; height: 8px; background: #000; border-radius: 5px; overflow: hidden; border: 1px solid #ffd700; }
-        .bp-mini-fill { width: 60%; height: 100%; background: linear-gradient(90deg, #ffcc00, #ff0055); }
-        .menu-trophies-container { text-align: right; }
-        .menu-trophies-value { font-size: 1.6rem; color: #ffd700; }
-
-        /* EMBLEM RANK */
-        .menu-center { display: flex; flex-direction: column; align-items: center; flex: 1; justify-content: center; }
-        .rank-emblem-3d {
-            width: 240px; height: 180px; position: relative; display: flex; justify-content: center; align-items: center;
-            margin: 10px 0; perspective: 1000px; cursor: pointer; transition: transform 0.2s;
-        }
-        .rank-emblem-3d:active { transform: scale(0.95); }
-        .rank-stars { position: absolute; top: 0; display: flex; gap: 5px; z-index: 5; }
-        .star { font-size: 1.3rem; filter: drop-shadow(0 2px 4px #000); }
-        .rank-wings-3d {
-            position: absolute; width: 100%; height: 100%; background: linear-gradient(to bottom, #f8fafc, #64748b);
-            clip-path: polygon(0% 25%, 20% 10%, 40% 35%, 50% 15%, 60% 35%, 80% 10%, 100% 25%, 85% 75%, 50% 100%, 15% 75%);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6); transition: all 0.5s;
-        }
-        .rank-shield-3d {
-            position: absolute; width: 110px; height: 120px; background: linear-gradient(135deg, #1e293b, #0f172a);
-            border: 4px solid #ffd700; border-radius: 10px 10px 50px 50px; z-index: 2; box-shadow: 0 5px 15px rgba(0,0,0,0.8);
-            display: flex; justify-content: center; align-items: center;
-        }
-        .rank-gem-3d {
-            position: relative; z-index: 3; width: 65px; height: 65px; background: var(--arg-gem); box-shadow: 0 0 25px var(--arg-glow);
-            clip-path: polygon(50% 0%, 100% 25%, 50% 100%, 0% 25%); border: 3px solid #fff; display: flex; justify-content: center; align-items: center;
-            font-size: 1.3rem; text-shadow: 2px 2px 0 #000; transition: all 0.5s;
-        }
-        .rank-banner-3d {
-            position: absolute; bottom: -10px; z-index: 4; background: linear-gradient(to bottom, #ef4444, #991b1b);
-            border: 2px solid #fff; border-radius: 8px; padding: 4px 20px; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-        }
-
-        /* JOUER BTN */
-        .play-btn {
-            background: linear-gradient(45deg, #ff3b3b, #ff0055); border: 4px solid #111; border-radius: 15px; color: white;
-            font-family: 'Roboto', sans-serif; font-weight: 900; font-size: 2.2rem; padding: 12px 60px;
-            text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 0 #111, 0 15px 25px rgba(255,0,85,0.6);
-            transition: all 0.1s; animation: pulsePlay 2s infinite; margin-top: 15px;
-        }
-        .play-btn:active { transform: translateY(8px); box-shadow: 0 2px 0 #111; animation: none; }
-        @keyframes pulsePlay { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* PROFIL UI & LEADERBOARD */
-        .profile-card-3d {
-            background: rgba(15, 23, 42, 0.85); border: 3px solid #00e5ff; border-radius: 20px; padding: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 10px;
-        }
-        .stats-grid-3d { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .stat-box-3d { background: rgba(30, 41, 59, 0.8); border: 2px solid #334155; border-radius: 12px; padding: 8px; text-align: center; }
-        .stat-value { font-size: 1.2rem; color: #00e5ff; margin-top: 2px; }
-
-        .chart-container {
-            background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; border-radius: 12px;
-            padding: 10px; text-align: center; height: 150px; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; width: 100%; position: relative;
-        }
-        #pushupChart { width: 100%; height: 100%; flex: 1; }
-
-        /* LISTE LEADERBOARD & AMIS */
-        .list-container {
-            background: rgba(15, 23, 42, 0.9); border: 2px solid #334155; border-radius: 15px;
-            padding: 10px; max-height: 220px; overflow-y: auto;
-        }
-        .list-item {
-            display: flex; align-items: center; justify-content: space-between;
-            background: #1e293b; border: 1px solid #334155; padding: 8px 12px; border-radius: 10px; margin-bottom: 6px;
-        }
-        .list-item.online { border-color: #00e5ff; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #4caf50; display: inline-block; margin-right: 5px; }
-        .status-dot.offline { background: #64748b; }
-
-        /* MODALS & OVERLAYS */
-        .modal-overlay { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(3, 7, 18, 0.95); z-index: 100; display: none; 
-            flex-direction: column; justify-content: center; align-items: center; padding: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .cr-button-3d {
-            background: linear-gradient(to bottom, #ffe44d, #ffcc00); border: 3px solid #000; border-radius: 12px;
-            color: #000; padding: 12px; width: 100%; margin: 8px 0; cursor: pointer;
-            box-shadow: 0 5px 0 #b38600, 0 8px 10px rgba(0,0,0,0.5); transition: 0.1s; font-family: 'Luckiest Guy';
-        }
-        .cr-button-3d:active { transform: translateY(4px); box-shadow: 0 1px 0 #b38600; }
-
-        /* GAME SCREEN & POP-UP ANIMS */
-        .full-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 200; display: none; flex-direction: column;
-        }
-        #camera-wrapper { flex: 1; position: relative; overflow: hidden; pointer-events: none; }
-        video { display: none; }
-        canvas.cam-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .battle-hud { display: flex; justify-content: space-between; padding: 15px; position: absolute; top:0; width: 100%; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
-
-        /* VISUAL REP FEEDBACK POPUP */
-        .rep-popup {
-            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
-            font-size: 5rem; color: #00e5ff; text-shadow: 0 0 20px #00e5ff, 3px 3px 0 #000;
-            pointer-events: none; opacity: 0; z-index: 30; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .rep-popup.active { opacity: 1; transform: translate(-50%, -60%) scale(1.2); }
-
-        .cam-flash {
-            position: absolute; top:0; left:0; width:100%; height:100%; border: 10px solid #00e5ff;
-            box-sizing: border-box; opacity:0; pointer-events:none; z-index: 25; transition: opacity 0.2s;
-        }
+        /* CAMERA & BATTLE SCREEN */
+        .cam-wrapper { position: relative; width: 100%; height: 260px; border-radius: 16px; overflow: hidden; background: #000; border: 2px solid var(--accent); }
+        #video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        #canvas { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+        .rep-popup { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 4rem; font-weight: 900; color: var(--accent); text-shadow: 0 0 20px var(--accent); pointer-events: none; opacity: 0; transition: transform 0.2s, opacity 0.2s; }
+        .rep-popup.active { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+        .cam-flash { position: absolute; inset: 0; background: rgba(0, 229, 255, 0.3); opacity: 0; pointer-events: none; transition: opacity 0.1s; }
         .cam-flash.active { opacity: 1; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        input, textarea { width: 100%; padding: 12px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
     <div id="app-window">
-        <!-- ARRIERE PLAN 3D -->
-        <div class="bg-3d-scene"><div class="bg-grid-3d"></div></div>
+        <!-- HEADER -->
+        <header>
+            <div class="user-pill">
+                <div class="avatar" id="display-avatar">🦍</div>
+                <div>
+                    <div id="display-username" style="font-weight: bold; font-size: 0.9rem;">JOUEUR</div>
+                    <div style="font-size: 0.75rem; color: var(--text-sub);"><span id="display-elo">1000</span> ELO</div>
+                </div>
+            </div>
+            <div class="rank-badge" id="rank-gem" onclick="openRankViewer()">OR</div>
+        </header>
 
-        <!-- AUTHENTIFICATION / PIN / RESET OVERLAY -->
-        <div id="auth-overlay" class="auth-overlay">
-            
-            <!-- ECRAN PIN (SI COMPTE EXISTE) -->
-            <div id="pin-screen" style="display:none; text-align:center; width:100%;">
-                <div class="menu-profile-pic" id="auth-pdp" style="margin: 0 auto 10px auto;">🦍</div>
-                <h2 class="text-3d" id="auth-username-title" style="color:#00e5ff; margin: 0;">LUSCAH</h2>
-                <p class="text-3d" style="font-size: 0.75rem; color: #aaa;">ENTREZ VOTRE CODE PIN</p>
-                <div class="pin-display">
+        <!-- VIEWPORT PAGE CONTAINER -->
+        <div class="viewport">
+            <div id="swipe-container">
+                
+                <!-- TAB 0: ARENA -->
+                <div class="tab-page">
+                    <h2 style="font-size: 1.2rem;">⚡ BATAILLE D'ARÈNE</h2>
+                    <div class="card" style="text-align: center;">
+                        <p style="color: var(--text-sub); font-size: 0.85rem; margin-bottom: 15px;">Affrontez des adversaires en temps réel ou entraînez-vous contre l'IA.</p>
+                        <button class="btn-action" onclick="startSmartMatchmaking()">Trouver un match</button>
+                    </div>
+                    <div class="card">
+                        <h3 style="font-size: 0.95rem; margin-bottom: 8px;">📊 Statut Actuel</h3>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub);">
+                            <span>Rang: <b id="rank-name" style="color: var(--accent);">OR</b></span>
+                            <span>Victoires: <b id="stat-games-won">0</b></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 1: MULTIJOUEUR / AMIS -->
+                <div class="tab-page">
+                    <h2 style="font-size: 1.2rem;">👥 MULTIJOUEUR P2P</h2>
+                    <div class="card">
+                        <button class="btn-action" onclick="shareFriendLink()">Inviter / Rejoindre un Ami</button>
+                    </div>
+                    <div class="card">
+                        <h3 style="font-size: 0.95rem; margin-bottom: 10px;">Liste d'amis</h3>
+                        <div id="friends-catalog-list"></div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: LEADERBOARD -->
+                <div class="tab-page">
+                    <h2 style="font-size: 1.2rem;">🏆 CLASSEMENT GLOBAL</h2>
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155;">
+                            <span>1. TITAN_FIT</span>
+                            <span style="color: var(--gold);">2450 ELO</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #334155;">
+                            <span>2. CYBER_PUMP</span>
+                            <span style="color: var(--plt-gem);">2100 ELO</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0;">
+                            <span>3. VOUS</span>
+                            <span style="color: var(--accent);"><span id="stat-current-elo">1000</span> ELO</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: PROFIL & STATS -->
+                <div class="tab-page">
+                    <h2 style="font-size: 1.2rem;">👤 PROFIL COMBATTANT</h2>
+                    <div class="card" style="text-align: center;">
+                        <div class="avatar" id="profile-pdp" style="margin: 0 auto 10px; width: 60px; height: 60px; font-size: 1.8rem;">🦍</div>
+                        <h3 id="profile-username">JOUEUR</h3>
+                        <p id="profile-tier" style="font-size: 0.8rem; color: var(--accent);">Guerrier Débutant</p>
+                        <p id="profile-bio" style="font-size: 0.75rem; color: var(--text-sub); margin-top: 5px;">"Prêt à tout écraser !"</p>
+                    </div>
+                    <div class="card" style="height: 160px; position: relative;">
+                        <h4 style="font-size: 0.85rem; margin-bottom: 10px; color: var(--text-sub);">Progression des Pompes</h4>
+                        <canvas id="pushupChart"></canvas>
+                    </div>
+                    <div class="card">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.8rem; text-align: center;">
+                            <div>Record ELO: <b id="stat-max-elo">1000</b></div>
+                            <div>Parties: <b id="stat-games-played">0</b></div>
+                        </div>
+                    </div>
+                    <button style="background: var(--danger); border: none; color: white; padding: 10px; border-radius: 8px; cursor: pointer;" onclick="resetAccount()">Réinitialiser Compte</button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- NAVIGATION -->
+        <nav>
+            <button class="nav-btn active" onclick="goToTab(0)"><span>⚡</span><span>Arène</span></button>
+            <button class="nav-btn" onclick="goToTab(1)"><span>👥</span><span>Social</span></button>
+            <button class="nav-btn" onclick="goToTab(2)"><span>🏆</span><span>Ladder</span></button>
+            <button class="nav-btn" onclick="goToTab(3)"><span>👤</span><span>Profil</span></button>
+        </nav>
+
+        <!-- OVERLAY AUTHENTIFICATION -->
+        <div class="overlay" id="auth-overlay">
+            <div id="pin-screen" style="width: 100%;">
+                <div class="avatar" id="auth-pdp" style="margin: 0 auto 10px; width: 60px; height: 60px; font-size: 1.8rem;">🦍</div>
+                <h3 id="auth-username-title">JOUEUR</h3>
+                <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 15px;">Entrez votre PIN à 4 chiffres</p>
+                <div class="pin-dots">
                     <div class="pin-dot" id="dot-0"></div>
                     <div class="pin-dot" id="dot-1"></div>
                     <div class="pin-dot" id="dot-2"></div>
                     <div class="pin-dot" id="dot-3"></div>
                 </div>
-                <div class="pin-keypad" style="margin: 0 auto;">
-                    <div class="pin-btn" onclick="pressPin('1')">1</div>
-                    <div class="pin-btn" onclick="pressPin('2')">2</div>
-                    <div class="pin-btn" onclick="pressPin('3')">3</div>
-                    <div class="pin-btn" onclick="pressPin('4')">4</div>
-                    <div class="pin-btn" onclick="pressPin('5')">5</div>
-                    <div class="pin-btn" onclick="pressPin('6')">6</div>
-                    <div class="pin-btn" onclick="pressPin('7')">7</div>
-                    <div class="pin-btn" onclick="pressPin('8')">8</div>
-                    <div class="pin-btn" onclick="pressPin('9')">9</div>
-                    <div class="pin-btn" style="background:#ef4444;" onclick="clearPin()">C</div>
-                    <div class="pin-btn" onclick="pressPin('0')">0</div>
-                    <div class="pin-btn" style="font-size:0.8rem; display:flex; align-items:center; justify-content:center;" onclick="switchAuthMode('login')">MDP</div>
+                <div class="pin-grid">
+                    <button class="pin-btn" onclick="pressPin('1')">1</button>
+                    <button class="pin-btn" onclick="pressPin('2')">2</button>
+                    <button class="pin-btn" onclick="pressPin('3')">3</button>
+                    <button class="pin-btn" onclick="pressPin('4')">4</button>
+                    <button class="pin-btn" onclick="pressPin('5')">5</button>
+                    <button class="pin-btn" onclick="pressPin('6')">6</button>
+                    <button class="pin-btn" onclick="pressPin('7')">7</button>
+                    <button class="pin-btn" onclick="pressPin('8')">8</button>
+                    <button class="pin-btn" onclick="pressPin('9')">9</button>
+                    <button class="pin-btn" style="grid-column: 2;" onclick="pressPin('0')">0</button>
                 </div>
-                <!-- BOUTON MOT DE PASSE OUBLIÉ -->
-                <button class="cr-button-3d" style="background: #475569; font-size: 0.75rem; margin-top: 15px;" onclick="showResetScreen()">CODE OU MOT DE PASSE OUBLIÉ ?</button>
             </div>
 
-            <!-- ECRAN REGISTRATION / LOGIN -->
-            <div id="reg-screen" style="display:none; width:100%; max-width:320px; text-align:center;">
-                <h2 class="text-3d-gold" style="font-size: 1.8rem; margin-top:0;">CRÉATION DU COMPTE</h2>
-                
-                <div class="auth-input-group">
-                    <label>PSEUDO</label>
-                    <input type="text" id="reg-pseudo" class="auth-input" placeholder="Ton Pseudo Ex: PushMaster">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>E-MAIL DE RÉCUPÉRATION</label>
-                    <input type="email" id="reg-email" class="auth-input" placeholder="ton.email@gmail.com">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>MOT DE PASSE</label>
-                    <input type="password" id="reg-pass" class="auth-input" placeholder="••••••••">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>CODE PIN (4 CHIFFRES)</label>
-                    <input type="number" id="reg-pin" class="auth-input" placeholder="1234" maxlength="4">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>TA BIO DE GUERRIER</label>
-                    <input type="text" id="reg-bio" class="auth-input" placeholder="Prêt à faire trembler le sol !">
-                </div>
-
-                <div class="auth-input-group">
-                    <label>TON NIVEAU EN POMPES</label>
-                    <select id="reg-level" class="auth-input" style="color:#ffd700;">
-                        <option value="0-4">0 à 4 : Poussin Molasson 🐥</option>
-                        <option value="4-8">4 à 8 : Pousseur du Dimanche 🛋️</option>
-                        <option value="8-12">8 à 12 : Machine à Pompes ⚙️</option>
-                        <option value="12-20">12 à 20 : Titan du Sol 🏋️</option>
-                        <option value="20+">20+ : Lévitateur Suprême ⚡</option>
-                    </select>
-                </div>
-
-                <button class="cr-button-3d" onclick="submitRegister()">VALIDER LE COMPTE</button>
-            </div>
-
-            <!-- ECRAN RÉCUPÉRATION PAR EMAIL -->
-            <div id="reset-screen" style="display:none; width:100%; max-width:320px; text-align:center;">
-                <h2 class="text-3d-gold" style="font-size: 1.5rem; margin-top:0;">RÉCUPÉRATION</h2>
-                
-                <!-- Étape 1 : Saisie de l'email -->
-                <div id="reset-step-1">
-                    <p style="font-size: 0.8rem; color: #ccc;">Entrez votre e-mail d'inscription pour recevoir un code.</p>
-                    <div class="auth-input-group">
-                        <input type="email" id="reset-email-input" class="auth-input" placeholder="ton.email@gmail.com">
-                    </div>
-                    <button class="cr-button-3d" onclick="sendResetEmail()">ENVOYER LE CODE</button>
-                </div>
-
-                <!-- Étape 2 : Vérification du code -->
-                <div id="reset-step-2" style="display:none;">
-                    <p style="font-size: 0.8rem; color: #ccc;">Saisissez le code à 6 chiffres envoyé à votre adresse.</p>
-                    <div class="auth-input-group">
-                        <input type="text" id="reset-code-input" class="auth-input" placeholder="123456" maxlength="6">
-                    </div>
-                    <button class="cr-button-3d" onclick="verifyResetCode()">VÉRIFIER LE CODE</button>
-                </div>
-
-                <!-- Étape 3 : Nouveaux identifiants -->
-                <div id="reset-step-3" style="display:none;">
-                    <div class="auth-input-group">
-                        <label>NOUVEAU MOT DE PASSE</label>
-                        <input type="password" id="new-pass-input" class="auth-input" placeholder="••••••••">
-                    </div>
-                    <div class="auth-input-group">
-                        <label>NOUVEAU CODE PIN (4 CHIFFRES)</label>
-                        <input type="number" id="new-pin-input" class="auth-input" placeholder="1234" maxlength="4">
-                    </div>
-                    <button class="cr-button-3d" onclick="saveNewCredentials()">VALIDER LES CHANGEMENTS</button>
-                </div>
-
-                <button class="cr-button-3d" style="background:#64748b; font-size:0.75rem;" onclick="cancelReset()">ANNULER</button>
+            <div id="reg-screen" style="width: 100%; display: none;">
+                <h2>Créer un Profil</h2>
+                <input type="text" id="reg-pseudo" placeholder="Pseudo Ex: TITAN">
+                <input type="email" id="reg-email" placeholder="Email (Optionnel)">
+                <input type="password" id="reg-pass" placeholder="Mot de passe">
+                <input type="password" id="reg-pin" maxlength="4" placeholder="Code PIN (4 chiffres)">
+                <textarea id="reg-bio" placeholder="Bio / Citation"></textarea>
+                <button class="btn-action" onclick="submitRegister()">Valider</button>
             </div>
         </div>
 
-        <!-- CONTAINER PRINCIPAL POUR LE SWIPE HORIZONTAL -->
-        <div id="swipe-container">
-            
-            <!-- PAGE 1: SHOP -->
-            <div class="page" id="page-shop">
-                <h1 class="text-3d-gold" style="font-size: 2.2rem; text-align: center; margin-top: 10px;">SHOP ROYALE</h1>
-                <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                    <div style="background: rgba(30,41,59,0.9); border: 2px solid #ffd700; border-radius: 15px; padding: 20px; text-align: center; width: 100%;">
-                        <div style="font-size: 3rem;">👑</div>
-                        <div class="text-3d-gold" style="font-size: 1.2rem;">AURA DE FEU</div>
-                        <button class="cr-button-3d" style="font-size:0.9rem;" onclick="alert('Bientôt disponible !')">500 TROPHÉES</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PAGE 2: ARÈNE (MENU PRINCIPAL) -->
-            <div class="page" id="page-main">
-                <div class="menu-top-bar">
-                    <div class="menu-user-info" onclick="goToTab(3)">
-                        <div class="menu-profile-pic" id="display-avatar">🦍</div>
-                        <div class="pseudo-font" id="display-username">LUSCAH</div>
-                    </div>
-                    <div class="header-right-block">
-                        <div class="bp-mini-widget" onclick="alert('Pass de combat bientôt !')">
-                            <div style="font-size: 1.2rem;">📜</div>
-                            <div>
-                                <div class="bp-mini-title text-3d-gold">PASS POMPES</div>
-                                <div class="bp-mini-bar"><div class="bp-mini-fill"></div></div>
-                            </div>
-                        </div>
-                        <div class="menu-trophies-container">
-                            <div class="text-3d" style="font-size: 0.65rem; color: #aaa;">NOMBRE DE TROPHETS</div>
-                            <div class="menu-trophies-value text-3d-gold" id="display-elo">1000</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="menu-center">
-                    <div class="text-3d" style="font-size: 1.1rem; color: #00e5ff;">VOTRE RANK</div>
-                    <div class="rank-emblem-3d" onclick="openRankViewer()">
-                        <div class="rank-stars"><span class="star">⭐</span><span class="star">⭐</span><span class="star">⭐</span></div>
-                        <div class="rank-wings-3d" id="rank-wings"></div>
-                        <div class="rank-shield-3d"><div class="rank-gem-3d text-3d" id="rank-gem">ARG</div></div>
-                        <div class="rank-banner-3d text-3d" id="rank-name">ARGENT</div>
-                    </div>
-                    <button class="play-btn" onclick="startSmartMatchmaking()">JOUER</button>
-                </div>
-            </div>
-
-            <!-- PAGE 3: DUEL, AMIS & LEADERBOARD -->
-            <div class="page" id="page-duels">
-                <h1 class="text-3d" style="font-size: 2rem; text-align: center; color: #00e5ff; margin-top: 5px;">COMMUNAUTÉ</h1>
-                
-                <!-- CATALOGUE D'AMIS & INVITATION -->
-                <div>
-                    <div class="text-3d" style="font-size: 0.8rem; color: #00e5ff; margin-bottom: 5px;">👥 MES AMIS & LOBBY</div>
-                    <div class="list-container" id="friends-catalog-list" style="max-height: 120px;">
-                        <!-- Généré en JS -->
-                    </div>
-                    <button class="cr-button-3d" style="font-size: 0.8rem; padding: 8px;" onclick="shareFriendLink()">REJOINDRE OU PARTAGER MON LOBBY 🔗</button>
-                </div>
-            </div>
-
-            <!-- PAGE 4: PROFIL -->
-            <div class="page" id="page-profile">
-                <h1 class="text-3d-gold" style="font-size: 2rem; text-align: center; margin-top: 5px; margin-bottom: 5px;">PROFIL JOUEUR</h1>
-                <div class="profile-card-3d">
-                    <div style="display:flex; align-items:center; gap:15px;">
-                        <div class="menu-profile-pic" id="profile-pdp" style="width:60px; height:60px; font-size:2rem;">🦍</div>
-                        <div>
-                            <div class="pseudo-font" id="profile-username" style="font-size:1.5rem;">LUSCAH</div>
-                            <div class="text-3d-gold" id="profile-tier" style="font-size:0.75rem;">Machine à Pompes ⚙️</div>
-                            <div style="font-size:0.7rem; color:#aaa; font-style:italic;" id="profile-bio">"Prêt à faire trembler le sol !"</div>
-                        </div>
-                    </div>
-
-                    <div class="stats-grid-3d">
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">TROPHÉES</div><div class="stat-value text-3d-gold" id="stat-current-elo">1000</div></div>
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">TROPHÉES MAX</div><div class="stat-value text-3d-gold" id="stat-max-elo">1250</div></div>
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">PARTIES JOUÉES</div><div class="stat-value text-3d" id="stat-games-played">0</div></div>
-                        <div class="stat-box-3d"><div class="text-3d" style="font-size:0.6rem; color:#aaa;">PARTIES GAGNÉES</div><div class="stat-value text-3d" style="color:#4caf50;" id="stat-games-won">0</div></div>
-                    </div>
-
-                    <!-- GRAPH CANVAS -->
-                    <div class="chart-container">
-                        <div class="text-3d" style="font-size:0.75rem; color:#00e5ff; margin-bottom:5px;">POMPES / JOUR (7 DERNIERS)</div>
-                        <canvas id="pushupChart"></canvas>
-                    </div>
-
-                    <button class="cr-button-3d" style="background:linear-gradient(to bottom, #ef4444, #991b1b); color:#fff; font-size:0.8rem; padding: 6px;" onclick="resetAccount()">DÉCONNEXION / RESET COMPTE</button>
-                </div>
-            </div>
+        <!-- OVERLAY MATCHMAKING -->
+        <div class="overlay" id="screen-matchmaking" style="display: none;">
+            <div style="font-size: 3rem;" class="shake-mini">🔍</div>
+            <h3 id="mm-status">RECHERCHE D'ADVERSAIRE...</h3>
+            <button style="background: transparent; border: 1px solid var(--danger); color: var(--danger); padding: 8px 16px; border-radius: 8px; cursor: pointer;" onclick="cancelMatchmaking()">Annuler</button>
         </div>
 
-        <!-- NAVBAR -->
-        <div class="menu-bottom-nav">
-            <div class="nav-btn" data-idx="0" onclick="goToTab(0)"><div style="font-size:1.2rem;">🛒</div><div class="text-3d">SHOP</div></div>
-            <div class="nav-btn active" data-idx="1" onclick="goToTab(1)"><div style="font-size:1.2rem;">⚔️</div><div class="text-3d">ARÈNE</div></div>
-            <div class="nav-btn" data-idx="2" onclick="goToTab(2)"><div style="font-size:1.2rem;">👥</div><div class="text-3d">SOCIAL</div></div>
-            <div class="nav-btn" data-idx="3" onclick="goToTab(3)"><div style="font-size:1.2rem;">👤</div><div class="text-3d">PROFIL</div></div>
-        </div>
+        <!-- OVERLAY BATTLE -->
+        <div class="overlay" id="screen-battle" style="display: none;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <div>VOUS: <b id="p1-score" style="color: var(--accent); font-size: 1.5rem;">0</b></div>
+                <div style="font-size: 2rem; font-weight: bold; color: var(--gold);" id="battle-timer">30</div>
+                <div><span id="p2-name">ADV</span>: <b id="p2-score" style="color: var(--danger); font-size: 1.5rem;">0</b></div>
+            </div>
 
-        <!-- MODALS -->
-        <div id="modal-ranks" class="modal-overlay">
-            <h2 class="text-3d" style="color:#00e5ff; margin-bottom: 10px;">CHEMIN DES RANGS</h2>
-            <div class="rank-swipe-container" style="width:100%; max-width:320px; height:70%; overflow-y:auto;" id="rank-scroll-area"></div>
-            <button class="cr-button-3d" style="max-width: 200px; margin-top: 15px;" onclick="closeModals()">RETOUR</button>
-        </div>
-
-        <!-- ECRAN MATCHMAKING -->
-        <div id="screen-matchmaking" class="full-screen" style="justify-content: center; align-items: center; text-align: center;">
-            <h1 class="text-3d" style="font-size: 2.5rem; color: #00e5ff;">RECHERCHE...</h1>
-            <p class="text-3d" id="mm-status" style="font-size: 0.8rem; color: #aaa;">RECHERCHE D'ADVERSAIRE EN LIGNE</p>
-            <div style="width: 70px; height: 70px; border: 6px solid rgba(255,255,255,0.1); border-top-color: #00e5ff; border-radius: 50%; animation: spin 1s infinite linear; margin: 20px auto;"></div>
-            <button class="cr-button-3d" style="width: 180px; background: #ef4444; color: white;" onclick="cancelMatchmaking()">ANNULER</button>
-        </div>
-
-        <!-- ECRAN BATAILLE -->
-        <div id="screen-battle" class="full-screen">
-            <div id="camera-wrapper">
-                <div class="cam-flash" id="cam-flash"></div>
+            <div class="cam-wrapper">
+                <video id="video" playsinline muted></video>
+                <canvas id="canvas"></canvas>
                 <div class="rep-popup" id="rep-popup">+1</div>
-                <div class="battle-hud">
-                    <div><div class="pseudo-font" id="p1-name" style="color:#00e5ff;">MOI</div><div class="text-3d" id="p1-score" style="font-size: 3rem; color: #00e5ff;">0</div></div>
-                    <div class="text-3d-gold" id="battle-timer" style="font-size: 2.8rem;">30</div>
-                    <div style="text-align: right;"><div class="pseudo-font" id="p2-name" style="color:#ef4444;">ADVERSAIRE</div><div class="text-3d" id="p2-score" style="font-size: 3rem; color: #ef4444;">0</div></div>
-                </div>
-                <video id="video" playsinline autoplay muted></video>
-                <canvas id="canvas" class="cam-canvas"></canvas>
+                <div class="cam-flash" id="cam-flash"></div>
             </div>
-            <!-- Bouton pour quitter la simulation de partie -->
-            <button class="cr-button-3d" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 200px; z-index: 50;" onclick="endSimulationBattle()">TERMINER LA PARTIE</button>
+            
+            <p style="font-size: 0.75rem; color: var(--text-sub);">Positionnez-vous face à la caméra et effectuez des pompes complètes.</p>
         </div>
 
-        <!-- ECRAN RESULTAT -->
-        <div id="screen-result" class="full-screen" style="justify-content: center; align-items: center; text-align: center; background: rgba(0,0,0,0.95);">
-            <h1 class="text-3d" id="res-title" style="font-size: 3.5rem;">VICTOIRE</h1>
-            <div class="text-3d" style="font-size: 2rem; margin: 15px 0;"><span style="color:#00e5ff;" id="res-p1">0</span> - <span style="color:#ef4444;" id="res-p2">0</span></div>
-            <div class="text-3d-gold" style="font-size: 1.5rem; margin-bottom: 20px;">TROPHÉES : <span id="res-elo">+30</span></div>
-            <button class="cr-button-3d" style="max-width: 220px;" onclick="returnToMenu()">CONTINUER</button>
+        <!-- OVERLAY RESULT -->
+        <div class="overlay" id="screen-result" style="display: none;">
+            <h2 id="res-title" style="font-size: 2rem;">VICTOIRE !</h2>
+            <div style="font-size: 1.2rem;">Score: <span id="res-p1">0</span> - <span id="res-p2">0</span></div>
+            <div style="font-size: 1rem; color: var(--gold);">Gain ELO: <span id="res-elo">+30</span></div>
+            <button class="btn-action" onclick="returnToMenu()">Continuer</button>
         </div>
+
+        <!-- MODAL RANKS -->
+        <div class="overlay" id="modal-ranks" style="display: none;">
+            <h3>Gradients & Niveaux</h3>
+            <div style="text-align: left; width: 100%; font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
+                <div>BRONZE : 0 - 499 ELO</div>
+                <div>ARGENT : 500 - 999 ELO</div>
+                <div>OR : 1000 - 1499 ELO</div>
+                <div>PLATINE : 1500 - 1999 ELO</div>
+                <div>DIAMANT : 2000+ ELO</div>
+            </div>
+            <button class="btn-action" onclick="closeModals()">Fermer</button>
+        </div>
+
     </div>
 
+    <!-- LOGIQUE JAVASCRIPT -->
     <script>
-        // ===================== ETAT ET AUTHENTIFICATION =====================
-        let user = { 
-            username: "", pass: "", pin: "", email: "", avatar: "🦍", bio: "Prêt à en découdre !", levelTitle: "Machine à Pompes ⚙️",
-            elo: 1000, maxElo: 1000, gamesPlayed: 0, gamesWon: 0, history: [0, 0, 0, 0, 0, 0, 0],
-            friends: [], myCode: "", currentLobby: "Aucun"
+        // ===================== ETAT ET DATA DU JOUEUR =====================
+        let user = {
+            username: "JOUEUR",
+            email: "",
+            pass: "",
+            pin: "1234",
+            avatar: "🦍",
+            bio: "Guerrier prêt au combat !",
+            levelTitle: "Combattant",
+            elo: 1000,
+            maxElo: 1000,
+            gamesPlayed: 0,
+            gamesWon: 0,
+            history: [10, 15, 12, 18, 22, 20, 25]
         };
-
+        
         const RANKS = [
-            { min: 0, max: 599, name: "BRONZE", short: "BRZ", gem: "var(--brz-gem)", glow: "var(--brz-glow)" },
-            { min: 600, max: 1199, name: "ARGENT", short: "ARG", gem: "var(--arg-gem)", glow: "var(--arg-glow)" },
-            { min: 1200, max: 1799, name: "OR", short: "OR", gem: "var(--or-gem)", glow: "var(--or-glow)" },
-            { min: 1800, max: 2499, name: "PLATINE", short: "PLT", gem: "var(--plt-gem)", glow: "var(--plt-glow)" },
-            { min: 2500, max: 9999, name: "DIAMANT", short: "DIA", gem: "var(--dia-gem)", glow: "var(--dia-glow)" }
+            { name: "BRONZE", min: 0, color: "var(--brz-gem)", glow: "var(--brz-glow)" },
+            { name: "ARGENT", min: 500, color: "var(--arg-gem)", glow: "var(--arg-glow)" },
+            { name: "OR", min: 1000, color: "var(--or-gem)", glow: "var(--or-glow)" },
+            { name: "PLATINE", min: 1500, color: "var(--plt-gem)", glow: "var(--plt-glow)" },
+            { name: "DIAMANT", min: 2000, color: "var(--dia-gem)", glow: "var(--dia-glow)" }
         ];
 
-        let resetState = { generatedCode: null, targetEmail: null };
+        let pinInput = "";
 
-        // ===================== SAUVEGARDE ET COMPTE =====================
-        function loadAccount() {
-            const savedData = localStorage.getItem('pushArenaUser');
-            if (savedData) {
-                user = JSON.parse(savedData);
+        // ===================== MULTIJOUEUR (PEERJS) =====================
+        let peer = null;
+        let peerConnection = null;
+        let myPeerId = null;
+        let friendList = JSON.parse(localStorage.getItem('pushArenaFriends')) || [];
+
+        // ===================== ETAT DU JEU (BATTLE) =====================
+        let battleState = {
+            active: false,
+            mode: "bot", // 'bot' ou 'p2p'
+            myScore: 0,
+            opponentScore: 0,
+            timeLeft: 30,
+            timerInterval: null
+        };
+
+        // ===================== MEDIAPIPE & CAMERA =====================
+        let pose, camera;
+        let isCamRunning = false;
+        let pushupState = "up"; // 'up' ou 'down'
+        const videoElement = document.getElementById('video');
+        const canvasElement = document.getElementById('canvas');
+        const canvasCtx = canvasElement.getContext('2d');
+
+        // ===================== INITIALISATION =====================
+        window.onload = () => {
+            loadUserData();
+            initPeerJS();
+            renderFriendsList();
+            renderChart();
+            updateUI();
+            injectDynamicCSS();
+        };
+
+        // ===================== SYSTEME DE NAVIGATION =====================
+        function goToTab(index) {
+            document.getElementById('swipe-container').style.transform = `translateX(-${index * 25}%)`;
+            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+                if(i === index) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            if (index === 3) renderChart();
+        }
+
+        // ===================== AUTHENTIFICATION =====================
+        function loadUserData() {
+            const saved = localStorage.getItem('pushArenaUser');
+            if (saved) {
+                user = JSON.parse(saved);
                 document.getElementById('auth-username-title').innerText = user.username;
-                
-                // On affiche l'écran PIN pour vérifier l'identité (et tester le bouton mot de passe oublié)
+                document.getElementById('auth-pdp').innerText = user.avatar;
                 document.getElementById('reg-screen').style.display = 'none';
                 document.getElementById('pin-screen').style.display = 'block';
-                document.getElementById('auth-overlay').style.display = 'flex';
-                
             } else {
-                // Pas de compte : on affiche l'inscription
-                document.getElementById('reg-screen').style.display = 'block';
                 document.getElementById('pin-screen').style.display = 'none';
-                document.getElementById('auth-overlay').style.display = 'flex';
+                document.getElementById('reg-screen').style.display = 'block';
             }
         }
 
-        // ===================== GESTION DU CLAVIER PIN =====================
-        let currentPinEntry = "";
+        function saveUser() {
+            localStorage.setItem('pushArenaUser', JSON.stringify(user));
+            updateUI();
+        }
+
+        function submitRegister() {
+            const pseudo = document.getElementById('reg-pseudo').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-pass').value;
+            const pin = document.getElementById('reg-pin').value;
+            const bio = document.getElementById('reg-bio').value;
+            
+            if(!pseudo || !pin || pin.length !== 4) return alert("Remplissez le Pseudo et un PIN de 4 chiffres !");
+            
+            user.username = pseudo.toUpperCase();
+            user.email = email;
+            user.pass = pass;
+            user.pin = pin;
+            user.bio = bio || user.bio;
+            
+            saveUser();
+            document.getElementById('auth-overlay').style.display = 'none';
+            playSuccessVFX();
+        }
+
         function pressPin(num) {
-            if (currentPinEntry.length < 4) {
-                currentPinEntry += num;
-                document.getElementById(`dot-${currentPinEntry.length - 1}`).classList.add('filled');
-                
-                if (currentPinEntry.length === 4) {
-                    setTimeout(checkPin, 200);
-                }
+            if (pinInput.length < 4) {
+                pinInput += num;
+                document.getElementById(`dot-${pinInput.length - 1}`).classList.add('filled');
+            }
+            if (pinInput.length === 4) {
+                setTimeout(() => {
+                    if (pinInput === user.pin) {
+                        document.getElementById('auth-overlay').style.display = 'none';
+                        playSuccessVFX();
+                    } else {
+                        triggerScreenShake();
+                        clearPin();
+                    }
+                }, 200);
             }
         }
 
         function clearPin() {
-            currentPinEntry = "";
-            for(let i=0; i<4; i++) document.getElementById(`dot-${i}`).classList.remove('filled');
-        }
-
-        function checkPin() {
-            if (currentPinEntry === user.pin) {
-                document.getElementById('auth-overlay').style.display = 'none';
-                updateUI();
-                initMultiplayer();
-                goToTab(1); // Aller directement à l'arène
-            } else {
-                alert("Code PIN incorrect !");
-                clearPin();
-            }
-        }
-
-        function switchAuthMode(mode) {
-            alert("Connexion par mot de passe classique en cours de développement.");
-        }
-
-        // ===================== CREATION & RESET COMPTE =====================
-        function submitRegister() {
-            const pseudo = document.getElementById('reg-pseudo').value;
-            const pass = document.getElementById('reg-pass').value;
-            const pin = document.getElementById('reg-pin').value;
-            const email = document.getElementById('reg-email').value;
-            
-            if (!pseudo || !pass || pin.length !== 4 || !email.includes('@')) {
-                alert("Veuillez remplir tous les champs correctement (Email valide + PIN à 4 chiffres).");
-                return;
-            }
-
-            user.username = pseudo;
-            user.pass = pass;
-            user.pin = pin;
-            user.email = email;
-            user.bio = document.getElementById('reg-bio').value || user.bio;
-            
-            localStorage.setItem('pushArenaUser', JSON.stringify(user));
-            document.getElementById('auth-overlay').style.display = 'none';
-            
-            updateUI();
-            initMultiplayer();
-            goToTab(1); // Aller à l'arène
+            pinInput = "";
+            document.querySelectorAll('.pin-dot').forEach(d => d.classList.remove('filled'));
         }
 
         function resetAccount() {
-            if (confirm("Es-tu sûr de vouloir supprimer ton compte ? Toutes tes statistiques seront perdues.")) {
-                localStorage.removeItem('pushArenaUser');
+            if(confirm("Êtes-vous sûr de vouloir réinitialiser toutes vos données ?")) {
+                localStorage.clear();
                 location.reload();
             }
         }
 
-        // ===================== RECUPERATION MOT DE PASSE (OUBLI) =====================
-        function showResetScreen() {
-            document.getElementById('pin-screen').style.display = 'none';
-            document.getElementById('reg-screen').style.display = 'none';
-            document.getElementById('reset-screen').style.display = 'block';
-            
-            document.getElementById('reset-step-1').style.display = 'block';
-            document.getElementById('reset-step-2').style.display = 'none';
-            document.getElementById('reset-step-3').style.display = 'none';
-        }
-
-        function cancelReset() {
-            document.getElementById('reset-screen').style.display = 'none';
-            if (user.username) {
-                document.getElementById('pin-screen').style.display = 'block';
-            } else {
-                document.getElementById('reg-screen').style.display = 'block';
-            }
-        }
-
-        function sendResetEmail() {
-            const inputEmail = document.getElementById('reset-email-input').value.trim();
-
-            if (!user.email) {
-                alert("Aucun compte enregistré n'a été trouvé sur ce navigateur.");
-                return;
-            }
-
-            if (inputEmail.toLowerCase() !== user.email.toLowerCase()) {
-                alert("Cette adresse email ne correspond pas à celle inscrite sur ce compte.");
-                return;
-            }
-
-            resetState.generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-            resetState.targetEmail = inputEmail;
-
-            // SIMULATION D'ENVOI DE MAIL (Pour de vrai, utilisez EmailJS ici)
-            alert(`[SIMULATION E-MAIL]\nUn e-mail a été envoyé à ${inputEmail}.\nVotre code de réinitialisation est : ${resetState.generatedCode}`);
-
-            document.getElementById('reset-step-1').style.display = 'none';
-            document.getElementById('reset-step-2').style.display = 'block';
-        }
-
-        function verifyResetCode() {
-            const enteredCode = document.getElementById('reset-code-input').value.trim();
-
-            if (enteredCode === resetState.generatedCode) {
-                alert("Code validé ! Vous pouvez maintenant saisir vos nouveaux identifiants.");
-                document.getElementById('reset-step-2').style.display = 'none';
-                document.getElementById('reset-step-3').style.display = 'block';
-            } else {
-                alert("Code incorrect. Veuillez réessayez.");
-            }
-        }
-
-        function saveNewCredentials() {
-            const newPass = document.getElementById('new-pass-input').value;
-            const newPin = document.getElementById('new-pin-input').value;
-
-            if (!newPass || newPin.length !== 4) {
-                alert("Veuillez renseigner un mot de passe valide et un PIN à 4 chiffres.");
-                return;
-            }
-
-            user.pass = newPass;
-            user.pin = newPin;
-
-            localStorage.setItem('pushArenaUser', JSON.stringify(user));
-            alert("Vos identifiants ont été réinitialisés avec succès !");
-
-            resetState.generatedCode = null;
-            document.getElementById('auth-overlay').style.display = 'none';
-            updateUI();
-            initMultiplayer();
-            goToTab(1);
-        }
-
-        // ===================== NAVIGATION & UI =====================
+        // ===================== MISE A JOUR UI & GRADES =====================
         function updateUI() {
             document.getElementById('display-username').innerText = user.username;
-            document.getElementById('profile-username').innerText = user.username;
+            document.getElementById('display-avatar').innerText = user.avatar;
             document.getElementById('display-elo').innerText = user.elo;
+            
+            document.getElementById('profile-username').innerText = user.username;
+            document.getElementById('profile-pdp').innerText = user.avatar;
+            document.getElementById('profile-bio').innerText = `"${user.bio}"`;
+            document.getElementById('profile-tier').innerText = user.levelTitle;
+            
             document.getElementById('stat-current-elo').innerText = user.elo;
             document.getElementById('stat-max-elo').innerText = user.maxElo;
-            document.getElementById('profile-bio').innerText = '"' + user.bio + '"';
-            updateRankDisplay();
-        }
+            document.getElementById('stat-games-played').innerText = user.gamesPlayed;
+            document.getElementById('stat-games-won').innerText = user.gamesWon;
 
-        function goToTab(index) {
-            document.getElementById('swipe-container').style.transform = `translateX(-${index * 25}%)`;
-            document.querySelectorAll('.nav-btn').forEach((btn, i) => {
-                btn.classList.toggle('active', i === index);
-            });
-        }
-
-        function closeModals() {
-            document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-        }
-
-        // ===================== GESTION DES RANGS =====================
-        function updateRankDisplay() {
             let currentRank = RANKS[0];
-            for (let r of RANKS) {
-                if (user.elo >= r.min) currentRank = r;
+            for(let i=RANKS.length-1; i>=0; i--) {
+                if(user.elo >= RANKS[i].min) { currentRank = RANKS[i]; break; }
             }
-            document.getElementById('rank-gem').innerText = currentRank.short;
-            document.getElementById('rank-gem').style.background = currentRank.gem;
-            document.getElementById('rank-gem').style.boxShadow = `0 0 25px ${currentRank.glow}`;
+            
             document.getElementById('rank-name').innerText = currentRank.name;
+            document.getElementById('rank-gem').innerText = currentRank.name.substring(0,3);
+            document.getElementById('rank-gem').style.background = currentRank.color;
+            document.getElementById('rank-gem').style.boxShadow = `0 0 25px ${currentRank.glow}`;
         }
 
-        function openRankViewer() {
-            const container = document.getElementById('rank-scroll-area');
-            container.innerHTML = ''; 
-            
-            RANKS.forEach(r => {
-                const isCurrent = user.elo >= r.min && user.elo <= r.max;
-                container.innerHTML += `
-                    <div style="background: ${isCurrent ? 'rgba(0,229,255,0.2)' : 'rgba(30,41,59,0.8)'}; 
-                                border: 2px solid ${isCurrent ? '#00e5ff' : '#334155'}; 
-                                border-radius: 10px; padding: 15px; margin-bottom: 10px; text-align: center;">
-                        <div class="text-3d" style="font-size: 1.5rem; color: ${isCurrent ? '#00e5ff' : '#fff'}; text-shadow: 0 0 10px ${r.glow}">
-                            ${r.name}
-                        </div>
-                        <div style="color: #aaa; font-size: 0.8rem; margin-top: 5px;">${r.min} - ${r.max > 9000 ? 'MAX' : r.max} Trophées</div>
-                    </div>
-                `;
-            });
-            
-            document.getElementById('modal-ranks').style.display = 'flex';
-        }
-
-        // ===================== MULTIJOUEUR (PEERJS) & AMIS =====================
-        let peer;
-        let activeConnection = null;
-
-        function initMultiplayer() {
-            peer = new Peer(); // Crée un ID unique pour cette session
-            
+        // ===================== PEERJS (MULTIJOUEUR P2P) =====================
+        function initPeerJS() {
+            peer = new Peer();
             peer.on('open', (id) => {
-                user.myCode = id;
-                user.currentLobby = "Lobby de " + user.username;
-                console.log("Mon Lobby (ID) : " + id);
-                renderFriendsList();
+                myPeerId = id;
             });
 
-            // Quand quelqu'un essaie de rejoindre notre lobby
             peer.on('connection', (conn) => {
-                if (confirm(`Le joueur ${conn.metadata.username || 'Un joueur'} souhaite te rejoindre en duel ! Accepter ?`)) {
-                    activeConnection = conn;
-                    setupGameConnection(conn);
-                    conn.send({ type: 'ACCEPTED' });
-                    
-                    document.getElementById('screen-matchmaking').style.display = 'none';
-                    document.getElementById('screen-battle').style.display = 'flex';
-                } else {
-                    conn.send({ type: 'REJECTED' });
-                    setTimeout(() => conn.close(), 500);
+                peerConnection = conn;
+                setupPeerEvents();
+                startBattle("p2p", "ADVERSAIRE (P2P)");
+            });
+        }
+
+        function setupPeerEvents() {
+            peerConnection.on('data', (data) => {
+                if(data.type === 'score_update') {
+                    battleState.opponentScore = data.score;
+                    document.getElementById('p2-score').innerText = battleState.opponentScore;
+                    createParticleExplosion(window.innerWidth - 50, 100, '#ef4444');
                 }
             });
         }
 
         function shareFriendLink() {
-            if (!user.myCode) return alert("Connexion au serveur en cours... Réessayez dans 2 secondes.");
-            
-            const code = prompt("Voici ton ID de Lobby à partager avec un ami. \nOu bien, colle ici l'ID de ton ami pour le rejoindre :", user.myCode);
-            
-            if (code && code !== user.myCode) {
-                joinFriendLobby(code);
+            if(!myPeerId) return alert("Connexion au serveur en cours...");
+            const joinCode = prompt(`Ton code d'invitation est :\n${myPeerId}\n\nEntre le code d'un ami pour le rejoindre :`);
+            if (joinCode && joinCode !== myPeerId) {
+                peerConnection = peer.connect(joinCode);
+                peerConnection.on('open', () => {
+                    setupPeerEvents();
+                    startBattle("p2p", "AMI");
+                });
             }
-        }
-
-        function joinFriendLobby(friendId) {
-            document.getElementById('mm-status').innerText = "Connexion au lobby de l'ami...";
-            document.getElementById('screen-matchmaking').style.display = 'flex';
-
-            const conn = peer.connect(friendId, { metadata: { username: user.username } });
-            
-            conn.on('open', () => {
-                document.getElementById('mm-status').innerText = "En attente de l'acceptation de l'hôte...";
-            });
-
-            conn.on('data', (data) => {
-                if (data.type === 'REJECTED') {
-                    alert("L'invitation a été refusée ou le lobby est plein.");
-                    cancelMatchmaking();
-                } else if (data.type === 'ACCEPTED') {
-                    activeConnection = conn;
-                    setupGameConnection(conn);
-                    document.getElementById('screen-matchmaking').style.display = 'none';
-                    document.getElementById('screen-battle').style.display = 'flex';
-                }
-            });
-        }
-
-        function setupGameConnection(conn) {
-            conn.on('data', (data) => {
-                if (data.type === 'SCORE_UPDATE') {
-                    document.getElementById('p2-score').innerText = data.score;
-                }
-            });
-        }
-
-        function startSmartMatchmaking() {
-            shareFriendLink(); 
-        }
-
-        function cancelMatchmaking() {
-            document.getElementById('screen-matchmaking').style.display = 'none';
         }
 
         function renderFriendsList() {
             const container = document.getElementById('friends-catalog-list');
-            container.innerHTML = `
-                <div class="list-item">
-                    <div style="display:flex; align-items:center;">
-                        <span class="status-dot"></span>
-                        <span class="text-3d" style="font-size: 0.9rem;">Mon Lobby</span>
-                    </div>
-                    <div style="font-size: 0.7rem; color: #aaa;">ID: ${user.myCode.substring(0,8)}...</div>
-                </div>
-            `;
+            container.innerHTML = '';
+            if(friendList.length === 0) {
+                container.innerHTML = '<div style="font-size:0.8rem; color:#aaa; text-align:center;">Aucun ami pour le moment. Partage ton code !</div>';
+            }
         }
 
-        // ===================== SIMULATION DE FIN DE PARTIE =====================
+        // ===================== MATCHMAKING =====================
+        let mmTimeout;
+        function startSmartMatchmaking() {
+            document.getElementById('screen-matchmaking').style.display = 'flex';
+            document.getElementById('mm-status').innerText = "ANALYSE DE VOTRE NIVEAU...";
+            
+            mmTimeout = setTimeout(() => {
+                document.getElementById('mm-status').innerText = "ADVERSAIRE TROUVÉ !";
+                setTimeout(() => {
+                    startBattle("bot", "COMBATTANT INCONNU");
+                }, 1000);
+            }, 3000 + Math.random() * 3000);
+        }
+
+        function cancelMatchmaking() {
+            clearTimeout(mmTimeout);
+            document.getElementById('screen-matchmaking').style.display = 'none';
+        }
+
+        // ===================== LOGIQUE DE BATAILLE =====================
+        function startBattle(mode, oppName) {
+            document.getElementById('screen-matchmaking').style.display = 'none';
+            document.getElementById('screen-battle').style.display = 'flex';
+            
+            battleState = {
+                active: true,
+                mode: mode,
+                myScore: 0,
+                opponentScore: 0,
+                timeLeft: 30,
+                timerInterval: null
+            };
+
+            document.getElementById('p1-score').innerText = "0";
+            document.getElementById('p2-score').innerText = "0";
+            document.getElementById('battle-timer').innerText = "30";
+            document.getElementById('p2-name').innerText = oppName;
+
+            initCamera();
+
+            battleState.timerInterval = setInterval(() => {
+                battleState.timeLeft--;
+                document.getElementById('battle-timer').innerText = battleState.timeLeft;
+                
+                if(battleState.timeLeft <= 5 && battleState.timeLeft > 0) {
+                    document.getElementById('battle-timer').style.color = "#ef4444";
+                    document.getElementById('battle-timer').style.transform = "scale(1.5)";
+                    setTimeout(() => document.getElementById('battle-timer').style.transform = "scale(1)", 200);
+                }
+
+                if (battleState.mode === "bot" && battleState.timeLeft % Math.floor(Math.random() * 3 + 1) === 0) {
+                    battleState.opponentScore++;
+                    document.getElementById('p2-score').innerText = battleState.opponentScore;
+                    triggerMiniShake();
+                }
+
+                if (battleState.timeLeft <= 0) {
+                    endSimulationBattle();
+                }
+            }, 1000);
+        }
+
+        function registerPushup() {
+            if (!battleState.active) return;
+            battleState.myScore++;
+            document.getElementById('p1-score').innerText = battleState.myScore;
+            
+            if (battleState.mode === "p2p" && peerConnection) {
+                peerConnection.send({ type: 'score_update', score: battleState.myScore });
+            }
+
+            triggerScreenShake();
+            showRepPopup();
+            flashCamera();
+            createParticleExplosion(50, 100, '#00e5ff');
+        }
+
         function endSimulationBattle() {
+            if(!battleState.active) return;
+            battleState.active = false;
+            clearInterval(battleState.timerInterval);
+            if(camera) camera.stop();
+            
             document.getElementById('screen-battle').style.display = 'none';
             document.getElementById('screen-result').style.display = 'flex';
             
-            user.elo += 30;
-            if(user.elo > user.maxElo) user.maxElo = user.elo;
+            document.getElementById('res-p1').innerText = battleState.myScore;
+            document.getElementById('res-p2').innerText = battleState.opponentScore;
+
             user.gamesPlayed++;
-            user.gamesWon++;
             
-            localStorage.setItem('pushArenaUser', JSON.stringify(user));
+            if (battleState.myScore > battleState.opponentScore) {
+                document.getElementById('res-title').innerText = "VICTOIRE !";
+                document.getElementById('res-title').style.color = "#00e5ff";
+                document.getElementById('res-elo').innerText = "+30";
+                user.elo += 30;
+                user.gamesWon++;
+                playSuccessVFX();
+            } else if (battleState.myScore < battleState.opponentScore) {
+                document.getElementById('res-title').innerText = "DÉFAITE...";
+                document.getElementById('res-title').style.color = "#ef4444";
+                document.getElementById('res-elo').innerText = "-15";
+                user.elo = Math.max(0, user.elo - 15);
+            } else {
+                document.getElementById('res-title').innerText = "ÉGALITÉ";
+                document.getElementById('res-title').style.color = "#fff";
+                document.getElementById('res-elo').innerText = "+5";
+                user.elo += 5;
+            }
+
+            if(user.elo > user.maxElo) user.maxElo = user.elo;
+            
+            user.history.shift();
+            user.history.push(battleState.myScore);
+            
+            saveUser();
+            updateUI();
         }
 
         function returnToMenu() {
             document.getElementById('screen-result').style.display = 'none';
-            updateUI();
         }
 
-        // Lancement initial au chargement de la page
-        window.onload = loadAccount;
+        // ===================== VISION PAR ORDINATEUR (MEDIAPIPE) =====================
+        function initCamera() {
+            if (isCamRunning) return;
+            
+            pose = new Pose({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`});
+            pose.setOptions({
+                modelComplexity: 0, 
+                smoothLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+            pose.onResults(onPoseResults);
 
+            camera = new Camera(videoElement, {
+                onFrame: async () => { await pose.send({image: videoElement}); },
+                width: 640, height: 480
+            });
+            camera.start();
+            isCamRunning = true;
+        }
+
+        function calculateAngle(a, b, c) {
+            const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs(radians * 180.0 / Math.PI);
+            if (angle > 180.0) angle = 360 - angle;
+            return angle;
+        }
+
+        function onPoseResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            
+            if (results.poseLandmarks) {
+                drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00e5ff', lineWidth: 4});
+                drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#ffd700', lineWidth: 2, radius: 4});
+
+                const shoulder = results.poseLandmarks[11];
+                const elbow = results.poseLandmarks[13];
+                const wrist = results.poseLandmarks[15];
+
+                if (shoulder.visibility > 0.5 && elbow.visibility > 0.5 && wrist.visibility > 0.5) {
+                    const angle = calculateAngle(shoulder, elbow, wrist);
+                    
+                    if (angle < 90 && pushupState === "up") {
+                        pushupState = "down";
+                        canvasElement.style.filter = "brightness(0.7) contrast(1.2)";
+                    }
+                    if (angle > 150 && pushupState === "down") {
+                        pushupState = "up";
+                        canvasElement.style.filter = "none";
+                        registerPushup();
+                    }
+                }
+            }
+            canvasCtx.restore();
+        }
+
+        // ===================== EFFETS VISUELS =====================
+        function injectDynamicCSS() {
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes heavyShake {
+                    0% { transform: translate(1px, 1px) rotate(0deg); }
+                    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+                    20% { transform: translate(-3px, 0px) rotate(1deg); }
+                    30% { transform: translate(3px, 2px) rotate(0deg); }
+                    40% { transform: translate(1px, -1px) rotate(1deg); }
+                    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+                    60% { transform: translate(-3px, 1px) rotate(0deg); }
+                    70% { transform: translate(3px, 1px) rotate(-1deg); }
+                    80% { transform: translate(-1px, -1px) rotate(1deg); }
+                    90% { transform: translate(1px, 2px) rotate(0deg); }
+                    100% { transform: translate(1px, -2px) rotate(-1deg); }
+                }
+                .shake-hard { animation: heavyShake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+                .shake-mini { animation: heavyShake 0.15s cubic-bezier(.36,.07,.19,.97) both; opacity: 0.8; }
+                
+                .particle {
+                    position: absolute; pointer-events: none;
+                    border-radius: 50%; z-index: 1000;
+                    animation: pop 0.6s ease-out forwards;
+                }
+                @keyframes pop {
+                    0% { transform: scale(1) translate(0, 0); opacity: 1; }
+                    100% { transform: scale(0) translate(var(--tx), var(--ty)); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function triggerScreenShake() {
+            const app = document.getElementById('app-window');
+            app.classList.remove('shake-hard');
+            void app.offsetWidth;
+            app.classList.add('shake-hard');
+            setTimeout(() => app.classList.remove('shake-hard'), 300);
+        }
+
+        function triggerMiniShake() {
+            const app = document.getElementById('app-window');
+            app.classList.remove('shake-mini');
+            void app.offsetWidth;
+            app.classList.add('shake-mini');
+            setTimeout(() => app.classList.remove('shake-mini'), 150);
+        }
+
+        function showRepPopup() {
+            const popup = document.getElementById('rep-popup');
+            popup.innerText = `+1`;
+            popup.classList.remove('active');
+            void popup.offsetWidth;
+            popup.classList.add('active');
+            setTimeout(() => popup.classList.remove('active'), 400);
+        }
+
+        function flashCamera() {
+            const flash = document.getElementById('cam-flash');
+            flash.classList.remove('active');
+            void flash.offsetWidth;
+            flash.classList.add('active');
+            setTimeout(() => flash.classList.remove('active'), 200);
+        }
+
+        function playSuccessVFX() {
+            for(let i=0; i<30; i++) {
+                setTimeout(() => createParticleExplosion(window.innerWidth/2, window.innerHeight/2, '#ffd700'), i*20);
+            }
+        }
+
+        function createParticleExplosion(x, y, color) {
+            for(let i=0; i<8; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.backgroundColor = color;
+                p.style.width = Math.random() * 15 + 5 + 'px';
+                p.style.height = p.style.width;
+                p.style.left = x + 'px';
+                p.style.top = y + 'px';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 100 + 50;
+                p.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                p.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                
+                document.body.appendChild(p);
+                setTimeout(() => p.remove(), 600);
+            }
+        }
+
+        // ===================== GRAPHIC CANVAS =====================
+        function renderChart() {
+            const canvas = document.getElementById('pushupChart');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const width = canvas.parentElement.clientWidth - 20;
+            const height = canvas.parentElement.clientHeight - 40;
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            const data = user.history;
+            const maxVal = Math.max(...data, 10);
+            const stepX = width / (data.length - 1);
+            
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, height); ctx.lineTo(width, height);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, height - (data[0] / maxVal) * height);
+            
+            for(let i = 1; i < data.length; i++) {
+                const x = i * stepX;
+                const y = height - (data[i] / maxVal) * height;
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.strokeStyle = '#00e5ff';
+            ctx.lineWidth = 4;
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.closePath();
+            
+            let gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, 'rgba(0, 229, 255, 0.4)');
+            gradient.addColorStop(1, 'rgba(0, 229, 255, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            for(let i = 0; i < data.length; i++) {
+                const x = i * stepX;
+                const y = height - (data[i] / maxVal) * height;
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#00e5ff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        function openRankViewer() { document.getElementById('modal-ranks').style.display = 'flex'; }
+        function closeModals() { document.getElementById('modal-ranks').style.display = 'none'; }
     </script>
 </body>
 </html>
