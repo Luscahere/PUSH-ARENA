@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Clash of Pushups - Ranked Edition</title>
+    <title>Clash of Pushups - Nouveau Menu</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     
@@ -39,63 +39,133 @@
         }
         .active-screen { display: flex; }
 
-        h1, h2, h3 { font-family: 'Anton', sans-serif; margin: 0; text-align: center; }
-        
-        .title { color: var(--cr-gold); font-size: 3rem; margin-bottom: 20px; text-shadow: 2px 2px 0 #000; }
+        /* --- NOUVEAU STYLE DU MENU PRINCIPAL (Basé sur l'image) --- */
+        #menu-screen {
+            background-color: #9cdbde; /* Bleu ciel de l'image */
+            background-image: none; /* Retire le quadrillage pour ce menu */
+            padding: 0; /* Pour que la navbar prenne tout le bas */
+            color: black;
+            justify-content: space-between;
+        }
 
+        .menu-top-bar {
+            display: flex; justify-content: space-between; align-items: flex-start;
+            padding: 20px; width: 100%;
+        }
+
+        .menu-user-info { display: flex; align-items: center; gap: 10px; }
+        .menu-profile-pic {
+            width: 70px; height: 70px;
+            border: 5px solid black; border-radius: 50%;
+            background: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-size: 0.6rem; font-weight: bold; text-align: center; line-height: 1.1;
+        }
+        .menu-pseudo { font-family: 'Anton', sans-serif; font-size: 1.2rem; text-transform: uppercase; }
+        
+        .menu-trophies-container { text-align: right; }
+        .menu-trophies-label { font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .menu-trophies-value { font-family: 'Anton', sans-serif; font-size: 1.5rem; }
+
+        .menu-center {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex: 1;
+        }
+        .menu-rank-title { font-size: 1.2rem; font-weight: bold; text-transform: uppercase; margin-bottom: 20px; }
+        
+        /* Design du Rank inspiré de l'image (Ailes + Gemme) via CSS */
+        .rank-emblem {
+            width: 220px; height: 140px; position: relative;
+            display: flex; justify-content: center; align-items: center;
+            filter: drop-shadow(0 10px 5px rgba(0,0,0,0.3));
+        }
+        .rank-wings {
+            position: absolute; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, #ffffff, #d4d4d4);
+            clip-path: polygon(0 20%, 30% 50%, 50% 20%, 70% 50%, 100% 20%, 80% 80%, 50% 100%, 20% 80%);
+        }
+        .rank-gem {
+            position: relative; z-index: 2; width: 60px; height: 60px;
+            background: radial-gradient(circle, #e066ff, #800080);
+            clip-path: polygon(50% 0%, 100% 25%, 50% 100%, 0% 25%);
+            border: 3px solid #fff;
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-family: 'Anton'; font-size: 1.2rem; text-shadow: 1px 1px 0 #000;
+        }
+
+        .menu-bottom-nav {
+            display: flex; width: 100%;
+            border-top: 6px solid black; background: white;
+            height: 80px;
+        }
+        .nav-btn {
+            flex: 1; border-right: 6px solid black;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 0.9rem; text-transform: uppercase; cursor: pointer;
+            color: black; text-align: center; padding: 5px; transition: background 0.2s;
+        }
+        .nav-btn:last-child { border-right: none; }
+        .nav-btn:active { background: #dcdcdc; }
+
+        /* --- STYLES STANDARDS (Popups, Boutons, etc) --- */
+        h1, h2, h3 { font-family: 'Anton', sans-serif; margin: 0; text-align: center; color: white;}
+        .title { color: var(--cr-gold); font-size: 3rem; margin-bottom: 20px; text-shadow: 2px 2px 0 #000; }
+        
         input {
-            width: 100%; padding: 15px; font-size: 1.2rem;
-            border-radius: 10px; border: 3px solid var(--cr-gold); background: rgba(0,0,0,0.7); color: white;
-            margin-bottom: 15px; text-align: center; font-family: 'Anton'; letter-spacing: 1px;
+            width: 100%; padding: 15px; font-size: 1.2rem; border-radius: 10px; 
+            border: 3px solid var(--cr-gold); background: rgba(0,0,0,0.7); color: white;
+            margin-bottom: 15px; text-align: center; font-family: 'Anton';
         }
 
         .cr-button {
             background: linear-gradient(to bottom, #ffe44d, var(--cr-gold) 40%, #cc9900);
-            border: 3px solid #332200; border-radius: 12px;
-            color: #4a3000; font-family: 'Anton', sans-serif; font-size: 1.2rem;
-            padding: 12px 20px; text-transform: uppercase; cursor: pointer;
-            box-shadow: inset 0 4px 0 rgba(255,255,255,0.6), 0 6px 0 #805500;
-            margin: 10px 0; width: 100%; transition: 0.1s;
+            border: 3px solid #332200; border-radius: 12px; color: #4a3000; 
+            font-family: 'Anton', sans-serif; font-size: 1.2rem; padding: 12px 20px; 
+            text-transform: uppercase; cursor: pointer; width: 100%; margin: 10px 0;
+            box-shadow: inset 0 4px 0 rgba(255,255,255,0.6), 0 6px 0 #805500; transition: 0.1s;
         }
         .cr-button.blue { background: linear-gradient(to bottom, #69a3ff, var(--cr-blue) 40%, #124d9c); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #092c5c; }
         .cr-button.red { background: linear-gradient(to bottom, #ff6b6b, var(--cr-red) 40%, #9c1212); color: white; box-shadow: inset 0 4px 0 rgba(255,255,255,0.4), 0 6px 0 #5c0909; }
-        .cr-button:active { transform: translateY(6px); box-shadow: 0 0px 0 #805500; }
+        .cr-button:active { transform: translateY(6px); box-shadow: 0 0px 0 transparent; }
 
-        /* PROFILE CARD */
-        .profile-card { background: rgba(0,0,0,0.6); border: 2px solid #444; border-radius: 15px; padding: 20px; text-align: center; margin-bottom: 20px; }
-        .rank-badge { width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 10px auto; display: flex; align-items: center; justify-content: center; font-family: 'Anton'; font-size: 2rem; border: 4px solid white; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .stat-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; font-family: 'Anton'; }
+        /* MODALS (Overlays pour Amis, Attente, etc.) */
+        .modal-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.9); z-index: 100; display: none; 
+            flex-direction: column; justify-content: center; align-items: center; 
+            padding: 20px; text-align: center; color: white;
+        }
+        .modal-content {
+            background: #112244; border: 3px solid var(--cr-gold); border-radius: 15px;
+            padding: 20px; width: 90%; max-width: 400px; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
         
-        .multiplayer-box { background: rgba(0,0,0,0.6); border: 2px solid #555; padding: 15px; border-radius: 10px; text-align: center; margin-top: auto;}
         .code-display { font-size: 2rem; font-family: 'Anton'; color: var(--cr-gold); letter-spacing: 4px; margin: 10px 0; background: #000; padding: 10px; border-radius: 8px; border: 1px dashed var(--cr-gold); user-select: all;}
 
-        /* MODALS (Invitations & Attente) */
-        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; }
-        
         /* BATAILLE HUD & PREPARATION */
         #camera-wrapper { flex: 1; position: relative; background: #000; overflow: hidden; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center;}
         video { display: none; }
         canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); z-index: 1; }
-
         .battle-hud-top { display: flex; justify-content: space-between; padding: 10px 20px; position: absolute; top:0; width: 100%; z-index: 10; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);}
         .score { font-family: 'Anton'; font-size: 3.5rem; text-shadow: 3px 3px 0 #000; }
         .timer-box { font-family: 'Anton'; font-size: 2.5rem; color: white; text-shadow: 2px 2px #000; background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 8px; border: 2px solid #555;}
         
-        #prep-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        #prep-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 20; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white;}
         .prep-number { font-family: 'Anton'; font-size: 8rem; color: var(--cr-gold); text-shadow: 0 0 20px var(--cr-gold); }
 
         /* RECAP */
-        .recap-box { background: rgba(0,0,0,0.8); border: 2px solid var(--cr-gold); border-radius: 15px; padding: 20px; margin: 20px 0; font-family: 'Anton'; font-size: 1.5rem; }
+        .recap-box { background: rgba(0,0,0,0.8); border: 2px solid var(--cr-gold); border-radius: 15px; padding: 20px; margin: 20px 0; font-family: 'Anton'; font-size: 1.5rem; color: white;}
         .elo-change { font-size: 2.5rem; margin-top: 10px; }
         .elo-up { color: #4caf50; } .elo-down { color: var(--cr-red); } .elo-neutral { color: #aaa; }
 
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
     <!-- ECRAN: CREATION / LOGIN -->
-    <div id="auth-screen" class="screen">
+    <div id="auth-screen" class="screen active-screen">
         <h1 class="title" style="margin-top: 50px;">CLASH OF PUSHUPS</h1>
         <div style="flex:1; display:flex; flex-direction:column; justify-content:center;">
             <h2>Créer un compte</h2>
@@ -105,37 +175,59 @@
         </div>
     </div>
 
-    <!-- ECRAN: MENU PRINCIPAL (DASHBOARD) -->
+    <!-- ECRAN: MENU PRINCIPAL EXACTEMENT COMME L'IMAGE -->
     <div id="menu-screen" class="screen">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-            <h1 style="color:var(--cr-gold); font-size:1.5rem;">C.O.P.</h1>
-            <button style="background:transparent; border:1px solid #555; color:#aaa; border-radius:5px; padding:5px 10px;" onclick="logout()">Déconnexion</button>
-        </div>
-
-        <div class="profile-card">
-            <div id="rank-badge" class="rank-badge">BRZ</div>
-            <h2 id="menu-username" style="font-size: 2rem;">Joueur</h2>
-            <div style="color: var(--cr-gold); font-family: 'Anton'; font-size: 1.5rem;" id="menu-elo">1000 ELO</div>
-            
-            <div class="stats-grid">
-                <div class="stat-box">Victoires<br><span id="menu-wins" style="color:#4caf50; font-size:1.5rem;">0</span></div>
-                <div class="stat-box">Défaites<br><span id="menu-losses" style="color:var(--cr-red); font-size:1.5rem;">0</span></div>
+        <!-- HAUT -->
+        <div class="menu-top-bar">
+            <div class="menu-user-info">
+                <div class="menu-profile-pic">PHOTO<br>DE<br>PROFIL</div>
+                <div class="menu-pseudo" id="menu-username">PSEUDO</div>
+            </div>
+            <div class="menu-trophies-container">
+                <div class="menu-trophies-label">NOMBRE DE TROPHET</div>
+                <div class="menu-trophies-value" id="menu-elo">1000</div>
             </div>
         </div>
 
-        <button class="cr-button" onclick="startBotMatch()">ENTRAINEMENT (VS IA)</button>
+        <!-- MILIEU -->
+        <div class="menu-center">
+            <div class="menu-rank-title">VOTRE RANK</div>
+            <div class="rank-emblem">
+                <div class="rank-wings" id="rank-wings-bg"></div>
+                <div class="rank-gem" id="rank-badge">BRZ</div>
+            </div>
+            <div style="margin-top: 15px; font-weight: bold;" id="rank-name-display">BRONZE</div>
+        </div>
 
-        <div class="multiplayer-box">
-            <h3>MODE DUEL (CLASSÉ)</h3>
-            <p style="font-size: 0.8rem; color: #aaa; margin-bottom: 10px;">Partage ton code ou entre celui d'un ami.</p>
-            
-            <div style="font-family:'Anton';">Ton Code d'invitation :</div>
+        <!-- BAS (NAVBAR) -->
+        <div class="menu-bottom-nav">
+            <div class="nav-btn" onclick="alert('La Boutique sera bientôt ouverte !')">Boutique</div>
+            <div class="nav-btn" onclick="openRankedMenu()">RANKED</div>
+            <div class="nav-btn" onclick="openFriendsMenu()">AMI(s)</div>
+            <div class="nav-btn" onclick="logout()">Réglage</div>
+        </div>
+    </div>
+
+    <!-- MODAL: MENU RANKED (Bouton 2) -->
+    <div id="ranked-menu-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>MODE RANKED</h2>
+            <p style="color: #aaa; font-size: 0.9rem;">(Actuellement contre l'IA d'entraînement pour grimper dans le classement)</p>
+            <button class="cr-button blue" onclick="startBotMatch()">LANCER LA PARTIE</button>
+            <button class="cr-button red" onclick="closeModals()">RETOUR</button>
+        </div>
+    </div>
+
+    <!-- MODAL: MENU AMIS P2P (Bouton 3) -->
+    <div id="friends-menu-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>DÉFIER UN AMI</h2>
+            <div style="font-family:'Anton'; margin-top: 10px;">Ton Code d'invitation :</div>
             <div class="code-display" id="my-code">...</div>
-            
-            <div style="margin: 15px 0; border-top: 1px solid #444;"></div>
-            
+            <hr style="border-color: #444; margin: 15px 0;">
             <input type="text" id="friend-code" placeholder="Code de ton ami">
-            <button class="cr-button red" onclick="sendInvite()">DÉFIER</button>
+            <button class="cr-button" onclick="sendInvite()">DÉFIER</button>
+            <button class="cr-button red" onclick="closeModals()">RETOUR</button>
         </div>
     </div>
 
@@ -158,7 +250,6 @@
     <!-- ECRAN: BATAILLE -->
     <div id="battle-screen" class="screen" style="padding:0;">
         <div id="camera-wrapper">
-            
             <!-- OVERLAY PREPARATION -->
             <div id="prep-overlay">
                 <h2 style="font-size:3rem;">METS-TOI EN POSITION</h2>
@@ -197,21 +288,16 @@
         <button class="cr-button" onclick="showDashboard()">RETOUR AU MENU</button>
     </div>
 
-    <style>
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-    </style>
-
     <script>
         // ===================== SYSTEME DE COMPTE & RANGS =====================
-        let userProfile = { username: "", elo: 1000, wins: 0, losses: 0 };
+        let userProfile = { username: "", elo: 1000 };
         
         const RANKS = [
-            { max: 800, name: "BRONZE", short: "BRZ", color: "var(--rank-bronze)" },
-            { max: 1200, name: "ARGENT", short: "ARG", color: "var(--rank-silver)" },
-            { max: 1600, name: "OR", short: "OR", color: "var(--rank-gold)" },
-            { max: 2000, name: "PLATINE", short: "PLT", color: "var(--rank-plat)" },
-            { max: 9999, name: "DIAMANT", short: "DIA", color: "var(--rank-diamond)" }
+            { max: 800, name: "BRONZE", short: "BRZ", wingColor: "linear-gradient(to bottom, #f2a65a, #8c4c14)" },
+            { max: 1200, name: "ARGENT", short: "ARG", wingColor: "linear-gradient(to bottom, #ffffff, #808080)" },
+            { max: 1600, name: "OR", short: "OR", wingColor: "linear-gradient(to bottom, #ffe44d, #b38600)" },
+            { max: 2000, name: "PLATINE", short: "PLT", wingColor: "linear-gradient(to bottom, #e5e4e2, #559999)" },
+            { max: 9999, name: "DIAMANT", short: "DIA", wingColor: "linear-gradient(to bottom, #b9f2ff, #0088cc)" }
         ];
 
         function getRank(elo) {
@@ -221,8 +307,8 @@
         function saveProfile() { localStorage.setItem('cop_profile', JSON.stringify(userProfile)); }
         function loadProfile() {
             let saved = localStorage.getItem('cop_profile');
-            if(saved) userProfile = JSON.parse(saved);
-            return !!saved;
+            if(saved) { userProfile = JSON.parse(saved); return true; }
+            return false;
         }
 
         function createAccount() {
@@ -230,17 +316,18 @@
             if(!name) return alert("Choisis un pseudo !");
             userProfile.username = name;
             saveProfile();
-            
-            // Demander la permission pour les notifications (sur interaction utilisateur)
-            if ("Notification" in window && Notification.permission !== "granted") {
-                Notification.requestPermission();
-            }
+            if ("Notification" in window && Notification.permission !== "granted") Notification.requestPermission();
             initApp();
         }
 
-        function logout() { localStorage.removeItem('cop_profile'); location.reload(); }
+        function logout() { 
+            if(confirm("Veux-tu vraiment te déconnecter ? Tes données locales seront effacées.")) {
+                localStorage.removeItem('cop_profile'); 
+                location.reload(); 
+            }
+        }
 
-        // ===================== NAVIGATION =====================
+        // ===================== NAVIGATION & MENUS =====================
         function switchScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
             document.getElementById(screenId).classList.add('active-screen');
@@ -249,22 +336,29 @@
         function showDashboard() {
             let rank = getRank(userProfile.elo);
             document.getElementById('menu-username').innerText = userProfile.username;
-            document.getElementById('menu-elo').innerText = `${userProfile.elo} ELO`;
-            document.getElementById('menu-wins').innerText = userProfile.wins;
-            document.getElementById('menu-losses').innerText = userProfile.losses;
+            document.getElementById('menu-elo').innerText = userProfile.elo;
             
             let badge = document.getElementById('rank-badge');
+            let wings = document.getElementById('rank-wings-bg');
+            let rankName = document.getElementById('rank-name-display');
+
             badge.innerText = rank.short;
-            badge.style.borderColor = rank.color;
-            badge.style.color = rank.color;
+            wings.style.background = rank.wingColor;
+            rankName.innerText = rank.name;
 
             switchScreen('menu-screen');
         }
 
+        function closeModals() {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+        }
+
+        function openRankedMenu() { closeModals(); document.getElementById('ranked-menu-modal').style.display = 'flex'; }
+        function openFriendsMenu() { closeModals(); document.getElementById('friends-menu-modal').style.display = 'flex'; }
+
         // ===================== MULTIJOUEUR & INVITATIONS (PeerJS) =====================
         let peer = null;
-        let conn = null; // Connexion active
-        let isHost = false;
+        let conn = null; 
         let enemyName = "Adversaire";
         let isRankedMode = false;
 
@@ -276,78 +370,56 @@
 
         function initPeer() {
             if(peer) return;
-            // Génère un ID unique de 5 lettres
             const id = Math.random().toString(36).substring(2, 7).toUpperCase();
             peer = new Peer(id);
-            
             peer.on('open', (id) => { document.getElementById('my-code').innerText = id; });
-
-            // Quand on reçoit une connexion (Quelqu'un nous défie)
             peer.on('connection', (connection) => {
                 conn = connection;
                 setupConnectionReceiver();
             });
         }
 
-        // --- CÔTÉ ENVOYEUR (CHALLENGER) ---
         function sendInvite() {
             const friendId = document.getElementById('friend-code').value.toUpperCase().trim();
             if(!friendId) return alert("Rentre un code !");
             if(friendId === peer.id) return alert("Tu ne peux pas te défier toi-même !");
             
+            closeModals();
             document.getElementById('waiting-modal').style.display = 'flex';
             
             conn = peer.connect(friendId);
-            conn.on('open', () => {
-                conn.send({ type: 'invite', name: userProfile.username });
-            });
-
+            conn.on('open', () => { conn.send({ type: 'invite', name: userProfile.username }); });
             conn.on('data', (data) => {
                 if(data.type === 'accept') {
-                    enemyName = data.name;
-                    isRankedMode = true;
-                    document.getElementById('waiting-modal').style.display = 'none';
-                    startPrepPhase();
+                    enemyName = data.name; isRankedMode = true;
+                    closeModals(); startPrepPhase();
                 }
                 if(data.type === 'decline') {
-                    document.getElementById('waiting-modal').style.display = 'none';
-                    alert("Ton adversaire a refusé le défi.");
-                    conn.close();
+                    closeModals(); alert("Ton adversaire a refusé le défi."); conn.close();
                 }
                 handleGameData(data);
             });
         }
 
-        function cancelInvite() {
-            if(conn) conn.close();
-            document.getElementById('waiting-modal').style.display = 'none';
-        }
+        function cancelInvite() { if(conn) conn.close(); closeModals(); }
 
-        // --- CÔTÉ RECEVEUR ---
         function setupConnectionReceiver() {
             conn.on('data', (data) => {
                 if (data.type === 'invite') {
                     enemyName = data.name;
                     document.getElementById('challenger-name').innerText = data.name;
+                    closeModals();
                     document.getElementById('invite-modal').style.display = 'flex';
-                    sendPushNotification("Nouveau Défi Clash !", `${data.name} veut t'affronter !`);
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        new Notification("Nouveau Défi !", { body: `${data.name} veut t'affronter !` });
+                    }
                 }
                 handleGameData(data);
             });
         }
 
-        function acceptInvite() {
-            document.getElementById('invite-modal').style.display = 'none';
-            conn.send({ type: 'accept', name: userProfile.username });
-            isRankedMode = true;
-            startPrepPhase();
-        }
-
-        function declineInvite() {
-            document.getElementById('invite-modal').style.display = 'none';
-            conn.send({ type: 'decline' });
-            setTimeout(() => conn.close(), 500);
-        }
+        function acceptInvite() { closeModals(); conn.send({ type: 'accept', name: userProfile.username }); isRankedMode = true; startPrepPhase(); }
+        function declineInvite() { closeModals(); conn.send({ type: 'decline' }); setTimeout(() => conn.close(), 500); }
 
         function handleGameData(data) {
             if(data.type === 'score' && gameActive) {
@@ -356,19 +428,14 @@
             }
         }
 
-        function sendPushNotification(title, body) {
-            if ("Notification" in window && Notification.permission === "granted") {
-                new Notification(title, { body: body, icon: "https://cdn-icons-png.flaticon.com/512/1754/1754290.png" });
-            }
-        }
-
         // ===================== LOGIQUE DE JEU =====================
         let playerScore = 0, enemyScore = 0, gameTime = 30;
         let gameActive = false, timerInterval;
 
         function startBotMatch() {
-            isRankedMode = false;
-            enemyName = "IA d'Entrainement";
+            closeModals();
+            isRankedMode = true; // On gagne/perd de l'elo contre l'IA pour l'exemple Ranked
+            enemyName = "IA d'Entraînement";
             startPrepPhase();
         }
 
@@ -383,11 +450,10 @@
             document.getElementById('enemy-score').innerText = "0";
             document.getElementById('match-timer').innerText = "30";
 
-            startCamera(); // Démarre la caméra en arrière-plan
+            startCamera();
 
             let prepTime = 10;
             document.getElementById('prep-timer').innerText = prepTime;
-            
             let prepInterval = setInterval(() => {
                 prepTime--;
                 document.getElementById('prep-timer').innerText = prepTime;
@@ -401,22 +467,18 @@
 
         function startMatch() {
             gameActive = true;
-            
-            // Bot Logic
             let botInterval;
-            if(!isRankedMode) {
+            if(enemyName === "IA d'Entraînement") {
                 botInterval = setInterval(() => {
                     if(gameActive && Math.random() > 0.4) {
-                        enemyScore++;
-                        document.getElementById('enemy-score').innerText = enemyScore;
+                        enemyScore++; document.getElementById('enemy-score').innerText = enemyScore;
                     }
                 }, 1500);
             }
 
             timerInterval = setInterval(() => {
                 if(gameTime > 0) {
-                    gameTime--;
-                    document.getElementById('match-timer').innerText = gameTime;
+                    gameTime--; document.getElementById('match-timer').innerText = gameTime;
                 } else {
                     gameActive = false;
                     clearInterval(timerInterval);
@@ -428,16 +490,12 @@
 
         function playerScored() {
             if(!gameActive) return;
-            playerScore++;
-            document.getElementById('player-score').innerText = playerScore;
-            if(isRankedMode && conn && conn.open) {
-                conn.send({ type: 'score', score: playerScore });
-            }
+            playerScore++; document.getElementById('player-score').innerText = playerScore;
+            if(conn && conn.open) conn.send({ type: 'score', score: playerScore });
         }
 
         function endMatch() {
             switchScreen('result-screen');
-            
             let title = document.getElementById('result-title');
             let recapElo = document.getElementById('recap-elo-change');
             
@@ -445,38 +503,32 @@
             document.getElementById('recap-e-score').innerText = enemyScore;
 
             let eloGained = 0;
-
             if(playerScore > enemyScore) {
                 title.innerText = "VICTOIRE"; title.style.color = "#4caf50";
-                if(isRankedMode) { eloGained = 25; userProfile.wins++; }
+                if(isRankedMode) eloGained = 25;
             } else if(playerScore < enemyScore) {
                 title.innerText = "DÉFAITE"; title.style.color = "var(--cr-red)";
-                if(isRankedMode) { eloGained = -20; userProfile.losses++; }
+                if(isRankedMode) eloGained = -20;
             } else {
                 title.innerText = "ÉGALITÉ"; title.style.color = "white";
-                if(isRankedMode) eloGained = 0;
             }
 
             if(isRankedMode) {
                 userProfile.elo += eloGained;
-                if(userProfile.elo < 0) userProfile.elo = 0; // Pas d'elo négatif
+                if(userProfile.elo < 0) userProfile.elo = 0;
                 saveProfile();
                 
                 if(eloGained > 0) { recapElo.innerText = `+ ${eloGained} ELO`; recapElo.className = "elo-change elo-up"; }
                 else if(eloGained < 0) { recapElo.innerText = `${eloGained} ELO`; recapElo.className = "elo-change elo-down"; }
                 else { recapElo.innerText = `+ 0 ELO`; recapElo.className = "elo-change elo-neutral"; }
-            } else {
-                recapElo.innerText = "Non classé (VS IA)";
-                recapElo.className = "elo-change elo-neutral";
             }
         }
 
-        // ===================== DETECTION CAMERA (MediaPipe) =====================
+        // ===================== DETECTION CAMERA =====================
         const videoElement = document.getElementById('video');
         const canvasElement = document.getElementById('canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        let isDown = false;
-        let cameraStarted = false;
+        let isDown = false; let cameraStarted = false;
 
         async function startCamera() {
             if(cameraStarted) return;
@@ -489,13 +541,10 @@
                 pose.onResults(onPoseResults);
 
                 const camera = new Camera(videoElement, {
-                    onFrame: async () => { await pose.send({image: videoElement}); },
-                    width: 640, height: 480
+                    onFrame: async () => { await pose.send({image: videoElement}); }, width: 640, height: 480
                 });
-                camera.start();
-                cameraStarted = true;
+                camera.start(); cameraStarted = true;
             } catch (err) {
-                alert("Erreur Caméra. Mode clic activé.");
                 document.getElementById('pose-hint').innerText = "CLIQUE SUR L'ÉCRAN POUR FAIRE UNE POMPE";
             }
         }
@@ -503,33 +552,23 @@
         function onPoseResults(results) {
             canvasElement.width = videoElement.videoWidth || 640;
             canvasElement.height = videoElement.videoHeight || 480;
-            canvasCtx.save(); 
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.translate(canvasElement.width, 0); 
-            canvasCtx.scale(-1, 1);
-            
+            canvasCtx.save(); canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.translate(canvasElement.width, 0); canvasCtx.scale(-1, 1);
             if (results.image) canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
             if (results.poseLandmarks && gameActive) {
                 document.getElementById('pose-hint').style.display = 'none';
-                
-                let shoulderL = results.poseLandmarks[11];
-                let elbowL = results.poseLandmarks[13];
-                let shoulderR = results.poseLandmarks[12];
-                let elbowR = results.poseLandmarks[14];
+                let shoulderL = results.poseLandmarks[11], elbowL = results.poseLandmarks[13];
+                let shoulderR = results.poseLandmarks[12], elbowR = results.poseLandmarks[14];
 
                 if(shoulderL && elbowL && shoulderR && elbowR) {
-                    let avgShoulderY = (shoulderL.y + shoulderR.y) / 2;
-                    let avgElbowY = (elbowL.y + elbowR.y) / 2;
-
+                    let avgShoulderY = (shoulderL.y + shoulderR.y) / 2, avgElbowY = (elbowL.y + elbowR.y) / 2;
                     if (avgShoulderY > avgElbowY - 0.05 && !isDown) {
-                        isDown = true;
-                        canvasElement.style.filter = "brightness(1.5)"; 
+                        isDown = true; canvasElement.style.filter = "brightness(1.5)"; 
                         setTimeout(() => canvasElement.style.filter = "none", 100);
                     } 
                     else if (avgShoulderY < avgElbowY - 0.15 && isDown) {
-                        isDown = false;
-                        playerScored();
+                        isDown = false; playerScored();
                     }
                 }
             } else if (gameActive) {
@@ -539,10 +578,7 @@
             canvasCtx.restore();
         }
 
-        // Fallback: clic sur l'écran pour marquer (pratique pour tester sur PC)
         document.getElementById('camera-wrapper').addEventListener('click', () => { if(gameActive) playerScored(); });
-
-        // Lancement initial
         window.onload = initApp;
     </script>
 </body>
