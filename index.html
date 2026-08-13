@@ -284,7 +284,7 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
   background:linear-gradient(180deg,#9BE1FF,var(--blue));transition:height .08s linear,background .2s}
 .depth.bad>span{background:linear-gradient(180deg,#FF9A9A,var(--red))}
 .depth.hit>span{background:linear-gradient(180deg,#D8FFAE,var(--lime))}
-.depth::after{content:'';position:absolute;left:-3px;right:-3px;bottom:55%;height:3px;
+.depth::after{content:'';position:absolute;left:-3px;right:-3px;bottom:48%;height:3px;
   background:var(--lime);box-shadow:0 0 10px var(--lime)}
 .formmsg{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 96px);z-index:3;text-align:center;
   font-family:'Saira Condensed';font-weight:900;font-size:15px;letter-spacing:.16em;text-transform:uppercase;
@@ -507,7 +507,7 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
       <div class="plate">
         <div class="eyebrow">Ce qui valide une répétition</div>
         <div style="margin-top:10px">
-          <div class="rule"><div class="num">01</div><p><b>Descente.</b> La jauge doit franchir le repère vert, soit environ 105° de coude. Inutile de coller la poitrine au sol : le seuil est atteint avant, et descendre plus bas ne rapporte rien de plus.</p></div>
+          <div class="rule"><div class="num">01</div><p><b>Descente.</b> La moitié de la trajectoire suffit : dès que la jauge franchit le repère vert, à mi-hauteur, la répétition est acquise. Inutile de coller la poitrine au sol.</p></div>
           <div class="rule"><div class="num">02</div><p><b>Amplitude.</b> L'écart entre ton point haut et ton point bas doit être réel. Une oscillation autour du repère ne compte pas.</p></div>
           <div class="rule"><div class="num">03</div><p><b>Remontée.</b> Bras tendus, retour à la position de départ mesurée pendant le décompte.</p></div>
           <div class="rule"><div class="num">04</div><p><b>Alignement.</b> Épaules, hanches et genoux tenus. Le squelette passe au rouge dès que le corps casse.</p></div>
@@ -520,6 +520,11 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
           <b>De profil</b> à 1,5–2 m : lecture la plus précise.<br>
           <b>De face</b>, posé au sol devant toi : désormais géré. Reste immobile bras tendus pendant le décompte,
           c'est ce moment qui sert de référence pour mesurer ta descente.</p>
+        <div class="eyebrow" style="margin-top:12px">Visage indifférent</div>
+        <p style="font-size:13px;color:#C6D4E6;line-height:1.55;margin-top:6px">
+          Le comptage n'utilise que les articulations : épaules, coudes, poignets, bassin, genoux.
+          Casquette, capuche, tête baissée ou regard au sol ne changent rien — aucun point du visage
+          n'est mesuré, et le squelette affiché s'arrête volontairement au cou.</p>
       </div>
     </section>
 
@@ -652,9 +657,10 @@ const MATCH_SECONDS = 60, K_RANKED = 32, K_BOT = 16;
    confondus), donc on valide AVANT cette zone. Pour que ce seuil plus doux ne
    laisse pas passer de fausses répétitions, on exige en plus une amplitude
    réellement parcourue (MIN_RANGE) entre le point haut et le point bas. */
-const EXT_DOWN  = .45;    // profondeur validante ≈ 105° de coude
+const EXT_DOWN  = .52;    // déclenche sur une descente réelle de 50 % (marge de 2 points
+                          // pour absorber le retard résiduel du filtre)
 const EXT_UP    = .84;    // retour bras tendus
-const MIN_RANGE = .34;    // course minimale haut → bas sur une même répétition
+const MIN_RANGE = .38;    // course minimale haut → bas sur une même répétition
 const ANGLE_BODY = 155;   // alignement épaule-hanche-genou (vue de profil)
 const MIN_REP_MS = 450;   // tempo minimal
 const MIN_VIS    = .40;   // tolérance de visibilité (on accepte une perte partielle en bas)
@@ -1018,6 +1024,7 @@ const Vision = {
   landmarker:null, stream:null, running:false, lastVideoTime:-1, raf:0,
   reps:0, refused:0, phase:"up", formBroken:false, repStart:0,
   extTop:1, extMin:1, upFrames:0, lost:0, descentAt:0, flash:null,
+  torsoRef:0, side:null,
   active:false, onRep:null,
   sE:1, sV:1, ext:1, frontality:0,                  // signaux lissés
   base:{ span:0, hip:0, n:0 }, calibrating:false, calibrated:false,
@@ -1031,7 +1038,11 @@ const Vision = {
         delegate:"GPU"
       },
       runningMode:"VIDEO", numPoses:1,
-      minPoseDetectionConfidence:.5, minPosePresenceConfidence:.5, minTrackingConfidence:.5
+      // Le détecteur de personne de BlazePose s'appuie sur la région de la tête.
+      // En abaissant le seuil de suivi, le tracker garde la main d'une image à
+      // l'autre au lieu de rappeler ce détecteur : tête baissée ou casquette
+      // ne provoquent plus de perte de cible.
+      minPoseDetectionConfidence:.35, minPosePresenceConfidence:.35, minTrackingConfidence:.30
     };
     try{ this.landmarker = await PoseLandmarker.createFromOptions(fs, opts); }
     catch{ opts.baseOptions.delegate = "CPU"; this.landmarker = await PoseLandmarker.createFromOptions(fs, opts); }
@@ -1055,7 +1066,7 @@ const Vision = {
   reset(){
     this.reps = 0; this.refused = 0; this.phase = "up"; this.formBroken = false;
     this.extTop = 1; this.extMin = 1; this.upFrames = 0; this.lost = 0;
-    this.descentAt = 0; this.flash = null;
+    this.descentAt = 0; this.flash = null; this.torsoRef = 0; this.side = null;
     this.sE = this.sV = this.ext = 1; this.frontality = 0;
     this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = false;
     this.active = false;
@@ -1088,7 +1099,8 @@ const Vision = {
         const st = this.analyse(lm, wl);
         this.draw(ctx, lm, c.width, c.height, st);
         this.hud(st);
-      }else this.hud({ ok:false, msg:"Aucun corps détecté" });
+      }else this.hud({ ok:false, held:this.active && this.phase === "down",
+                       depth:clamp(1 - this.ext, 0, 1), msg:"Recherche du corps…" });
     };
     step();
   },
@@ -1104,31 +1116,53 @@ const Vision = {
   d2(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); },
 
   analyse(lm, wl){
+    /* ------------------------------------------------------------------
+       AUCUN point du visage n'intervient ici. MediaPipe renvoie les indices
+       0 à 10 pour le nez, les yeux, les oreilles et la bouche : ils ne sont
+       ni mesurés, ni pondérés, ni même dessinés. Casquette, capuche ou tête
+       baissée n'ont donc aucun effet sur le comptage.
+       Points utilisés : 11/12 épaules, 13/14 coudes, 15/16 poignets,
+       23/24 hanches, 25/26 genoux.
+       ------------------------------------------------------------------ */
     const vis = i => lm[i]?.visibility ?? 0;
-    const lV = (vis(11)+vis(13)+vis(15)+vis(23))/4;
-    const rV = (vis(12)+vis(14)+vis(16)+vis(24))/4;
-    const q  = Math.max(lV, rV);
+    // Chaîne du bras : c'est elle qui porte le comptage
+    const armL = (vis(11)+vis(13)+vis(15))/3;
+    const armR = (vis(12)+vis(14)+vis(16))/3;
+    const q    = Math.max(armL, armR);
+    const hipV = Math.max(vis(23), vis(24));
 
-    /* Suivi dégradé — typiquement en bas du mouvement, bras masqués par le
-       buste. On GÈLE l'état plutôt que de le perdre : une descente déjà
-       validée le reste, et la répétition pourra se boucler à la remontée. */
+    /* Suivi dégradé — bas du mouvement, bras masqués par le buste. On GÈLE
+       l'état plutôt que de le perdre : une descente déjà validée le reste. */
     if(q < MIN_VIS){
       this.lost++;
       const held = this.active && this.phase === "down";
       return { ok:false, held, depth:clamp(1 - this.ext, 0, 1),
-               msg:held ? "Position basse tenue — remonte" : "Cadre tout ton corps" };
+               msg:held ? "Position basse tenue — remonte" : "Cadre épaules, bras et bassin" };
     }
     this.lost = 0;
     const trust = q > TRUST_VIS;          // mesure assez sûre pour juger la forme
-    const L = lV >= rV;
-    const S=L?11:12, E=L?13:14, W=L?15:16, H=L?23:24, K=L?25:26;
 
-    /* --- géométrie image, utilisée pour l'orientation et la course --- */
+    // Côté suivi avec hystérésis : on ne bascule que si l'autre profil est
+    // nettement mieux vu, sinon le signal saute en plein mouvement
+    if(this.side === null) this.side = armL >= armR;
+    else if(this.side && armR > armL + .12) this.side = false;
+    else if(!this.side && armL > armR + .12) this.side = true;
+    const L = this.side;
+    const S=L?11:12, H=L?23:24, K=L?25:26;
+
+    /* --- géométrie image, uniquement à partir des articulations --- */
     const shMid = this.mid(lm[11], lm[12]);
     const hpMid = this.mid(lm[23], lm[24]);
     const wrMid = this.mid(lm[15], lm[16]);
-    const torso = Math.max(this.d2(shMid, hpMid), 1e-3);
     const shW   = this.d2(lm[11], lm[12]);
+    // Longueur de tronc : mémorisée tant que le bassin est vu, réutilisée
+    // ensuite. Elle sert d'étalon de distance et ne dépend que du buste.
+    if(hipV > .5){
+      const t = Math.max(this.d2(shMid, hpMid), 1e-3);
+      this.torsoRef = this.torsoRef ? this.torsoRef + (t - this.torsoRef)*.10 : t;
+    }
+    const torso = this.torsoRef || Math.max(this.d2(shMid, hpMid), 1e-3);
+
     // frontalité : 0 = profil pur, 1 = face pleine
     const front = clamp((shW/torso - .42) / (.85 - .42), 0, 1);
     this.frontality += (front - this.frontality) * .12;
@@ -1138,7 +1172,12 @@ const Vision = {
     const hipN  = (hpMid.y - shMid.y) / torso;
 
     /* --- calibration : position haute, bras tendus --- */
-    const elbowNow = (this.angle(wl[S], wl[E], wl[W]) + this.angle(wl[L?12:11], wl[L?14:13], wl[L?16:15]))/2;
+    // Angle de coude moyenné sur les deux bras, pondéré par leur visibilité :
+    // un bras masqué pèse moins, aucun basculement brusque de mesure.
+    const eL = this.angle(wl[11], wl[13], wl[15]);
+    const eR = this.angle(wl[12], wl[14], wl[16]);
+    const wL = armL + .01, wR = armR + .01;
+    const elbowNow = (eL*wL + eR*wR) / (wL + wR);
     if(this.calibrating && elbowNow > 150 && spanN > .2){
       this.base.n++;
       this.base.span += (spanN - this.base.span) / this.base.n;   // moyenne courante
@@ -1146,14 +1185,17 @@ const Vision = {
       if(this.base.n >= 8) this.calibrated = true;
     }
 
-    /* --- signaux --- */
+    /* --- signaux ---
+       Filtre asymétrique : attaque rapide en descente (on doit capter
+       fidèlement jusqu'où le corps est descendu) et lissage normal à la
+       remontée (stabilité de la détection de fin de répétition). */
     const sE = clamp((elbowNow - 55) / (170 - 55), 0, 1);
-    this.sE += (sE - this.sE) * .55;   // alpha relevé : moins de retard sur une descente rapide
+    this.sE += (sE - this.sE) * (sE < this.sE ? .78 : .55);
     let sV = 1;
     if(this.calibrated && this.base.span > .05){
       // 1 = position haute mesurée ; 0 = poitrine au sol
       sV = clamp((spanN / this.base.span - .18) / (1 - .18), 0, 1.1);
-      this.sV += (sV - this.sV) * .50;
+      this.sV += (sV - this.sV) * (sV < this.sV ? .74 : .50);
     }else this.sV = this.sE;
 
     // Fusion : plus la vue est frontale, plus la course verticale prime
@@ -1162,13 +1204,14 @@ const Vision = {
     const depth = clamp(1 - this.ext, 0, 1);
 
     /* --- alignement du corps --- */
+    // Règle constante : on ne sanctionne jamais ce qu'on ne mesure pas.
     let aligned = true, alignCheck = true;
-    if(this.frontality < .55 && vis(K) > .45){
+    if(this.frontality < .55 && vis(K) > .45 && hipV > .5){
       aligned = this.angle(wl[S], wl[H], wl[K]) >= ANGLE_BODY;     // mesure directe, vue de profil
-    }else if(this.calibrated){
+    }else if(this.calibrated && hipV > .5){
       // De face les genoux sont masqués : on surveille la dérive du bassin
       aligned = Math.abs(hipN - this.base.hip) < .38;
-    }else alignCheck = false;
+    }else alignCheck = false;                                      // bassin non vu → pas de verdict
 
     /* --- machine à états ---
        Valider ne repose plus sur un point bas absolu mais sur la COURSE
@@ -1231,18 +1274,23 @@ const Vision = {
 
   draw(ctx, lm, w, h, st){
     const color = !st.ok ? "rgba(132,151,179,.55)" : (st.aligned ? "#2FA8FF" : "#FF4D4D");
+    // Indices 0 à 10 = visage (nez, yeux, oreilles, bouche) : jamais tracés,
+    // jamais mesurés. L'overlay montre exactement ce qui sert au comptage.
+    const body = i => i >= 11;
     ctx.lineWidth = Math.max(2.5, w/200);
     ctx.strokeStyle = color; ctx.shadowBlur = 16; ctx.shadowColor = color;
     ctx.beginPath();
     for(const cn of PoseLandmarker.POSE_CONNECTIONS){
+      if(!body(cn.start) || !body(cn.end)) continue;
       const a = lm[cn.start], b = lm[cn.end];
       if(!a || !b) continue;
-      if((a.visibility ?? 1) < .35 || (b.visibility ?? 1) < .35) continue;
+      if((a.visibility ?? 1) < .3 || (b.visibility ?? 1) < .3) continue;
       ctx.moveTo(a.x*w, a.y*h); ctx.lineTo(b.x*w, b.y*h);
     }
     ctx.stroke(); ctx.shadowBlur = 0; ctx.fillStyle = color;
-    for(const p of lm){
-      if((p.visibility ?? 1) < .45) continue;
+    for(let i = 11; i < lm.length; i++){
+      const p = lm[i];
+      if(!p || (p.visibility ?? 1) < .4) continue;
       ctx.beginPath(); ctx.arc(p.x*w, p.y*h, Math.max(2.5, w/300), 0, 6.283); ctx.fill();
     }
   },
