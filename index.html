@@ -1,701 +1,1129 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0b1830">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pompes Royale">
-<meta name="description" content="Duels de pompes en temps reel : la camera compte tes repetitions.">
-<title>Pompes Royale</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%AA%3C/text%3E%3C/svg%3E">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#07080D" />
+<title>PUSHDUEL — Duels de pompes classés</title>
 
-<!-- IMPORTS POUR L'INTELLIGENCE ARTIFICIELLE (TENSORFLOW & MOVENET) -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+<!-- ============================================================
+     PUSHDUEL — application 1v1 de pompes, 100% client
+     - IA : MediaPipe Tasks Vision (PoseLandmarker "lite", délégué GPU)
+     - Réseau : WebRTC via PeerJS (serveur de signalisation public gratuit)
+     - Persistance : window.storage (artefact) → localStorage → mémoire
+     Aucun serveur applicatif n'est nécessaire.
+     ============================================================ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+
+<!-- PeerJS (script classique → expose window.Peer) -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
 <style>
-/* ============================================================
-   POMPES ROYALE — interface minimaliste (TON CODE INTACT)
-   ============================================================ */
+/* ===========================================================
+   1. TOKENS
+   =========================================================== */
 :root{
-  --bg:#0d1117; --bg2:#0a0e14;
-  --surf:#161b22; --surf2:#1c232c; --line:#252c37; --line2:#333c49;
-  --tx:#e6edf3; --tx2:#9aa7b5; --tx3:#6b7684;
-  --acc:#f0b429; --acc2:#ffd166;
-  --ok:#3fb950; --no:#f85149; --info:#58a6ff; --vio:#a371f7;
-  --gold-200:var(--acc2); --grey-300:var(--tx2); --grey-500:var(--tx3);
-  --r-common:#8b949e; --r-rare:#58a6ff; --r-epic:#a371f7; --r-legend:#f0b429; --r-champ:#f778ba;
-  --nav-h:60px;
-  --safe-t:env(safe-area-inset-top,0px); --safe-b:env(safe-area-inset-bottom,0px);
-  --safe-l:env(safe-area-inset-left,0px); --safe-r:env(safe-area-inset-right,0px);
-  --ft:-apple-system,'Segoe UI',system-ui,Roboto,sans-serif;
-  --fb:-apple-system,'Segoe UI',system-ui,Roboto,sans-serif;
-  --pop:cubic-bezier(.2,.9,.3,1); --out:cubic-bezier(.16,1,.3,1);
+  --carbon:#07080D;          /* fond */
+  --panel:#0E1119;           /* surfaces */
+  --panel-2:#141926;
+  --line:rgba(120,150,180,.18);
+  --ink:#E8EEF6;             /* texte principal */
+  --ink-dim:#7A8798;         /* texte secondaire */
+  --cyan:#00F0FF;            /* accent joueur / énergie */
+  --magenta:#FF2E7E;         /* accent adversaire */
+  --lime:#C6FF3D;            /* rep validée */
+  --red:#FF3B3B;             /* faute de forme */
+  --r:4px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
 }
-*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;padding:0;height:100%;height:100dvh;overflow:hidden;position:fixed;inset:0;
-  background:var(--bg);color:var(--tx);font-family:var(--fb);font-weight:500;font-size:15px;
-  user-select:none;-webkit-user-select:none;overscroll-behavior:none;
-  -webkit-text-size-adjust:100%;touch-action:manipulation;
-  -webkit-font-smoothing:antialiased}
-.hide{display:none!important}
-button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer;padding:0}
-input,textarea{font-family:inherit;-webkit-appearance:none;border-radius:0}
-::-webkit-scrollbar{width:0;height:0}
-.t{font-weight:700;letter-spacing:-.01em}
-.gold{color:var(--acc)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{
+  background:var(--carbon); color:var(--ink);
+  font-family:'Chakra Petch',system-ui,sans-serif;
+  overflow:hidden; overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;
+}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace}
 
-/* ---------- caméra source : hors écran mais RENDUE (indispensable sur iOS) ---------- */
-#cam{position:fixed;left:0;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-1}
-#cam.camfeed{position:absolute;inset:0;width:100%;height:100%;opacity:1;z-index:0;
-  object-fit:cover;pointer-events:none}
+/* Fond : grille technique + halo diagonal, statique (léger sur mobile) */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(90vw 60vh at 80% -10%, rgba(0,240,255,.10), transparent 60%),
+    radial-gradient(70vw 50vh at 0% 110%, rgba(255,46,126,.10), transparent 60%),
+    linear-gradient(rgba(120,150,180,.05) 1px, transparent 1px) 0 0/100% 44px,
+    linear-gradient(90deg, rgba(120,150,180,.05) 1px, transparent 1px) 0 0/44px 100%;
+}
 
-/* ---------- chargement ---------- */
-#boot{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:20px;background:var(--bg);transition:opacity .35s}
-#boot.out{opacity:0;pointer-events:none}
-.bootIco{font-size:44px}
-.bootT{font-size:22px;font-weight:700;letter-spacing:.16em;text-align:center;margin:0;color:var(--tx)}
-.bootT small{display:block;font-size:.62em;letter-spacing:.34em;color:var(--acc);margin-top:4px}
-.bootBar{width:min(220px,60vw);height:2px;background:var(--line);overflow:hidden;border-radius:2px}
-.bootBar i{display:block;height:100%;width:0;background:var(--acc);transition:width .3s var(--out)}
-.bootTip{font-size:12px;color:var(--tx3);letter-spacing:.04em;text-align:center;padding:0 20px}
+/* ===========================================================
+   2. ÉCRANS
+   =========================================================== */
+.screen{
+  position:fixed;inset:0;z-index:1;
+  display:none;flex-direction:column;
+  padding:calc(var(--safe-t) + 18px) 18px calc(var(--safe-b) + 18px);
+  animation:screen-in .32s cubic-bezier(.2,.8,.2,1);
+}
+.screen.on{display:flex}
+@keyframes screen-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
-/* ---------- app ---------- */
-#app{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
-#bgfx,.grid3d{display:none}
+/* ===========================================================
+   3. COMPOSANTS
+   =========================================================== */
+.eyebrow{
+  font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+  color:var(--ink-dim);font-weight:600;
+}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  width:100%;padding:16px 18px;border:0;cursor:pointer;
+  font-family:'Chakra Petch';font-size:16px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:#04121A;background:var(--cyan);
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+  transition:transform .12s ease, filter .2s ease;
+}
+.btn:active{transform:scale(.985)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btn.ghost{
+  background:transparent;color:var(--ink);
+  box-shadow:inset 0 0 0 1px var(--line);
+}
+.btn.danger{background:var(--magenta);color:#180008}
+.btn:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
 
-/* ---------- boutons ---------- */
-.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  padding:11px 16px;border-radius:10px;font-size:14px;font-weight:600;letter-spacing:.01em;
-  color:var(--tx);background:var(--surf2);border:1px solid var(--line2);white-space:nowrap;
-  transition:background .15s,transform .08s,opacity .15s}
-.btn:active{transform:scale(.97);background:var(--line)}
-.btn[disabled],.btn.off{opacity:.4;pointer-events:none}
-.bg{background:var(--acc);border-color:var(--acc);color:#1a1205;font-weight:700}
-.bg:active{background:var(--acc2)}
-.br{background:transparent;border-color:#5c2a28;color:#ff8b82}
-.br:active{background:#2a1615}
-.bv{background:var(--ok);border-color:var(--ok);color:#06210c;font-weight:700}
-.bv:active{background:#4ecb60}
-.bp{background:var(--vio);border-color:var(--vio);color:#150a26;font-weight:700}
-.bn{background:transparent;border-color:var(--line2);color:var(--tx2)}
-.bn:active{background:var(--surf2)}
-.lg{padding:15px 22px;font-size:16px;border-radius:12px}
-.sm{padding:8px 12px;font-size:13px;border-radius:9px;min-height:36px}
-.blk{width:100%}
-.pulse{animation:none}
+.card{
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  box-shadow:inset 0 0 0 1px var(--line);
+  clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+  padding:18px;
+}
 
-/* ---------- panneaux ---------- */
-.pan{position:relative;border-radius:12px;padding:14px;background:var(--surf);border:1px solid var(--line)}
-.pan.dk{background:var(--bg2)}
-.pan.au{border-color:#4a3a12;background:#191509}
-.panT{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);
-  margin:0 0 10px;font-weight:600;display:flex;align-items:center;gap:7px}
+/* ===========================================================
+   4. ACCUEIL — le rang est le héros
+   =========================================================== */
+#home{gap:16px;justify-content:space-between}
+.brand{display:flex;align-items:baseline;justify-content:space-between}
+.brand h1{
+  margin:0;font-size:26px;font-weight:700;letter-spacing:.2em;
+}
+.brand h1 span{color:var(--cyan)}
 
-/* ---------- barre du haut ---------- */
-#top{position:relative;z-index:20;flex:0 0 auto;padding:calc(var(--safe-t) + 10px) 12px 10px;
-  display:flex;flex-direction:column;gap:9px;background:var(--bg);border-bottom:1px solid var(--line)}
-.trow{display:flex;align-items:center;gap:8px}
-.res{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--tx2)}
-.res b{font-weight:600;color:var(--tx);font-size:13px}
-.res .ic{font-size:13px;opacity:.85}
-.plus{width:17px;height:17px;border-radius:9px;display:grid;place-items:center;font-size:13px;
-  line-height:1;background:var(--surf2);color:var(--tx2);border:1px solid var(--line2)}
-.king{flex:1;display:flex;align-items:center;gap:9px;min-width:0;padding:0}
-.av{border-radius:9px;display:grid;place-items:center;overflow:hidden;background:var(--surf2);
-  border:1px solid var(--line2)}
-.av.au{border-color:#4a3a12}
-.kav{position:relative;width:36px;height:36px;flex:0 0 auto}
-.kav .av{width:100%;height:100%;font-size:19px}
-.klv{position:absolute;left:-4px;bottom:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;
-  display:grid;place-items:center;font-size:10px;font-weight:700;color:#1a1205;background:var(--acc);
-  border:2px solid var(--bg)}
-.knm{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kxp{height:3px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:5px;max-width:150px}
-.kxp i{display:block;height:100%;background:var(--info);transition:width .4s var(--out)}
-.ktr{font-size:14px;font-weight:600;color:var(--acc);display:flex;align-items:center;gap:4px}
-.tbtn{width:36px;height:36px;flex:0 0 auto;border-radius:9px;display:grid;place-items:center;
-  font-size:15px;position:relative;background:var(--surf);border:1px solid var(--line);color:var(--tx2)}
-.tbtn:active{background:var(--surf2)}
-.dot{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;
-  background:var(--no);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;
-  border:2px solid var(--bg)}
+.rankwrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0}
+/* Signature : sceau hexagonal du rang, avec anneau de progression vers le rang suivant */
+.seal{position:relative;width:190px;height:190px;display:grid;place-items:center}
+.seal svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.seal .track{fill:none;stroke:rgba(255,255,255,.07);stroke-width:3}
+.seal .prog{fill:none;stroke:var(--cyan);stroke-width:3;stroke-linecap:square;
+  filter:drop-shadow(0 0 6px rgba(0,240,255,.7));transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.seal .hex{
+  width:118px;height:134px;display:grid;place-items:center;gap:2px;
+  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
+  background:linear-gradient(160deg,rgba(0,240,255,.22),rgba(255,46,126,.14));
+  box-shadow:0 0 40px rgba(0,240,255,.18);
+}
+.seal .tier{font-size:30px;font-weight:700;letter-spacing:.06em}
+.seal .div{font-size:12px;letter-spacing:.3em;color:var(--ink-dim)}
+.elo{font-size:15px;letter-spacing:.22em;color:var(--ink-dim)}
+.elo b{color:var(--ink);font-size:20px}
 
-/* ---------- écrans ---------- */
-#scr{position:relative;flex:1 1 auto;min-height:0;z-index:10}
-.sc{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;
-  padding:6px calc(12px + var(--safe-l)) calc(var(--nav-h) + var(--safe-b) + 20px) calc(12px + var(--safe-r));
-  -webkit-overflow-scrolling:touch}
-.sc.on{display:block;animation:scIn .22s var(--out) both}
-@keyframes scIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-.sec{margin:16px 0}
-.secH{display:flex;align-items:center;justify-content:space-between;margin:0 0 9px;gap:8px}
-.secT{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);font-weight:600}
-.secA{font-size:12px;color:var(--acc);font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
+.stat{background:var(--panel);padding:12px 8px;text-align:center}
+.stat .v{font-size:22px;font-weight:800}
+.stat .k{font-size:10px;letter-spacing:.18em;color:var(--ink-dim);text-transform:uppercase}
 
-/* ---------- navigation ---------- */
-#nav{position:relative;z-index:30;flex:0 0 auto;display:flex;
-  height:calc(var(--nav-h) + var(--safe-b));padding-bottom:var(--safe-b);
-  background:var(--bg);border-top:1px solid var(--line)}
-.nv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  position:relative;color:var(--tx3);transition:color .15s}
-.nv i{font-size:18px;font-style:normal;filter:grayscale(1) opacity(.65);transition:filter .15s}
-.nv b{font-size:9.5px;letter-spacing:.05em;font-weight:600}
-.nv.on{color:var(--tx)}
-.nv.on i{filter:none}
-.nv.on::after{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
-  width:22px;height:2px;background:var(--acc);border-radius:0 0 2px 2px}
-.nv:active{opacity:.6}
+.pseudo{
+  width:100%;background:var(--panel);border:0;box-shadow:inset 0 0 0 1px var(--line);
+  color:var(--ink);font-family:'Chakra Petch';font-size:15px;letter-spacing:.1em;
+  padding:13px 14px;text-align:center;text-transform:uppercase;
+}
+.pseudo:focus{outline:none;box-shadow:inset 0 0 0 1px var(--cyan)}
+.row{display:flex;gap:10px}
 
-/* ---------- listes ---------- */
-.row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;margin-bottom:6px;
-  background:var(--surf);border:1px solid var(--line)}
-.row:active{background:var(--surf2)}
-.rowM{flex:1;min-width:0}
-.rowT{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rowS{font-size:12px;color:var(--tx3);margin-top:2px}
-.rowR{font-size:14px;font-weight:600;color:var(--acc);text-align:right}
-.rk{width:24px;height:24px;flex:0 0 auto;border-radius:6px;display:grid;place-items:center;
-  font-size:11px;font-weight:700;background:var(--surf2);color:var(--tx2);border:1px solid var(--line)}
-.rk.r1{background:var(--acc);color:#1a1205;border-color:var(--acc)}
-.rk.r2{background:#8b949e;color:#0d1117;border-color:#8b949e}
-.rk.r3{background:#a4703c;color:#0d1117;border-color:#a4703c}
-.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;font-size:11.5px;
-  font-weight:600;background:var(--surf2);border:1px solid var(--line2);color:var(--tx2)}
-.chip.au{border-color:#4a3a12;color:var(--acc)}
-.chip.gr{border-color:#1e4a26;color:var(--ok)}
-.chip.rd{border-color:#5c2a28;color:var(--no)}
-.empty{text-align:center;padding:28px 12px;color:var(--tx3);font-size:13px;line-height:1.6}
-.empty i{font-size:30px;opacity:.4;display:block;margin-bottom:8px;font-style:normal}
-.bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;position:relative}
-.bar i{display:block;height:100%;background:var(--ok);transition:width .4s var(--out)}
-.bar span{position:absolute;inset:0;display:grid;place-items:center;font-size:9px;font-weight:700;
-  color:var(--tx);text-shadow:0 1px 2px rgba(0,0,0,.8)}
-.tabs{display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid var(--line)}
-.tab{flex:1;padding:10px 4px;text-align:center;font-size:12.5px;font-weight:600;
-  background:none;border:none;color:var(--tx3);position:relative}
-.tab.on{color:var(--tx)}
-.tab.on::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--acc)}
-.fld{display:block;margin-bottom:14px}
-.fld>span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;
-  color:var(--tx3);margin-bottom:6px;font-weight:600}
-.inp{width:100%;padding:11px 13px;border-radius:9px;border:1px solid var(--line2);color:var(--tx);
-  background:var(--bg2);outline:none;font-size:16px}
-.inp:focus{border-color:var(--acc)}
-.pick{display:flex;flex-wrap:wrap;gap:6px}
-.pick>button{width:42px;height:42px;border-radius:9px;display:grid;place-items:center;font-size:20px;
-  background:var(--surf);border:1px solid var(--line);position:relative}
-.pick>button.on{border-color:var(--acc);background:var(--surf2)}
-.sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;
-  border-bottom:1px solid var(--line);font-size:14px}
-.sw:last-child{border-bottom:none}
-.swk{width:42px;height:24px;border-radius:12px;background:var(--line2);position:relative;flex:0 0 auto;
-  transition:background .18s}
-.swk::after{content:'';position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:10px;
-  background:var(--tx2);transition:transform .18s var(--pop),background .18s}
-.sw.on .swk{background:var(--ok)}
-.sw.on .swk::after{transform:translateX(18px);background:#fff}
-.sld{width:100%;-webkit-appearance:none;appearance:none;height:3px;border-radius:2px;
-  background:var(--line2);outline:none}
-.sld::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:10px;
-  background:var(--acc);border:none}
-.sld::-moz-range-thumb{width:20px;height:20px;border-radius:10px;background:var(--acc);border:none}
+/* ===========================================================
+   5. RECHERCHE
+   =========================================================== */
+#search{align-items:center;justify-content:center;gap:22px;text-align:center}
+.radar{position:relative;width:210px;height:210px}
+.radar i{
+  position:absolute;inset:0;border:1px solid rgba(0,240,255,.35);border-radius:50%;
+  animation:ping 2.6s cubic-bezier(.2,.7,.3,1) infinite;
+}
+.radar i:nth-child(2){animation-delay:.85s}
+.radar i:nth-child(3){animation-delay:1.7s}
+@keyframes ping{0%{transform:scale(.25);opacity:1}100%{transform:scale(1);opacity:0}}
+.radar .core{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-size:13px;letter-spacing:.24em;color:var(--cyan)
+}
+.searchlog{font-size:12px;letter-spacing:.14em;color:var(--ink-dim);min-height:18px}
 
-/* ---------- animations ---------- */
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-@keyframes ring{0%,100%{opacity:1}50%{opacity:.5}}
-@keyframes flip{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes shine{to{opacity:1}}
-@keyframes bp{0%,100%{opacity:1}50%{opacity:.72}}
-.apop{animation:pop .25s var(--pop) both}
+/* ===========================================================
+   6. ARÈNE
+   =========================================================== */
+#arena{padding:0;background:#000}
+#stage{position:absolute;inset:0;overflow:hidden}
+#cam,#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#cam{background:#000}
+.mirror{transform:scaleX(-1)}
 
-/* ---------- toasts ---------- */
-#toasts{position:fixed;left:0;right:0;top:calc(var(--safe-t) + 8px);z-index:4000;display:flex;
-  flex-direction:column;align-items:center;gap:6px;pointer-events:none;padding:0 12px}
-.toast{display:flex;align-items:center;gap:8px;max-width:94vw;padding:10px 14px;border-radius:10px;
-  font-size:13px;background:var(--surf2);border:1px solid var(--line2);animation:tin .22s var(--out) both;
-  box-shadow:0 6px 20px rgba(0,0,0,.5)}
-.toast.g{border-color:#1e4a26}
-.toast.b{border-color:#5c2a28}
-.toast.a{border-color:#4a3a12}
-.toast.out{animation:tout .2s ease forwards}
-@keyframes tin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
-@keyframes tout{to{opacity:0;transform:translateY(-8px)}}
+/* Barre de duel : tug-of-war en haut, la frontière EST le score relatif */
+.duel{
+  position:absolute;top:calc(var(--safe-t) + 10px);left:12px;right:12px;z-index:3;
+}
+.duel .names{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.2em;margin-bottom:6px}
+.duel .me{color:var(--cyan)}
+.duel .op{color:var(--magenta)}
+.bar{position:relative;height:10px;background:rgba(255,46,126,.28);overflow:hidden}
+.bar>span{
+  position:absolute;inset:0 auto 0 0;width:50%;
+  background:linear-gradient(90deg,rgba(0,240,255,.55),var(--cyan));
+  transition:width .35s cubic-bezier(.2,.8,.2,1);
+}
+.duel .nums{display:flex;justify-content:space-between;margin-top:6px}
+.duel .nums b{font-family:'JetBrains Mono';font-size:30px;font-weight:800;line-height:1}
+.duel .nums b:first-child{color:var(--cyan)}
+.duel .nums b:last-child{color:var(--magenta)}
 
-/* ---------- modales ---------- */
-#ovl{position:fixed;inset:0;z-index:3000;pointer-events:none}
-.mod{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;
-  background:rgba(1,4,9,.78);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-  pointer-events:auto;animation:fin .18s ease both}
-@keyframes fin{from{opacity:0}to{opacity:1}}
-.mod.out{animation:fin .16s ease reverse both}
-.modB{position:relative;width:min(400px,94vw);max-height:86vh;overflow:auto;padding:20px;
-  border-radius:14px;background:var(--surf);border:1px solid var(--line2);animation:min .24s var(--out) both}
-@keyframes min{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-.modT{font-size:17px;font-weight:700;text-align:center;margin:0 0 6px;color:var(--tx)}
-.modX{text-align:center;font-size:13.5px;color:var(--tx2);line-height:1.55;margin:0 0 14px}
-.modA{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
-.modC{position:absolute;top:10px;right:10px;min-height:30px;padding:5px 9px}
-#cfti{position:fixed;inset:0;z-index:3500;pointer-events:none}
-#netb{position:fixed;z-index:2500;right:10px;bottom:calc(var(--nav-h) + var(--safe-b) + 8px);
-  display:flex;align-items:center;gap:5px;padding:3px 8px;border-radius:20px;font-size:9.5px;
-  letter-spacing:.05em;color:var(--tx3);pointer-events:none;background:var(--surf);border:1px solid var(--line)}
-#netb i{width:5px;height:5px;border-radius:3px;background:var(--tx3);font-style:normal}
-#netb.on i{background:var(--ok)}
-#netb.wt i{background:var(--acc);animation:ring 1.4s infinite}
+/* Chrono */
+.clock{
+  position:absolute;top:calc(var(--safe-t) + 96px);left:0;right:0;z-index:3;text-align:center;
+  font-family:'JetBrains Mono';font-size:44px;font-weight:800;letter-spacing:.04em;
+  text-shadow:0 2px 24px rgba(0,0,0,.8);
+}
+.clock.low{color:var(--red);animation:tick 1s steps(2) infinite}
+@keyframes tick{50%{opacity:.45}}
 
-/* ============================================================
-   DUEL
-   ============================================================ */
-.duel{position:fixed;inset:0;z-index:2800;display:flex;flex-direction:column;overflow:hidden;
-  padding-top:var(--safe-t);padding-bottom:var(--safe-b);background:#000;animation:fin .25s ease both}
-.duel.out{animation:fin .2s ease reverse forwards}
-.stage{position:absolute;inset:0;overflow:hidden;background:#0a0a0b}
-.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1}
-.stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.vig{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,
-  rgba(0,0,0,.66) 0%,rgba(0,0,0,.10) 20%,rgba(0,0,0,.06) 58%,rgba(0,0,0,.86) 100%)}
+/* Signature : jauge de profondeur latérale — se remplit quand tu descends,
+   se brise en rouge si l'alignement du corps casse. */
+.depth{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:3;
+  width:8px;height:34vh;background:rgba(255,255,255,.08);
+}
+.depth>span{
+  position:absolute;left:0;right:0;bottom:0;height:0%;
+  background:linear-gradient(180deg,var(--cyan),rgba(0,240,255,.25));
+  transition:height .08s linear,background .2s;
+}
+.depth.bad>span{background:linear-gradient(180deg,var(--red),rgba(255,59,59,.2))}
+.depth::after{
+  content:'';position:absolute;left:-5px;right:-5px;bottom:78%;height:2px;background:var(--lime);
+  opacity:.9; /* seuil de validation de profondeur */
+}
 
-/* ---------- bandeau des combattants ---------- */
-.dTop{position:relative;z-index:3;padding:8px 10px 0}
-.hud{background:rgba(24,24,27,.58);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
-  border:1px solid rgba(255,255,255,.09);border-radius:20px;padding:10px 12px 12px}
-.hudR{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.pl{display:flex;flex-direction:column;align-items:center;gap:5px;width:60px;flex:0 0 auto}
-.plav{width:50px;height:50px;border-radius:50%;padding:2.5px;background:var(--pc);
-  transition:box-shadow .25s}
-.plav .av{width:100%;height:100%;border-radius:50%;font-size:25px;border:2px solid #141416;
-  background:#23272e}
-.pl.led .plav{box-shadow:0 0 0 3px rgba(255,255,255,.22)}
-.pln{font-size:11px;font-weight:600;color:#fff;max-width:62px;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 3px rgba(0,0,0,.7)}
-.pl.me{--pc:#31dd63}
-.pl.op{--pc:#ff3b7f}
-.plsc{font-size:30px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;
-  min-width:32px;text-align:center}
-.plsc.me{color:#31dd63}
-.plsc.op{color:#ff3b7f}
-.plsc.bump{animation:sbump .24s var(--pop)}
-@keyframes sbump{0%{transform:scale(1)}45%{transform:scale(1.3)}100%{transform:scale(1)}}
-.hudC{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0}
-.hudC s{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,255,255,.5);
-  text-decoration:none;padding-left:.24em}
-.hudC b{font-size:25px;font-weight:800;color:#fff;line-height:1;font-variant-numeric:tabular-nums}
-.hudC.urg b{color:#ff5b52}
-.sbar{position:relative;height:14px;border-radius:9px;overflow:hidden;margin-top:11px;
-  background:#ff3b7f;box-shadow:0 0 0 2px rgba(255,255,255,.92)}
-.sbar i{position:absolute;inset:0 auto 0 0;background:#31dd63;transition:width .35s var(--out);
-  box-shadow:2px 0 0 rgba(255,255,255,.92)}
+/* Verdict de forme */
+.form{
+  position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 92px);z-index:3;text-align:center;
+  font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);
+  transition:color .2s;
+}
+.form.bad{color:var(--red)}
+.form.ok{color:var(--lime)}
 
-/* ---------- compteur central ---------- */
-.dMid{position:relative;z-index:3;flex:1;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;padding:6px 12px;min-height:0}
-.repL{font-size:12px;letter-spacing:.42em;text-transform:uppercase;color:rgba(255,255,255,.6);
-  text-shadow:0 2px 10px rgba(0,0,0,.9);padding-left:.42em;margin-bottom:-4px}
-.rN{font-size:min(148px,38vw);font-weight:800;line-height:1;color:#fff;letter-spacing:-.045em;
-  font-variant-numeric:tabular-nums;text-shadow:0 8px 34px rgba(0,0,0,.8),0 2px 8px rgba(0,0,0,.7)}
-.rN.bump{animation:rbump .24s var(--pop)}
-@keyframes rbump{0%{transform:scale(1)}38%{transform:scale(1.14)}100%{transform:scale(1)}}
-.ring,.rPulse,.rL{display:none}
+/* Flash de rep : cyan = validée, rouge = refusée */
+#flash{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;background:var(--cyan);mix-blend-mode:screen}
+@keyframes fl{from{opacity:.28}to{opacity:0}}
 
-/* ---------- bas d'écran ---------- */
-.dBot{position:relative;z-index:3;padding:0 14px 12px;display:flex;flex-direction:column;gap:9px}
-.dhint{font-size:11.5px;color:rgba(255,255,255,.72);text-align:center;line-height:1.4;
-  text-shadow:0 1px 5px rgba(0,0,0,.9);min-height:16px}
-.dstat{display:flex;align-items:center;justify-content:center;gap:9px;font-size:11px;
-  color:rgba(255,255,255,.6);text-shadow:0 1px 4px rgba(0,0,0,.9);flex-wrap:wrap}
-.dstat b{color:#fff;font-weight:700}
-.post{display:flex;align-items:center;gap:5px;font-size:11px;letter-spacing:.06em;
-  text-transform:uppercase;color:rgba(255,255,255,.6);font-weight:600}
-.post i{width:7px;height:7px;border-radius:4px;background:rgba(255,255,255,.35);font-style:normal;
-  transition:background .12s}
-.post.down i{background:#ff3b7f}
-.post.up i{background:#31dd63}
-.emos{display:flex;gap:7px;justify-content:center}
-.emo{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:16px;
-  background:rgba(255,255,255,.13);border:none;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
-.emo:active{opacity:.55}
-.emoPop{position:fixed;z-index:2900;font-size:44px;pointer-events:none;animation:ep 1.3s var(--out) forwards}
-@keyframes ep{0%{transform:scale(.6);opacity:0}20%{transform:scale(1);opacity:1}
-  70%{opacity:1}100%{transform:translateY(-44px) scale(.9);opacity:0}}
-.giveup{width:100%;padding:16px;border-radius:16px;background:#f5333f;border:none;color:#fff;
-  font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:9px;
-  box-shadow:0 4px 18px rgba(245,51,63,.32)}
-.giveup:active{background:#d5222d;transform:scale(.985)}
-.gauges,.trk,.wave{display:none}
+.arena-actions{
+  position:absolute;left:14px;right:14px;bottom:calc(var(--safe-b) + 14px);z-index:4;display:flex;gap:10px;
+}
+.icon-btn{
+  flex:0 0 52px;height:52px;display:grid;place-items:center;border:0;cursor:pointer;
+  background:rgba(10,14,22,.75);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);font-size:18px;
+}
 
-/* ---------- compte à rebours ---------- */
-.cd{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:rgba(0,0,0,.72)}
-.cdN{font-size:min(120px,32vw);font-weight:800;line-height:1;color:#fff;animation:cdp .9s var(--out)}
-@keyframes cdp{0%{transform:scale(1.5);opacity:0}20%{transform:scale(1);opacity:1}
-  80%{opacity:1}100%{transform:scale(.9);opacity:0}}
-.cdS{position:absolute;bottom:22%;font-size:13px;letter-spacing:.06em;color:rgba(255,255,255,.85);
-  padding:0 26px;text-align:center;line-height:1.6}
+/* Compte à rebours plein écran */
+#countdown{
+  position:absolute;inset:0;z-index:6;display:none;place-items:center;
+  background:rgba(4,6,10,.82);backdrop-filter:blur(3px);text-align:center;
+}
+#countdown.on{display:grid}
+#countdown .n{font-family:'JetBrains Mono';font-size:26vw;font-weight:800;color:var(--cyan);line-height:.9}
+#countdown .n.pop{animation:pop .9s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{from{transform:scale(.55);opacity:0}60%{opacity:1}to{transform:scale(1);opacity:1}}
+#countdown .hint{font-size:13px;letter-spacing:.2em;color:var(--ink-dim);margin-top:14px;padding:0 30px}
 
-/* ---------- résultat ---------- */
-.rslt{position:fixed;inset:0;z-index:3200;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:14px;padding:22px;overflow-y:auto;background:var(--bg);
-  animation:fin .22s ease both}
-.resB{font-size:min(34px,9vw);font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-  animation:pop .3s var(--pop) both}
-.resB.win{color:var(--acc)}
-.resB.lose{color:var(--tx3)}
-.resB.draw{color:var(--info)}
-.resS{display:flex;align-items:center;gap:14px;font-size:44px;font-weight:700;
-  font-variant-numeric:tabular-nums;animation:pop .3s .08s var(--pop) both}
-.resS em{font-style:normal;font-size:16px;color:var(--tx3)}
-.rwds{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:400px}
-.rwd{min-width:72px;padding:10px;border-radius:10px;text-align:center;background:var(--surf);
-  border:1px solid var(--line);animation:flip .3s var(--pop) both}
-.rwd u{font-size:18px;text-decoration:none;display:block;opacity:.9}
-.rwd b{font-size:15px;font-weight:700;color:var(--acc);display:block;margin-top:2px}
-.rwd s{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);
-  text-decoration:none;display:block}
-.stg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:380px}
-.st{padding:11px 6px;border-radius:10px;text-align:center;background:var(--surf);border:1px solid var(--line)}
-.st b{font-size:16px;font-weight:700;display:block;line-height:1.1}
-.st s{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;
-  text-decoration:none;display:block;margin-top:3px}
+/* ===========================================================
+   7. RÉSULTAT
+   =========================================================== */
+#result{gap:18px;justify-content:center;text-align:center}
+.verdict{font-size:44px;font-weight:700;letter-spacing:.16em}
+.verdict.win{color:var(--lime);text-shadow:0 0 30px rgba(198,255,61,.35)}
+.verdict.loss{color:var(--magenta)}
+.verdict.draw{color:var(--ink-dim)}
+.scoreline{display:flex;align-items:center;justify-content:center;gap:18px;font-family:'JetBrains Mono';font-size:52px;font-weight:800}
+.scoreline .s1{color:var(--cyan)}
+.scoreline .s2{color:var(--magenta)}
+.delta{font-size:26px;font-weight:800;font-family:'JetBrains Mono'}
+.delta.up{color:var(--lime)}
+.delta.down{color:var(--red)}
 
-/* ---------- coffre ---------- */
-.chop{position:fixed;inset:0;z-index:3300;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:18px;background:var(--bg);animation:fin .22s ease both;overflow:hidden}
-.chBox{font-size:76px;animation:float 1.6s ease-in-out infinite}
-.chBox.burst{animation:cbu .4s var(--pop) forwards}
-@keyframes cbu{to{transform:scale(1.5);opacity:0}}
-.chHint{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);animation:bp 1.4s infinite}
-.loot{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:400px;padding:0 16px}
-.lc{width:82px;border-radius:10px;padding:11px 6px;text-align:center;background:var(--surf);
-  border:1px solid var(--line);animation:flip .3s var(--pop) both}
-.lc u{font-size:26px;text-decoration:none;display:block}
-.lc s{font-size:10px;text-decoration:none;display:block;margin-top:3px;line-height:1.2;color:var(--tx2)}
-.lc b{font-size:13px;font-weight:700;color:var(--acc);display:block;margin-top:2px}
-.lc.rare{border-color:#1e3a5c}
-.lc.epic{border-color:#3d2a5c}
-.lc.legend{border-color:#4a3a12}
-.lc.champ{border-color:#5c2444}
-.rays{display:none}
+/* ===========================================================
+   8. FEUILLE / TOAST
+   =========================================================== */
+.sheet{
+  position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;
+  background:rgba(3,5,9,.7);backdrop-filter:blur(4px);
+}
+.sheet.on{display:flex;animation:screen-in .2s}
+.sheet .inner{width:100%;padding:22px 18px calc(var(--safe-b) + 22px);background:var(--panel);
+  box-shadow:0 -1px 0 var(--line);display:flex;flex-direction:column;gap:14px}
+.sheet h3{margin:0;font-size:18px;letter-spacing:.16em;text-transform:uppercase}
+.sheet p{margin:0;font-size:14px;line-height:1.55;color:var(--ink-dim)}
+#toast{
+  position:fixed;left:50%;bottom:calc(var(--safe-b) + 22px);transform:translateX(-50%);
+  z-index:30;background:var(--panel-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);
+  padding:11px 16px;font-size:13px;letter-spacing:.1em;opacity:0;pointer-events:none;transition:opacity .25s;
+  max-width:88vw;text-align:center;
+}
+#toast.on{opacity:1}
 
-/* ---------- réglage caméra / test ---------- */
-.cal{position:fixed;inset:0;z-index:3100;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:14px;padding:20px;text-align:center;background:var(--bg);
-  animation:fin .2s ease both;overflow-y:auto}
-.calT{font-size:16px;font-weight:700}
-.calX{font-size:13px;color:var(--tx2);max-width:340px;line-height:1.6}
-.calBig{font-size:52px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
-.calCam{position:relative;width:min(300px,84vw);aspect-ratio:4/3;border-radius:12px;overflow:hidden;
-  border:1px solid var(--line2);background:#000}
-.calCam video,.calCam canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.pchk{display:flex;flex-direction:column;gap:1px;width:min(300px,84vw)}
-.pck{display:flex;align-items:center;gap:9px;padding:9px 11px;font-size:12.5px;text-align:left;
-  background:var(--surf);border:1px solid var(--line);color:var(--tx3)}
-.pck:first-child{border-radius:10px 10px 0 0}
-.pck:last-child{border-radius:0 0 10px 10px}
-.pck.ok{color:var(--tx);border-color:var(--line)}
-.pck u{font-size:13px;text-decoration:none}
-
-/* ---------- matchmaking ---------- */
-.mm{position:fixed;inset:0;z-index:3100;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:16px;padding:20px;text-align:center;background:var(--bg);
-  animation:fin .2s ease both}
-.mmS{width:34px;height:34px;border-radius:20px;border:2px solid var(--line2);
-  border-top-color:var(--acc);animation:spin .8s linear infinite}
-.mmT{font-size:16px;font-weight:600}
-.mmX{font-size:12.5px;color:var(--tx3)}
-.mmV{display:flex;align-items:center;gap:20px;animation:pop .3s var(--pop) both}
-.mmP{text-align:center}
-.mmP .av{width:56px;height:56px;font-size:28px;margin:0 auto 8px}
-.mmP b{font-size:13px;font-weight:600;display:block}
-.mmP s{font-size:11px;color:var(--tx3);text-decoration:none;display:block;margin-top:2px}
-
-/* ---------- arène ---------- */
-.hero{position:relative;text-align:center;padding:14px 0 2px}
-.stage3d{position:relative;height:auto;margin:0 auto;width:auto}
-.plate,.rng{display:none}
-.emb{position:static;transform:none;width:76px;height:76px;margin:0 auto;border-radius:18px;
-  display:grid;place-items:center;font-size:38px;border:1px solid var(--line2);background:var(--surf)!important}
-.aN{font-size:19px;font-weight:700;margin-top:12px;letter-spacing:-.01em}
-.aS{font-size:11.5px;color:var(--tx3);letter-spacing:.04em;margin-top:3px}
-.road{margin:16px auto 0;width:min(340px,94vw)}
-.roadB{position:relative;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
-.roadB i{display:block;height:100%;background:var(--acc);transition:width .6s var(--out)}
-.roadB span{display:none}
-.roadL{display:flex;justify-content:space-between;font-size:11px;color:var(--tx3);margin-top:8px}
-.modes{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.mo{position:relative;padding:13px 12px;border-radius:11px;text-align:left;background:var(--surf)!important;
-  border:1px solid var(--line)}
-.mo:active{background:var(--surf2)!important}
-.mo u{font-size:20px;text-decoration:none;display:block}
-.mo b{font-size:13.5px;font-weight:600;display:block;margin-top:6px}
-.mo s{font-size:11px;color:var(--tx3);text-decoration:none;display:block;line-height:1.4;margin-top:3px}
-.mo em{position:absolute;top:11px;right:11px;font-size:9px;font-style:normal;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--tx3)}
-
-/* ---------- coffres ---------- */
-.chrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-.ch{position:relative;aspect-ratio:.85;border-radius:10px;padding:8px 4px 6px;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  background:var(--surf);border:1px solid var(--line)}
-.ch:active{background:var(--surf2)}
-.ch u{font-size:24px;text-decoration:none}
-.ch.rdy u{animation:float 1.8s ease-in-out infinite}
-.ch s{font-size:9px;text-decoration:none;text-align:center;line-height:1.15;color:var(--tx3)}
-.ch em{font-size:9.5px;color:var(--tx2);font-style:normal;font-weight:600}
-.ch.emp{border-style:dashed;background:transparent}
-.ch.emp u{opacity:.25;font-size:16px}
-.ch.rdy{border-color:var(--acc)}
-.chG{display:none}
-.chB{width:80%;height:2px;border-radius:2px;background:var(--line);overflow:hidden}
-.chB i{display:block;height:100%;background:var(--info)}
-
-/* ---------- talents ---------- */
-.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:7px}
-.tc{position:relative;border-radius:10px;padding:9px 5px 7px;text-align:center;overflow:hidden;
-  background:var(--surf);border:1px solid var(--line)}
-.tc:active{background:var(--surf2)}
-.tc u{font-size:22px;text-decoration:none;display:block;line-height:1.15}
-.tc s{font-size:9.5px;text-decoration:none;display:block;line-height:1.2;margin-top:4px;color:var(--tx2)}
-.tc em{position:absolute;top:5px;left:6px;font-size:8.5px;font-style:normal;color:var(--tx3);font-weight:600}
-.tc .bar{height:3px;margin-top:6px}
-.tc .bar i{background:var(--tx3)}
-.tc .bar span{display:none}
-.tc.common{border-color:var(--line)}
-.tc.rare{border-color:#1e3a5c}
-.tc.epic{border-color:#3d2a5c}
-.tc.legend{border-color:#4a3a12}
-.tc.champ{border-color:#5c2444}
-.tc.lock{opacity:.35}
-.tc.eq::after{content:'';position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:3px;
-  background:var(--ok)}
-.tc.legend::before,.tc.champ::before{display:none}
-.deck{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
-.dslot{aspect-ratio:.8;border-radius:9px;display:grid;place-items:center;font-size:15px;
-  background:transparent;border:1px dashed var(--line2);color:var(--tx3)}
-
-/* ---------- boutique ---------- */
-.sgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.of{position:relative;border-radius:11px;padding:14px 10px 11px;text-align:center;overflow:hidden;
-  background:var(--surf)!important;border:1px solid var(--line)}
-.of.hot{border-color:#4a3a12}
-.of.epi{border-color:#3d2a5c}
-.of u{font-size:26px;text-decoration:none;display:block;animation:none}
-.of b{font-size:12.5px;font-weight:600;display:block;margin-top:7px;line-height:1.25}
-.of s{font-size:10.5px;color:var(--tx3);text-decoration:none;display:block;min-height:26px;margin:3px 0 8px}
-.rib{position:absolute;top:8px;right:8px;left:auto;width:auto;transform:none;font-size:8.5px;
-  letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:#4a3a12;color:var(--acc)}
-
-/* ---------- chat ---------- */
-.chat{display:flex;flex-direction:column}
-.clog{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0 10px}
-.msg{max-width:86%;padding:9px 12px;border-radius:12px;font-size:13.5px;line-height:1.45;
-  word-break:break-word;background:var(--surf2);border:1px solid var(--line)}
-.msg u{font-size:10.5px;color:var(--tx3);text-decoration:none;display:flex;gap:6px;align-items:center;
-  margin-bottom:3px;font-weight:600}
-.msg.me{align-self:flex-end;background:#1b3a5c;border-color:#254a70}
-.msg.sys{align-self:center;background:transparent;border:none;font-size:11.5px;color:var(--tx3);
-  text-align:center;max-width:94%}
-.msg em{font-size:9.5px;color:var(--tx3);margin-left:auto;font-style:normal}
-.cbar{display:flex;gap:8px;padding:8px 0 2px}
-
-/* ---------- clan / stats ---------- */
-.war{position:relative;height:30px;margin:10px 0;border:none}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+}
 </style>
 </head>
 <body>
 
-  <!-- STRUCTURE DE L'ARÈNE (DUEL) BASEE SUR TES CLASSES CSS -->
-  <div class="duel">
-    <!-- Camera + Canvas par dessus -->
-    <div class="stage">
-      <!-- On l'appelle camfeed pour que ton CSS l'affiche en fond -->
-      <video id="cam" class="camfeed" autoplay playsinline muted></video>
-      <canvas id="trackerCanvas"></canvas>
-    </div>
-    
-    <!-- Filtre sombre pour que le texte soit lisible -->
-    <div class="vig"></div>
-
-    <!-- Interface Haut -->
-    <div class="dTop">
-      <div class="hud">
-        <div class="hudR">
-          <div class="pl me">
-            <div class="plav"><div class="av">🧑‍💻</div></div>
-            <div class="pln">Toi</div>
-          </div>
-          <div class="hudC">
-            <s>TIME</s>
-            <b>17</b>
-            <div class="sbar"><i style="width: 50%;"></i></div>
-          </div>
-          <div class="pl op">
-            <div class="plav"><div class="av">🤖</div></div>
-            <div class="pln">Adversaire</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Centre avec les répétitions -->
-    <div class="dMid">
-      <div class="repL">REPS</div>
-      <div class="rN" id="scoreDisplay">0</div>
+<!-- ================= ACCUEIL ================= -->
+<section id="home" class="screen on">
+  <div>
+    <div class="brand">
+      <h1>PUSH<span>DUEL</span></h1>
+      <div class="eyebrow" id="netState">hors ligne</div>
     </div>
   </div>
 
-  <!-- SCRIPT DU TRACKER DE CORPS INTELLIGENT (TENSORFLOW) -->
-  <script>
-    const video = document.getElementById('cam');
-    const canvas = document.getElementById('trackerCanvas');
-    const ctx = canvas.getContext('2d');
-    const scoreElement = document.getElementById('scoreDisplay');
-    
-    let detector;
-    let pushupsCount = 0;
-    let isDown = false;
+  <div class="rankwrap">
+    <div class="seal">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="track" cx="100" cy="100" r="92"></circle>
+        <circle class="prog" id="ringProg" cx="100" cy="100" r="92"
+                stroke-dasharray="578" stroke-dashoffset="578"></circle>
+      </svg>
+      <div class="hex">
+        <div class="tier" id="rankTier">FER</div>
+        <div class="div" id="rankDiv">III</div>
+      </div>
+    </div>
+    <div class="elo">ELO <b class="mono" id="eloVal">1000</b></div>
+    <div class="eyebrow" id="nextRank">— points avant le rang suivant</div>
+  </div>
 
-    // 1. Démarrer la webcam
-    async function startCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false
-      });
-      video.srcObject = stream;
-      
-      return new Promise((resolve) => {
-        video.onloadedmetadata = () => resolve(video);
-      });
+  <div class="stats">
+    <div class="stat"><div class="v mono" id="stW">0</div><div class="k">victoires</div></div>
+    <div class="stat"><div class="v mono" id="stL">0</div><div class="k">défaites</div></div>
+    <div class="stat"><div class="v mono" id="stB">0</div><div class="k">record</div></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <input id="pseudo" class="pseudo" maxlength="12" placeholder="TON PSEUDO" />
+    <button class="btn" id="btnRanked">Chercher un adversaire</button>
+    <div class="row">
+      <button class="btn ghost" id="btnSolo">Entraînement</button>
+      <button class="btn ghost" id="btnPrivate">Duel privé</button>
+    </div>
+    <button class="btn ghost" id="btnRules" style="letter-spacing:.1em;font-size:13px;padding:11px">Comment une pompe est validée</button>
+  </div>
+</section>
+
+<!-- ================= RECHERCHE ================= -->
+<section id="search" class="screen">
+  <div class="eyebrow">Recherche classée</div>
+  <div class="radar"><i></i><i></i><i></i><div class="core mono" id="radarTxt">ELO ±50</div></div>
+  <div class="searchlog" id="searchLog">Ouverture du canal pair-à-pair…</div>
+  <button class="btn ghost" id="btnCancel" style="max-width:280px">Annuler</button>
+</section>
+
+<!-- ================= ARÈNE ================= -->
+<section id="arena" class="screen">
+  <div id="stage">
+    <video id="cam" playsinline muted autoplay></video>
+    <canvas id="overlay"></canvas>
+    <div id="flash"></div>
+
+    <div class="duel">
+      <div class="names"><span class="me" id="nameMe">TOI</span><span class="op" id="nameOp">ADVERSAIRE</span></div>
+      <div class="bar"><span id="tug"></span></div>
+      <div class="nums"><b class="mono" id="scoreMe">0</b><b class="mono" id="scoreOp">0</b></div>
+    </div>
+
+    <div class="clock mono" id="clock">01:00</div>
+    <div class="depth" id="depthGauge"><span id="depthFill"></span></div>
+    <div class="form" id="formMsg">Mets-toi en position</div>
+
+    <div class="arena-actions">
+      <button class="icon-btn" id="btnSwitchCam" title="Changer de caméra">⟲</button>
+      <button class="btn danger" id="btnQuit" style="flex:1">Abandonner</button>
+    </div>
+
+    <div id="countdown"><div><div class="n mono" id="cdNum">5</div><div class="hint" id="cdHint">Cadre tout ton corps de profil, puis mets-toi en position de planche.</div></div></div>
+  </div>
+</section>
+
+<!-- ================= RÉSULTAT ================= -->
+<section id="result" class="screen">
+  <div class="eyebrow" id="resMode">Duel classé</div>
+  <div class="verdict" id="verdict">VICTOIRE</div>
+  <div class="scoreline"><span class="s1 mono" id="resMe">0</span><span style="font-size:22px;color:var(--ink-dim)">—</span><span class="s2 mono" id="resOp">0</span></div>
+  <div class="card" style="text-align:center">
+    <div class="eyebrow">Elo</div>
+    <div style="display:flex;align-items:baseline;justify-content:center;gap:14px;margin-top:8px">
+      <span class="mono" style="font-size:30px" id="resElo">1000</span>
+      <span class="delta" id="resDelta">+16</span>
+    </div>
+    <div class="eyebrow" id="resRefused" style="margin-top:12px">0 répétition refusée</div>
+  </div>
+  <button class="btn" id="btnAgain">Rejouer</button>
+  <button class="btn ghost" id="btnHome">Accueil</button>
+</section>
+
+<!-- ================= FEUILLES ================= -->
+<div class="sheet" id="sheetRules"><div class="inner">
+  <h3>Ce qui compte comme une pompe</h3>
+  <p><b style="color:var(--cyan)">Descente</b> — les coudes passent sous 90°. La jauge de droite doit dépasser le trait vert.</p>
+  <p><b style="color:var(--cyan)">Remontée</b> — bras tendus à plus de 160°, sinon la répétition reste ouverte.</p>
+  <p><b style="color:var(--red)">Alignement</b> — épaules, hanches et genoux sur une ligne (plus de 155°). Si tu casses le corps pendant la descente, la répétition est refusée et le squelette passe au rouge.</p>
+  <p><b style="color:var(--red)">Rythme</b> — une répétition sous 0,45 s est ignorée.</p>
+  <p>Place le téléphone au sol à 1,5–2 m, de profil, tout le corps dans le cadre.</p>
+  <button class="btn" data-close>Compris</button>
+</div></div>
+
+<div class="sheet" id="sheetPrivate"><div class="inner">
+  <h3>Duel privé</h3>
+  <p>Un joueur crée le salon, l'autre entre le code. Aucun Elo n'est en jeu.</p>
+  <button class="btn" id="btnHost">Créer un salon</button>
+  <div class="row">
+    <input id="joinCode" class="pseudo" maxlength="6" placeholder="CODE" style="flex:1" />
+    <button class="btn" id="btnJoin" style="flex:0 0 120px">Rejoindre</button>
+  </div>
+  <div class="eyebrow" id="privateInfo"></div>
+  <button class="btn ghost" data-close>Fermer</button>
+</div></div>
+
+<div id="toast"></div>
+
+<script type="module">
+/* =====================================================================
+   0. IMPORTS IA
+   MediaPipe Tasks Vision : plus léger et plus rapide que la version
+   "solutions" historique, et le modèle *lite* tourne à 25-30 fps sur un
+   mobile milieu de gamme avec le délégué GPU.
+   ===================================================================== */
+import { FilesetResolver, PoseLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+
+/* =====================================================================
+   1. CONSTANTES DE JEU
+   ===================================================================== */
+const NS            = "pushduel-v1";   // préfixe des identifiants PeerJS
+const SLOTS         = 6;               // salons d'attente par palier d'Elo
+const BUCKET        = 100;             // largeur d'un palier d'Elo
+const PROBE_MS      = 2200;            // délai d'essai de connexion à un salon
+const HOST_WAIT_MS  = 6000;            // temps d'attente en tant qu'hôte avant d'élargir
+const MATCH_SECONDS = 60;
+const K_FACTOR      = 32;
+
+// Seuils biomécaniques (degrés)
+const ANGLE_DOWN   = 90;    // coudes pliés → profondeur atteinte
+const ANGLE_UP     = 160;   // bras tendus → répétition bouclée
+const ANGLE_BODY   = 155;   // épaule-hanche-genou → corps aligné
+const MIN_REP_MS   = 450;   // anti-tremblement
+const MIN_VIS      = 0.55;  // confiance minimale des points clés
+
+const RANKS = [
+  { name:"FER",     min:0    }, { name:"BRONZE",  min:900  },
+  { name:"ARGENT",  min:1100 }, { name:"OR",      min:1300 },
+  { name:"PLATINE", min:1500 }, { name:"DIAMANT", min:1700 },
+  { name:"ÉLITE",   min:1900 }, { name:"LÉGENDE", min:2100 }
+];
+
+/* =====================================================================
+   2. STOCKAGE
+   window.storage existe dans le lecteur d'artefacts ; localStorage quand
+   le fichier est ouvert directement. On retombe sur la mémoire sinon.
+   ===================================================================== */
+const Store = (() => {
+  const mem = {};
+  const hasW = typeof window.storage?.get === "function";
+  return {
+    async get(k, d){
+      try{
+        if(hasW){ const r = await window.storage.get(k); return r ? JSON.parse(r.value) : d; }
+        const v = localStorage.getItem(k); return v ? JSON.parse(v) : d;
+      }catch{ return k in mem ? mem[k] : d; }
+    },
+    async set(k, v){
+      const s = JSON.stringify(v);
+      try{
+        if(hasW){ await window.storage.set(k, s); return; }
+        localStorage.setItem(k, s);
+      }catch{ mem[k] = v; }
     }
+  };
+})();
 
-    // 2. Initialiser MoveNet (Tracker de Corps)
-    async function loadPoseDetectionModel() {
-      const detectorConfig = { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING };
-      detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet, detectorConfig);
+let profile = { name:"", elo:1000, wins:0, losses:0, best:0 };
+
+/* =====================================================================
+   3. OUTILS UI
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+function show(id){
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+}
+let toastT;
+function toast(msg, ms=2400){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms);
+}
+function rankOf(elo){
+  let i = 0;
+  for(let k=0;k<RANKS.length;k++) if(elo >= RANKS[k].min) i = k;
+  const cur = RANKS[i], next = RANKS[i+1];
+  const span = next ? next.min - cur.min : 200;
+  const prog = next ? clamp((elo - cur.min) / span, 0, 1) : 1;
+  // Division I → III à l'intérieur d'un rang (III = entrée du rang)
+  const div = ["III","II","I"][clamp(Math.floor(prog*3),0,2)];
+  return { tier:cur.name, div, prog, toNext: next ? next.min - elo : 0 };
+}
+function paintHome(){
+  const r = rankOf(profile.elo);
+  $("#rankTier").textContent = r.tier;
+  $("#rankDiv").textContent  = r.div;
+  $("#eloVal").textContent   = Math.round(profile.elo);
+  $("#nextRank").textContent = r.toNext > 0 ? `${r.toNext} points avant le rang suivant` : "Rang maximal atteint";
+  $("#ringProg").style.strokeDashoffset = String(578 - 578 * r.prog);
+  $("#stW").textContent = profile.wins;
+  $("#stL").textContent = profile.losses;
+  $("#stB").textContent = profile.best;
+  $("#pseudo").value = profile.name;
+}
+
+/* =====================================================================
+   4. MOTEUR DE VISION — détection et validation des pompes
+   ===================================================================== */
+const Vision = {
+  landmarker:null, stream:null, facing:"user",
+  running:false, lastVideoTime:-1, raf:0,
+
+  // état de comptage
+  reps:0, refused:0, phase:"up", depthReached:false, formBroken:false,
+  repStart:0, smoothElbow:180, smoothBody:180, active:false,
+  onRep:null,
+
+  async load(){
+    if(this.landmarker) return;
+    const fileset = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+    );
+    const opts = {
+      baseOptions:{
+        modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+        delegate:"GPU"
+      },
+      runningMode:"VIDEO", numPoses:1,
+      minPoseDetectionConfidence:.5, minPosePresenceConfidence:.5, minTrackingConfidence:.5
+    };
+    try{
+      this.landmarker = await PoseLandmarker.createFromOptions(fileset, opts);
+    }catch{
+      opts.baseOptions.delegate = "CPU"; // repli si pas de WebGL exploitable
+      this.landmarker = await PoseLandmarker.createFromOptions(fileset, opts);
     }
+  },
 
-    // 3. Boucle principale d'analyse
-    async function detectPose() {
-      if (video.readyState >= 2) {
-        // Aligner la taille du canvas sur la vidéo
-        canvas.width = video.offsetWidth;
-        canvas.height = video.offsetHeight;
-        
-        // Ratio pour redimensionner les coordonnées (car on utilise object-fit: cover)
-        const scaleX = canvas.width / video.videoWidth;
-        const scaleY = canvas.height / video.videoHeight;
+  async startCamera(){
+    if(this.stream) this.stream.getTracks().forEach(t => t.stop());
+    this.stream = await navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:this.facing, width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:30} },
+      audio:false
+    });
+    const v = $("#cam");
+    v.srcObject = this.stream;
+    v.classList.toggle("mirror", this.facing === "user");
+    $("#overlay").classList.toggle("mirror", this.facing === "user");
+    await v.play();
+  },
 
-        // Détection
-        const poses = await detector.estimatePoses(video);
-        
-        // Nettoyer l'image précédente
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+  async switchCamera(){
+    this.facing = this.facing === "user" ? "environment" : "user";
+    try{ await this.startCamera(); }catch{ toast("Cette caméra n'est pas disponible"); }
+  },
 
-        if (poses.length > 0) {
-          const keypoints = poses[0].keypoints.map(kp => ({
-            ...kp,
-            x: kp.x * scaleX,
-            y: kp.y * scaleY
-          }));
+  reset(){
+    this.reps = 0; this.refused = 0; this.phase = "up";
+    this.depthReached = false; this.formBroken = false;
+    this.smoothElbow = 180; this.smoothBody = 180; this.active = false;
+  },
 
-          drawSkeletonStyle(keypoints);
-          analyzePushupMovement(keypoints);
+  stop(){
+    this.running = false;
+    cancelAnimationFrame(this.raf);
+    if(this.stream){ this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
+  },
+
+  loop(){
+    this.running = true;
+    const v = $("#cam"), c = $("#overlay"), ctx = c.getContext("2d");
+
+    const step = () => {
+      if(!this.running) return;
+      this.raf = requestAnimationFrame(step);
+      if(v.readyState < 2) return;
+      if(c.width !== v.videoWidth){ c.width = v.videoWidth; c.height = v.videoHeight; }
+
+      if(v.currentTime !== this.lastVideoTime){
+        this.lastVideoTime = v.currentTime;
+        const res = this.landmarker.detectForVideo(v, performance.now());
+        ctx.clearRect(0,0,c.width,c.height);
+        if(res.landmarks?.length){
+          const lm = res.landmarks[0];
+          const wl = res.worldLandmarks?.[0] || lm;  // coords métriques → angles fiables
+          const st = this.analyse(lm, wl);
+          this.draw(ctx, lm, c.width, c.height, st);
+          this.hud(st);
+        }else{
+          this.hud({ ok:false, msg:"Aucun corps détecté" });
         }
       }
-      // Reboucler à chaque frame
-      requestAnimationFrame(detectPose);
-    }
+    };
+    step();
+  },
 
-    // 4. Dessiner le squelette (Style de la photo : orange avec des points blancs)
-    function drawSkeletonStyle(keypoints) {
-      const colorOrange = '#ff6a2b';
-      const scoreThreshold = 0.4;
-      
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = colorOrange;
-      ctx.fillStyle = colorOrange;
+  /* ---- angle ABC en degrés (3D si disponible) ---- */
+  angle(a,b,c){
+    const v1 = { x:a.x-b.x, y:a.y-b.y, z:(a.z||0)-(b.z||0) };
+    const v2 = { x:c.x-b.x, y:c.y-b.y, z:(c.z||0)-(b.z||0) };
+    const dot = v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+    const m1 = Math.hypot(v1.x,v1.y,v1.z), m2 = Math.hypot(v2.x,v2.y,v2.z);
+    if(!m1 || !m2) return 180;
+    return Math.acos(clamp(dot/(m1*m2), -1, 1)) * 180 / Math.PI;
+  },
 
-      // Dessiner les barres de connexion
-      const adjacentKeyPoints = poseDetection.util.getAdjacentPairs(poseDetection.SupportedModels.MoveNet);
-      adjacentKeyPoints.forEach(([i, j]) => {
-        const kp1 = keypoints[i];
-        const kp2 = keypoints[j];
-        if (kp1.score > scoreThreshold && kp2.score > scoreThreshold) {
-          ctx.beginPath();
-          ctx.moveTo(kp1.x, kp1.y);
-          ctx.lineTo(kp2.x, kp2.y);
-          ctx.stroke();
+  /* ---- cœur de la validation ---- */
+  analyse(lm, wl){
+    const vis = i => lm[i]?.visibility ?? 0;
+    // On travaille sur le côté le mieux vu (le téléphone est posé de profil)
+    const leftVis  = (vis(11)+vis(13)+vis(15)+vis(23))/4;
+    const rightVis = (vis(12)+vis(14)+vis(16)+vis(24))/4;
+    const L = leftVis >= rightVis;
+    const S=L?11:12, E=L?13:14, W=L?15:16, H=L?23:24, K=L?25:26;
+
+    if(Math.max(leftVis,rightVis) < MIN_VIS)
+      return { ok:false, msg:"Cadre tout ton corps", depth:0, side:L };
+
+    const elbow = this.angle(wl[S], wl[E], wl[W]);
+    const body  = this.angle(wl[S], wl[H], wl[K]);
+    // Lissage exponentiel : supprime le tremblement sans ajouter de latence perçue
+    this.smoothElbow += (elbow - this.smoothElbow) * .45;
+    this.smoothBody  += (body  - this.smoothBody ) * .35;
+    const eA = this.smoothElbow, bA = this.smoothBody;
+
+    // 0 % bras tendus → 100 % coudes à 60°
+    const depth = clamp((ANGLE_UP - eA) / (ANGLE_UP - 60), 0, 1);
+    const aligned = bA >= ANGLE_BODY;
+    const now = performance.now();
+    let event = null;
+
+    if(this.active){
+      if(!aligned && this.phase === "down") this.formBroken = true;
+
+      if(this.phase === "up" && eA < ANGLE_DOWN){
+        this.phase = "down"; this.repStart = now;
+        this.depthReached = true; this.formBroken = !aligned;
+      }else if(this.phase === "down" && eA > ANGLE_UP){
+        this.phase = "up";
+        const fast = now - this.repStart < MIN_REP_MS;
+        if(this.depthReached && !this.formBroken && !fast){
+          this.reps++; event = "valid";
+        }else{
+          this.refused++; event = "refused";
         }
-      });
-
-      // Dessiner les ronds sur les articulations
-      keypoints.forEach(point => {
-        if (point.score > scoreThreshold) {
-          // Gros cercle extérieur
-          ctx.beginPath();
-          ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
-          ctx.fill();
-          
-          // Petit point blanc intérieur (style "joint")
-          ctx.beginPath();
-          ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
-          ctx.fillStyle = '#ffffff';
-          ctx.fill();
-          ctx.fillStyle = colorOrange; // Reset pour le prochain
-        }
-      });
-    }
-
-    // 5. Logique pour compter les pompes automatiquement
-    function analyzePushupMovement(keypoints) {
-      const leftShoulder = keypoints.find(k => k.name === 'left_shoulder');
-      const leftElbow = keypoints.find(k => k.name === 'left_elbow');
-      const leftWrist = keypoints.find(k => k.name === 'left_wrist');
-
-      // Si on voit bien le bras
-      if (leftShoulder?.score > 0.4 && leftElbow?.score > 0.4 && leftWrist?.score > 0.4) {
-        
-        // Calcul très simple de la distance verticale entre l'épaule et le poignet
-        // Quand tu descends, ton épaule se rapproche de ton poignet
-        const armDistance = Math.abs(leftShoulder.y - leftWrist.y);
-        
-        // SEUILS (à calibrer selon l'angle du téléphone, ici par défaut)
-        const thresholdDown = 60; // Distance courte = tu es en bas
-        const thresholdUp = 130;  // Distance longue = tu as tendu le bras
-
-        if (armDistance < thresholdDown && !isDown) {
-          // On enregistre qu'on est descendu
-          isDown = true; 
-        } else if (armDistance > thresholdUp && isDown) {
-          // On est remonté ! On compte la pompe
-          isDown = false;
-          pushupsCount++;
-          
-          // Mettre à jour l'interface avec la classe 'bump' de ton CSS pour l'animation
-          scoreElement.innerText = pushupsCount;
-          scoreElement.classList.add('bump');
-          setTimeout(() => {
-            scoreElement.classList.remove('bump');
-          }, 250);
-        }
+        this.depthReached = false; this.formBroken = false;
+        if(event && this.onRep) this.onRep(event, this.reps);
       }
     }
 
-    // 6. Lancement de l'app 
-    async function initGame() {
-      await startCamera();
-      await loadPoseDetectionModel();
-      detectPose();
+    let msg = "Bras tendus, prêt";
+    if(!aligned) msg = "Aligne épaules, hanches et genoux";
+    else if(this.phase === "down") msg = this.formBroken ? "Corps cassé — répétition refusée" : "Descente valide";
+    else if(depth > .1) msg = "Descends plus bas";
+
+    return { ok:true, aligned, depth, elbow:eA, body:bA, msg, event, side:L };
+  },
+
+  /* ---- squelette néon ---- */
+  draw(ctx, lm, w, h, st){
+    const C = PoseLandmarker.POSE_CONNECTIONS;
+    const color = !st.ok ? "rgba(122,135,152,.6)"
+                : (st.aligned ? "#00F0FF" : "#FF3B3B");
+    ctx.lineWidth = Math.max(2, w/220);
+    ctx.strokeStyle = color;
+    ctx.shadowBlur = 14; ctx.shadowColor = color;
+    ctx.beginPath();
+    for(const cn of C){
+      const a = lm[cn.start], b = lm[cn.end];
+      if(!a || !b) continue;
+      if((a.visibility ?? 1) < .35 || (b.visibility ?? 1) < .35) continue;
+      ctx.moveTo(a.x*w, a.y*h); ctx.lineTo(b.x*w, b.y*h);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = color;
+    for(const p of lm){
+      if((p.visibility ?? 1) < .45) continue;
+      ctx.beginPath(); ctx.arc(p.x*w, p.y*h, Math.max(2.5, w/300), 0, 6.283); ctx.fill();
+    }
+  },
+
+  hud(st){
+    const f = $("#formMsg"), g = $("#depthGauge");
+    f.textContent = st.msg || "";
+    f.classList.toggle("bad", st.ok === true && st.aligned === false);
+    f.classList.toggle("ok",  st.ok === true && st.aligned === true && (st.depth||0) > .5);
+    $("#depthFill").style.height = ((st.depth || 0) * 100).toFixed(0) + "%";
+    g.classList.toggle("bad", st.ok === true && st.aligned === false);
+  }
+};
+
+/* =====================================================================
+   5. RÉSEAU — PeerJS
+   Matchmaking sans serveur applicatif : les identifiants de pairs servent
+   eux-mêmes d'annuaire. Chaque palier d'Elo possède N "salons" au nom
+   déterministe. Chercher = tenter de se connecter à ces noms ; ne trouver
+   personne = réserver un de ces noms et attendre. La collision d'ID que
+   PeerJS renvoie ("unavailable-id") est le signal qu'un salon est occupé.
+   ===================================================================== */
+const Net = {
+  peer:null, conn:null, isHost:false, searching:false, matched:false,
+  opponent:{ name:"ADVERSAIRE", elo:1000 }, ranked:true,
+  onData:null, onClose:null,
+
+  slot(bucket, i){ return `${NS}-b${bucket}-s${i}`; },
+  bucketOf(elo){ return Math.max(0, Math.floor(elo / BUCKET)); },
+
+  destroy(){
+    try{ this.conn?.close(); }catch{}
+    try{ this.peer?.destroy(); }catch{}
+    this.conn = null; this.peer = null;
+  },
+
+  /* Crée un pair avec l'ID demandé (ou aléatoire). Résout null si l'ID est pris. */
+  makePeer(id){
+    return new Promise(resolve => {
+      let done = false;
+      const p = id ? new Peer(id, { debug:0 }) : new Peer({ debug:0 });
+      const finish = v => { if(!done){ done = true; resolve(v); } };
+      p.on("open", () => finish(p));
+      p.on("error", e => {
+        if(e.type === "unavailable-id" || e.type === "network" || e.type === "server-error"){
+          try{ p.destroy(); }catch{}
+          finish(null);
+        }
+      });
+      setTimeout(() => { if(!done){ try{ p.destroy(); }catch{} finish(null); } }, 9000);
+    });
+  },
+
+  /* Essaie de rejoindre un salon existant. */
+  tryJoin(peer, target){
+    return new Promise(resolve => {
+      let done = false;
+      const finish = v => { if(!done){ done = true; cleanup(); resolve(v); } };
+      const conn = peer.connect(target, { reliable:true,
+        metadata:{ name:profile.name, elo:profile.elo } });
+
+      const onErr = e => { if(e.type === "peer-unavailable") finish(null); };
+      const cleanup = () => peer.off("error", onErr);
+      peer.on("error", onErr);
+
+      conn.on("open", () => {
+        // L'hôte répond "welcome" (libre) ou "busy" (déjà apparié)
+        conn.send({ t:"hello", name:profile.name, elo:profile.elo });
+      });
+      conn.on("data", d => {
+        if(d?.t === "welcome"){
+          this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000 };
+          finish(conn);
+        }else if(d?.t === "busy"){
+          try{ conn.close(); }catch{}
+          finish(null);
+        }
+      });
+      conn.on("error", () => finish(null));
+      setTimeout(() => { if(!done){ try{ conn.close(); }catch{} finish(null); } }, PROBE_MS);
+    });
+  },
+
+  /* Réserve un salon libre et attend un adversaire. */
+  hostAndWait(bucket, ms){
+    return new Promise(async resolve => {
+      let peer = null;
+      for(let i = 0; i < SLOTS && this.searching; i++){
+        peer = await this.makePeer(this.slot(bucket, i));
+        if(peer) break;
+      }
+      if(!peer || !this.searching){ resolve(null); return; }
+      this.peer = peer;
+
+      let done = false;
+      const finish = v => { if(!done){ done = true; resolve(v); } };
+
+      peer.on("connection", conn => {
+        if(done){ conn.on("open", () => { conn.send({ t:"busy" }); setTimeout(()=>conn.close(),200); }); return; }
+        conn.on("data", d => {
+          if(d?.t === "hello" && !done){
+            this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000 };
+            conn.send({ t:"welcome", name:profile.name, elo:profile.elo });
+            finish(conn);
+          }
+        });
+      });
+      setTimeout(() => { if(!done){ try{ peer.destroy(); }catch{} this.peer = null; finish(null); } }, ms);
+    });
+  },
+
+  /* Boucle de matchmaking : palier exact, puis élargissement progressif. */
+  async findMatch(log){
+    this.searching = true; this.matched = false; this.ranked = true;
+    const myB = this.bucketOf(profile.elo);
+    let widen = 0;
+
+    while(this.searching){
+      const buckets = [myB];
+      for(let d = 1; d <= widen; d++){ buckets.push(myB + d, myB - d); }
+      const range = (widen + 1) * BUCKET / 2;
+      log(`Palier ELO ±${Math.round(range)}`, `Analyse de ${buckets.length * SLOTS} salons…`);
+
+      // Phase 1 — chercher un hôte déjà en attente
+      const probe = await this.makePeer(null);
+      if(!probe){ log("ELO ±?", "Signalisation indisponible. Nouvelle tentative…"); await this.wait(1500); continue; }
+      this.peer = probe;
+
+      for(const b of buckets){
+        if(b < 0) continue;
+        for(let i = 0; i < SLOTS; i++){
+          if(!this.searching){ this.destroy(); return null; }
+          const conn = await this.tryJoin(probe, this.slot(b, i));
+          if(conn){
+            this.conn = conn; this.isHost = false; this.matched = true;
+            this.bind(); return conn;
+          }
+        }
+      }
+      try{ probe.destroy(); }catch{} this.peer = null;
+      if(!this.searching) return null;
+
+      // Phase 2 — devenir hôte et attendre
+      log(`Palier ELO ±${Math.round(range)}`, "Salon ouvert, en attente d'un adversaire…");
+      const hosted = await this.hostAndWait(myB, HOST_WAIT_MS + widen * 2000);
+      if(hosted){
+        this.conn = hosted; this.isHost = true; this.matched = true;
+        this.bind(); return hosted;
+      }
+      widen++;
+      if(widen > 6) widen = 6;
+    }
+    return null;
+  },
+
+  /* Salon privé par code. */
+  async hostPrivate(code){
+    this.ranked = false;
+    const peer = await this.makePeer(`${NS}-priv-${code}`);
+    if(!peer) return null;
+    this.peer = peer; this.isHost = true;
+    return new Promise(resolve => {
+      peer.on("connection", conn => {
+        conn.on("data", d => {
+          if(d?.t === "hello"){
+            this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000 };
+            conn.send({ t:"welcome", name:profile.name, elo:profile.elo });
+            this.conn = conn; this.matched = true; this.bind(); resolve(conn);
+          }
+        });
+      });
+    });
+  },
+  async joinPrivate(code){
+    this.ranked = false;
+    const peer = await this.makePeer(null);
+    if(!peer) return null;
+    this.peer = peer; this.isHost = false;
+    const conn = await this.tryJoin(peer, `${NS}-priv-${code}`);
+    if(conn){ this.conn = conn; this.matched = true; this.bind(); }
+    return conn;
+  },
+
+  bind(){
+    this.searching = false;
+    this.conn.on("data", d => this.onData && this.onData(d));
+    this.conn.on("close", () => this.onClose && this.onClose());
+    this.peer?.on("disconnected", () => { try{ this.peer.reconnect(); }catch{} });
+  },
+  send(o){ try{ if(this.conn?.open) this.conn.send(o); }catch{} },
+  wait(ms){ return new Promise(r => setTimeout(r, ms)); },
+  cancel(){ this.searching = false; this.destroy(); }
+};
+
+/* =====================================================================
+   6. BOUCLE DE MATCH
+   ===================================================================== */
+const Game = {
+  mode:"ranked",     // ranked | solo | private
+  myScore:0, opScore:0, opFinal:null, timeLeft:MATCH_SECONDS,
+  timer:null, running:false, startedAt:0,
+
+  async enter(mode){
+    this.mode = mode;
+    this.myScore = 0; this.opScore = 0; this.opFinal = null;
+    this.timeLeft = MATCH_SECONDS; this.running = false;
+    Vision.reset();
+
+    $("#nameMe").textContent = (profile.name || "TOI").toUpperCase();
+    $("#nameOp").textContent = mode === "solo" ? "OBJECTIF" : (Net.opponent.name || "ADVERSAIRE").toUpperCase();
+    $("#scoreMe").textContent = "0"; $("#scoreOp").textContent = "0";
+    $("#tug").style.width = "50%";
+    $("#clock").textContent = this.fmt(MATCH_SECONDS);
+    $("#clock").classList.remove("low");
+    $("#btnQuit").textContent = mode === "solo" ? "Terminer" : "Abandonner";
+    show("arena");
+
+    try{
+      $("#cdHint").textContent = "Chargement du modèle de détection…";
+      $("#cdNum").textContent = "…";
+      $("#countdown").classList.add("on");
+      await Vision.load();
+      await Vision.startCamera();
+      Vision.loop();
+    }catch(e){
+      $("#countdown").classList.remove("on");
+      toast("Caméra refusée ou indisponible");
+      show("home"); return;
     }
 
-    // Démarrer dès le chargement
-    initGame();
-  </script>
+    Vision.onRep = (event, reps) => this.onRep(event, reps);
+
+    // Synchronisation : l'hôte donne le départ, les deux comptent 5 s en local.
+    if(this.mode !== "solo" && Net.isHost) Net.send({ t:"go" });
+    await this.countdown();
+    this.start();
+  },
+
+  countdown(){
+    return new Promise(resolve => {
+      const el = $("#cdNum"), box = $("#countdown");
+      box.classList.add("on");
+      $("#cdHint").textContent = "Téléphone au sol, de profil. Position de planche, bras tendus.";
+      let n = 5;
+      const tick = () => {
+        el.textContent = n > 0 ? String(n) : "GO";
+        el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
+        if(n < 0){ box.classList.remove("on"); resolve(); return; }
+        n--; setTimeout(tick, 1000);
+      };
+      tick();
+    });
+  },
+
+  start(){
+    this.running = true; Vision.active = true; this.startedAt = Date.now();
+    $("#formMsg").textContent = "Go";
+    this.timer = setInterval(() => {
+      this.timeLeft = Math.max(0, MATCH_SECONDS - Math.round((Date.now() - this.startedAt)/1000));
+      $("#clock").textContent = this.fmt(this.timeLeft);
+      $("#clock").classList.toggle("low", this.timeLeft <= 10);
+      if(this.timeLeft <= 0) this.finish();
+    }, 250);
+  },
+
+  onRep(event, reps){
+    const f = $("#flash");
+    f.style.background = event === "valid" ? "var(--cyan)" : "var(--red)";
+    f.style.animation = "none"; void f.offsetWidth; f.style.animation = "fl .45s ease-out";
+    if(navigator.vibrate) navigator.vibrate(event === "valid" ? 30 : [20,40,20]);
+    if(event !== "valid") return;
+    this.myScore = reps;
+    $("#scoreMe").textContent = reps;
+    this.paintTug();
+    Net.send({ t:"score", v:reps });
+  },
+
+  setOpScore(v){
+    this.opScore = v; $("#scoreOp").textContent = v; this.paintTug();
+  },
+
+  paintTug(){
+    const tot = this.myScore + this.opScore;
+    const pct = tot === 0 ? 50 : (this.myScore / tot) * 100;
+    $("#tug").style.width = clamp(pct, 4, 96) + "%";
+  },
+
+  fmt(s){ return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; },
+
+  async finish(forfeitByOpponent=false){
+    if(!this.running) return;
+    this.running = false; Vision.active = false;
+    clearInterval(this.timer);
+    Vision.stop();
+
+    if(this.mode !== "solo"){
+      Net.send({ t:"final", v:this.myScore });
+      if(!forfeitByOpponent && this.opFinal === null){
+        // On laisse 4 s au pair pour envoyer son score final
+        $("#formMsg").textContent = "Score de l'adversaire…";
+        const t0 = Date.now();
+        while(this.opFinal === null && Date.now() - t0 < 4000) await Net.wait(200);
+      }
+    }
+    this.report(forfeitByOpponent);
+  },
+
+  async report(forfeit){
+    const me = this.myScore;
+    const op = forfeit ? -1 : (this.opFinal ?? this.opScore);
+    let delta = 0, outcome = "draw";
+
+    if(this.mode === "solo"){
+      $("#resMode").textContent = "Entraînement";
+      outcome = "draw";
+      $("#verdict").textContent = "SÉANCE TERMINÉE";
+    }else{
+      outcome = forfeit ? "win" : (me > op ? "win" : me < op ? "loss" : "draw");
+      $("#resMode").textContent = this.mode === "ranked" ? "Duel classé" : "Duel privé";
+      $("#verdict").textContent = forfeit ? "VICTOIRE PAR FORFAIT"
+        : outcome === "win" ? "VICTOIRE" : outcome === "loss" ? "DÉFAITE" : "ÉGALITÉ";
+
+      if(this.mode === "ranked"){
+        const S = outcome === "win" ? 1 : outcome === "loss" ? 0 : .5;
+        const E = 1 / (1 + Math.pow(10, (Net.opponent.elo - profile.elo) / 400));
+        delta = Math.round(K_FACTOR * (S - E));
+        profile.elo = Math.max(100, profile.elo + delta);
+        if(outcome === "win") profile.wins++;
+        if(outcome === "loss") profile.losses++;
+      }
+    }
+
+    if(me > profile.best) profile.best = me;
+    await Store.set("profile", profile);
+
+    $("#verdict").className = "verdict " + outcome;
+    $("#resMe").textContent = me;
+    $("#resOp").textContent = this.mode === "solo" ? "—" : (op < 0 ? "—" : op);
+    $("#resElo").textContent = Math.round(profile.elo);
+    const d = $("#resDelta");
+    d.textContent = delta === 0 ? "±0" : (delta > 0 ? "+" : "") + delta;
+    d.className = "delta " + (delta > 0 ? "up" : delta < 0 ? "down" : "");
+    $("#resRefused").textContent = `${Vision.refused} répétition${Vision.refused > 1 ? "s" : ""} refusée${Vision.refused > 1 ? "s" : ""} pour forme incorrecte`;
+
+    Net.destroy();
+    paintHome();
+    show("result");
+  },
+
+  quit(){
+    if(this.mode === "solo"){ this.finish(); return; }
+    Net.send({ t:"quit" });
+    this.running = false; Vision.active = false;
+    clearInterval(this.timer); Vision.stop(); Net.destroy();
+    if(this.mode === "ranked"){
+      // Un abandon coûte le maximum : on applique une défaite sèche
+      const E = 1 / (1 + Math.pow(10, (Net.opponent.elo - profile.elo) / 400));
+      profile.elo = Math.max(100, profile.elo + Math.round(K_FACTOR * (0 - E)));
+      profile.losses++;
+      Store.set("profile", profile);
+    }
+    paintHome(); show("home");
+    toast("Duel abandonné");
+  }
+};
+
+/* ---- réception des messages du pair ---- */
+Net.onData = d => {
+  if(!d) return;
+  if(d.t === "score") Game.setOpScore(d.v);
+  else if(d.t === "final"){ Game.opFinal = d.v; Game.setOpScore(d.v); }
+  else if(d.t === "quit"){ if(Game.running) Game.finish(true); }
+  else if(d.t === "go" && !Game.running && !Net.isHost){ /* départ déjà géré localement */ }
+};
+Net.onClose = () => {
+  if(Game.running) Game.finish(true);
+};
+
+/* =====================================================================
+   7. ÉVÉNEMENTS D'INTERFACE
+   ===================================================================== */
+$("#btnRules").onclick   = () => $("#sheetRules").classList.add("on");
+$("#btnPrivate").onclick = () => $("#sheetPrivate").classList.add("on");
+document.querySelectorAll("[data-close]").forEach(b =>
+  b.onclick = () => b.closest(".sheet").classList.remove("on"));
+
+$("#pseudo").onchange = async e => {
+  profile.name = (e.target.value || "").trim().toUpperCase().slice(0,12) || "JOUEUR";
+  e.target.value = profile.name;
+  await Store.set("profile", profile);
+};
+
+$("#btnSolo").onclick = () => Game.enter("solo");
+
+$("#btnRanked").onclick = async () => {
+  if(!window.Peer){ toast("PeerJS n'a pas pu être chargé"); return; }
+  show("search");
+  const log = (a, b) => { $("#radarTxt").textContent = a; $("#searchLog").textContent = b; };
+  log("ELO ±50", "Ouverture du canal pair-à-pair…");
+  const conn = await Net.findMatch(log);
+  if(!conn){ if(Net.searching === false && !Net.matched) return; return; }
+  toast(`Adversaire trouvé — ${Net.opponent.name} (${Math.round(Net.opponent.elo)})`);
+  Game.enter("ranked");
+};
+
+$("#btnCancel").onclick = () => { Net.cancel(); show("home"); };
+
+$("#btnHost").onclick = async () => {
+  const code = Math.random().toString(36).slice(2,7).toUpperCase();
+  $("#privateInfo").textContent = `Code du salon : ${code} — en attente…`;
+  const conn = await Net.hostPrivate(code);
+  if(conn){ $("#sheetPrivate").classList.remove("on"); Game.enter("private"); }
+  else $("#privateInfo").textContent = "Impossible d'ouvrir le salon. Réessaie.";
+};
+$("#btnJoin").onclick = async () => {
+  const code = ($("#joinCode").value || "").trim().toUpperCase();
+  if(code.length < 4){ $("#privateInfo").textContent = "Entre le code à 5 caractères de l'hôte."; return; }
+  $("#privateInfo").textContent = "Connexion au salon…";
+  const conn = await Net.joinPrivate(code);
+  if(conn){ $("#sheetPrivate").classList.remove("on"); Game.enter("private"); }
+  else $("#privateInfo").textContent = "Aucun salon actif avec ce code.";
+};
+
+$("#btnSwitchCam").onclick = () => Vision.switchCamera();
+$("#btnQuit").onclick = () => Game.quit();
+$("#btnAgain").onclick = () => { Net.destroy(); $("#btnRanked").click(); };
+$("#btnHome").onclick = () => { Net.destroy(); show("home"); };
+
+// Sécurité : couper la caméra si l'onglet passe en arrière-plan hors match
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden && !Game.running) Vision.stop();
+});
+
+/* =====================================================================
+   8. DÉMARRAGE
+   ===================================================================== */
+(async function boot(){
+  profile = await Store.get("profile", profile);
+  if(!profile.name){
+    profile.name = "JOUEUR" + Math.floor(Math.random()*900+100);
+    await Store.set("profile", profile);
+  }
+  paintHome();
+  $("#netState").textContent = window.Peer ? "signalisation prête" : "hors ligne";
+})();
+</script>
 </body>
 </html>
