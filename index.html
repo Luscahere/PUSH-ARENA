@@ -3,526 +3,1016 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#07080D" />
+<meta name="theme-color" content="#070B16" />
 <title>PUSHDUEL — Duels de pompes classés</title>
 
-<!-- ============================================================
-     PUSHDUEL — application 1v1 de pompes, 100% client
-     - IA : MediaPipe Tasks Vision (PoseLandmarker "lite", délégué GPU)
-     - Réseau : WebRTC via PeerJS (serveur de signalisation public gratuit)
-     - Persistance : window.storage (artefact) → localStorage → mémoire
-     Aucun serveur applicatif n'est nécessaire.
-     ============================================================ -->
+<!-- =================================================================
+     PUSHDUEL v3
+     - Compte local en 4 étapes + session persistante
+     - Vision : MediaPipe Tasks Vision (PoseLandmarker lite, GPU)
+       → fusion angle de coude + course verticale, calibrée au démarrage,
+         pour compter aussi bien de profil que de FACE
+     - Réseau : WebRTC via PeerJS ; repli sparring IA après 40 s
+     ================================================================= -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-
-<!-- PeerJS (script classique → expose window.Peer) -->
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@700;900&family=Saira:wght@500;600;700&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
 <style>
-/* ===========================================================
-   1. TOKENS
-   =========================================================== */
+/* ============================================================ TOKENS */
 :root{
-  --carbon:#07080D;          /* fond */
-  --panel:#0E1119;           /* surfaces */
-  --panel-2:#141926;
-  --line:rgba(120,150,180,.18);
-  --ink:#E8EEF6;             /* texte principal */
-  --ink-dim:#7A8798;         /* texte secondaire */
-  --cyan:#00F0FF;            /* accent joueur / énergie */
-  --magenta:#FF2E7E;         /* accent adversaire */
-  --lime:#C6FF3D;            /* rep validée */
-  --red:#FF3B3B;             /* faute de forme */
-  --r:4px;
+  --night:#070B16; --deep:#0C1326;
+  --plate-hi:#22304E; --plate-lo:#111A31;
+  --edge:rgba(160,190,230,.22);
+  --ink:#EAF1FB; --dim:#8497B3;
+  --blue:#2FA8FF; --blue-dk:#0E5FA8;
+  --orange:#FF8A1F; --gold:#FFC24A; --gold-dk:#9A6A00;
+  --lime:#9BFF57; --red:#FF4D4D;
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
+  --nav-h:76px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0}
-body{
-  background:var(--carbon); color:var(--ink);
-  font-family:'Chakra Petch',system-ui,sans-serif;
-  overflow:hidden; overscroll-behavior:none;
-  -webkit-user-select:none;user-select:none;
-}
+body{background:var(--night);color:var(--ink);font-family:'Saira',system-ui,sans-serif;font-weight:500;
+  overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-transform:uppercase;letter-spacing:.03em;margin:0}
 
-/* Fond : grille technique + halo diagonal, statique (léger sur mobile) */
-body::before{
-  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
   background:
-    radial-gradient(90vw 60vh at 80% -10%, rgba(0,240,255,.10), transparent 60%),
-    radial-gradient(70vw 50vh at 0% 110%, rgba(255,46,126,.10), transparent 60%),
-    linear-gradient(rgba(120,150,180,.05) 1px, transparent 1px) 0 0/100% 44px,
-    linear-gradient(90deg, rgba(120,150,180,.05) 1px, transparent 1px) 0 0/44px 100%;
-}
+    radial-gradient(70vw 46vh at 18% -8%, rgba(47,168,255,.20), transparent 62%),
+    radial-gradient(70vw 46vh at 88% 6%, rgba(255,138,31,.16), transparent 60%),
+    linear-gradient(180deg,var(--deep),var(--night) 62%)}
+#bg::after{content:'';position:absolute;left:-30%;right:-30%;bottom:-6%;height:52%;
+  background:
+    repeating-linear-gradient(90deg, rgba(143,166,196,.16) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(0deg,  rgba(143,166,196,.13) 0 1px, transparent 1px 46px);
+  transform:perspective(320px) rotateX(66deg);
+  mask-image:linear-gradient(transparent,#000 55%);-webkit-mask-image:linear-gradient(transparent,#000 55%)}
 
-/* ===========================================================
-   2. ÉCRANS
-   =========================================================== */
-.screen{
-  position:fixed;inset:0;z-index:1;
-  display:none;flex-direction:column;
-  padding:calc(var(--safe-t) + 18px) 18px calc(var(--safe-b) + 18px);
-  animation:screen-in .32s cubic-bezier(.2,.8,.2,1);
-}
-.screen.on{display:flex}
-@keyframes screen-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* ============================================================ PLAQUES / BOUTONS */
+.plate{position:relative;border-radius:14px;padding:14px;
+  background:linear-gradient(180deg,var(--plate-hi),var(--plate-lo));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px var(--edge),0 10px 22px -10px rgba(0,0,0,.9)}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:0;cursor:pointer;
+  padding:15px 18px 17px;border-radius:12px;font-family:'Saira Condensed';font-weight:900;font-size:19px;
+  letter-spacing:.10em;text-transform:uppercase;color:#04121F;
+  background:linear-gradient(180deg,#63C4FF,var(--blue));
+  box-shadow:0 5px 0 var(--blue-dk),0 12px 20px -8px rgba(47,168,255,.55),inset 0 1px 0 rgba(255,255,255,.55);
+  transition:transform .08s ease,box-shadow .08s ease}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--blue-dk),inset 0 1px 0 rgba(255,255,255,.4)}
+.btn:disabled{filter:grayscale(.75);opacity:.45;pointer-events:none}
+.btn:focus-visible{outline:3px solid var(--lime);outline-offset:3px}
+.btn.gold{background:linear-gradient(180deg,#FFDC8A,var(--gold));color:#2A1A00;
+  box-shadow:0 5px 0 var(--gold-dk),0 12px 22px -8px rgba(255,194,74,.5),inset 0 1px 0 rgba(255,255,255,.6)}
+.btn.steel{background:linear-gradient(180deg,#3B4E74,#243354);color:var(--ink);
+  box-shadow:0 5px 0 #131C33,inset 0 1px 0 rgba(255,255,255,.18)}
+.btn.steel:active{box-shadow:0 1px 0 #131C33,inset 0 1px 0 rgba(255,255,255,.14)}
+.btn.danger{background:linear-gradient(180deg,#FF8A8A,#E03434);color:#2A0000;box-shadow:0 5px 0 #7C1010,inset 0 1px 0 rgba(255,255,255,.4)}
+.btn.sm{font-size:15px;padding:11px 12px 13px;border-radius:10px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--dim)}
+.field{width:100%;border:0;border-radius:12px;padding:14px;text-align:center;
+  background:rgba(8,14,28,.85);color:var(--ink);font-family:'Saira Condensed';font-weight:900;
+  font-size:19px;letter-spacing:.10em;box-shadow:inset 0 2px 8px rgba(0,0,0,.7),inset 0 0 0 1px var(--edge)}
+.field::placeholder{color:#4E5D75}
+.field:focus{outline:none;box-shadow:inset 0 2px 8px rgba(0,0,0,.7),inset 0 0 0 2px var(--blue)}
+.field.up{text-transform:uppercase}
+.field.low{text-transform:none;letter-spacing:.04em;font-family:'Saira';font-weight:600;font-size:17px}
+.hint{font-size:12px;line-height:1.5;color:var(--dim);text-align:center}
+.hint.err{color:var(--red)}
+.hint.ok{color:var(--lime)}
 
-/* ===========================================================
-   3. COMPOSANTS
-   =========================================================== */
-.eyebrow{
-  font-size:11px;letter-spacing:.28em;text-transform:uppercase;
-  color:var(--ink-dim);font-weight:600;
-}
-.btn{
-  display:flex;align-items:center;justify-content:center;gap:10px;
-  width:100%;padding:16px 18px;border:0;cursor:pointer;
-  font-family:'Chakra Petch';font-size:16px;font-weight:700;
-  letter-spacing:.16em;text-transform:uppercase;
-  color:#04121A;background:var(--cyan);
-  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
-  transition:transform .12s ease, filter .2s ease;
-}
-.btn:active{transform:scale(.985)}
-.btn:disabled{opacity:.4;pointer-events:none}
-.btn.ghost{
-  background:transparent;color:var(--ink);
-  box-shadow:inset 0 0 0 1px var(--line);
-}
-.btn.danger{background:var(--magenta);color:#180008}
-.btn:focus-visible{outline:2px solid var(--lime);outline-offset:3px}
+/* ============================================================ ONBOARDING / LOGIN */
+#gate{position:fixed;inset:0;z-index:12;display:none;flex-direction:column;
+  padding:calc(var(--safe-t) + 22px) 20px calc(var(--safe-b) + 20px)}
+#gate.on{display:flex}
+.gate-head{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:20px}
+.logo{font-family:'Saira Condensed';font-weight:900;font-size:34px;letter-spacing:.16em}
+.logo b{color:var(--blue);font-weight:900}
+.dots{display:flex;gap:7px;margin-top:14px}
+.dots i{width:34px;height:5px;border-radius:3px;background:rgba(160,190,230,.2);transition:background .3s}
+.dots i.on{background:var(--gold);box-shadow:0 0 10px rgba(255,194,74,.75)}
+.step{flex:1;display:none;flex-direction:column;gap:14px;overflow-y:auto}
+.step.on{display:flex;animation:tab-in .3s cubic-bezier(.2,.8,.2,1)}
+.step h2{font-size:26px}
+.step .sub{font-size:14px;color:var(--dim);line-height:1.5;margin:-6px 0 4px}
+.gate-foot{display:flex;gap:10px;padding-top:14px}
+.gate-foot .btn{flex:1}
+.gate-foot .btn.back{flex:0 0 108px}
 
-.card{
-  background:linear-gradient(180deg,var(--panel-2),var(--panel));
-  box-shadow:inset 0 0 0 1px var(--line);
-  clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
-  padding:18px;
-}
+/* choix d'avatar */
+.avgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.avpick{aspect-ratio:1;border:0;padding:0;cursor:pointer;border-radius:14px;overflow:hidden;background:none;
+  box-shadow:inset 0 0 0 2px rgba(160,190,230,.18);transition:transform .12s,box-shadow .18s}
+.avpick.on{box-shadow:inset 0 0 0 3px var(--gold),0 0 20px -4px rgba(255,194,74,.8);transform:scale(1.04)}
+.avpick svg,.avpick img{width:100%;height:100%;display:block;object-fit:cover}
+.avbig{width:132px;height:132px;border-radius:22px;overflow:hidden;margin:0 auto;
+  box-shadow:inset 0 0 0 3px var(--gold),0 12px 30px -12px rgba(255,194,74,.7)}
+.avbig svg,.avbig img{width:100%;height:100%;display:block;object-fit:cover}
 
-/* ===========================================================
-   4. ACCUEIL — le rang est le héros
-   =========================================================== */
-#home{gap:16px;justify-content:space-between}
-.brand{display:flex;align-items:baseline;justify-content:space-between}
-.brand h1{
-  margin:0;font-size:26px;font-weight:700;letter-spacing:.2em;
-}
-.brand h1 span{color:var(--cyan)}
+/* ============================================================ COQUE */
+#shell{position:fixed;inset:0;z-index:1;display:none;flex-direction:column}
+#shell.on{display:flex}
+#topbar{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-t) + 10px) 14px 10px;
+  background:linear-gradient(180deg,rgba(10,16,32,.96),rgba(10,16,32,.55));box-shadow:0 1px 0 var(--edge)}
+#tbAvatar{width:42px;height:42px;flex:0 0 42px;border-radius:12px;overflow:hidden;
+  box-shadow:inset 0 0 0 2px var(--edge)}
+#tbAvatar svg,#tbAvatar img{width:100%;height:100%;display:block;object-fit:cover}
+#topMini{width:32px;height:37px;flex:0 0 32px}
+#topbar .who{flex:1;min-width:0}
+#topbar .who .n{font-family:'Saira Condensed';font-weight:900;font-size:17px;letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#topbar .who .r{font-size:11px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase}
+.chip{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:20px;
+  background:linear-gradient(180deg,#26365A,#16203A);
+  box-shadow:inset 0 0 0 1px var(--edge),inset 0 1px 0 rgba(255,255,255,.12);
+  font-family:'JetBrains Mono';font-weight:800;font-size:14px}
+.chip .k{font-family:'Saira';font-size:10px;letter-spacing:.18em;color:var(--gold)}
 
-.rankwrap{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0}
-/* Signature : sceau hexagonal du rang, avec anneau de progression vers le rang suivant */
-.seal{position:relative;width:190px;height:190px;display:grid;place-items:center}
-.seal svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
-.seal .track{fill:none;stroke:rgba(255,255,255,.07);stroke-width:3}
-.seal .prog{fill:none;stroke:var(--cyan);stroke-width:3;stroke-linecap:square;
-  filter:drop-shadow(0 0 6px rgba(0,240,255,.7));transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
-.seal .hex{
-  width:118px;height:134px;display:grid;place-items:center;gap:2px;
-  clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);
-  background:linear-gradient(160deg,rgba(0,240,255,.22),rgba(255,46,126,.14));
-  box-shadow:0 0 40px rgba(0,240,255,.18);
-}
-.seal .tier{font-size:30px;font-weight:700;letter-spacing:.06em}
-.seal .div{font-size:12px;letter-spacing:.3em;color:var(--ink-dim)}
-.elo{font-size:15px;letter-spacing:.22em;color:var(--ink-dim)}
-.elo b{color:var(--ink);font-size:20px}
+#tabs{flex:1;position:relative;overflow:hidden}
+.tab{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 14px calc(var(--nav-h) + var(--safe-b) + 18px);display:none;flex-direction:column;gap:12px}
+.tab.on{display:flex;animation:tab-in .26s cubic-bezier(.2,.8,.2,1)}
+@keyframes tab-in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line)}
-.stat{background:var(--panel);padding:12px 8px;text-align:center}
-.stat .v{font-size:22px;font-weight:800}
-.stat .k{font-size:10px;letter-spacing:.18em;color:var(--ink-dim);text-transform:uppercase}
+#navbar{position:absolute;left:0;right:0;bottom:0;height:calc(var(--nav-h) + var(--safe-b));
+  padding-bottom:var(--safe-b);display:grid;grid-template-columns:repeat(5,1fr);align-items:center;
+  background:linear-gradient(180deg,#16203A,#0A1122);
+  box-shadow:0 -1px 0 var(--edge),0 -14px 30px -12px rgba(0,0,0,.9)}
+.navbtn{background:none;border:0;cursor:pointer;color:var(--dim);display:flex;flex-direction:column;
+  align-items:center;gap:3px;padding:6px 0;font-family:'Saira Condensed';font-weight:900;font-size:11px;
+  letter-spacing:.12em;text-transform:uppercase;transition:color .18s}
+.navbtn svg{width:24px;height:24px;fill:currentColor}
+.navbtn.on{color:var(--ink)}
+.navbtn.on svg{color:var(--blue);filter:drop-shadow(0 0 8px rgba(47,168,255,.8))}
+.navbtn.main{position:relative;top:-16px}
+.navbtn.main .disc{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;color:#2A1A00;
+  background:linear-gradient(180deg,#FFDC8A,var(--gold));
+  box-shadow:0 6px 0 var(--gold-dk),0 14px 26px -8px rgba(255,194,74,.6),inset 0 2px 0 rgba(255,255,255,.7)}
+.navbtn.main .disc svg{width:30px;height:30px}
+.navbtn.main.on .disc{animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.navbtn.main span{margin-top:2px;color:var(--gold)}
 
-.pseudo{
-  width:100%;background:var(--panel);border:0;box-shadow:inset 0 0 0 1px var(--line);
-  color:var(--ink);font-family:'Chakra Petch';font-size:15px;letter-spacing:.1em;
-  padding:13px 14px;text-align:center;text-transform:uppercase;
-}
-.pseudo:focus{outline:none;box-shadow:inset 0 0 0 1px var(--cyan)}
-.row{display:flex;gap:10px}
+/* ============================================================ ONGLET DUEL */
+.hero{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:16px 14px 18px}
+.hero .badge-xl{width:172px;height:196px}
+.hero .tiername{font-family:'Saira Condensed';font-weight:900;font-size:30px;letter-spacing:.06em;margin-top:6px}
+.hero .divname{font-size:12px;letter-spacing:.3em;color:var(--dim);text-transform:uppercase}
+.progress{width:100%;margin-top:14px}
+.progress .rail{height:12px;border-radius:8px;overflow:hidden;background:rgba(8,14,28,.9);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.7),inset 0 0 0 1px var(--edge)}
+.progress .fill{height:100%;width:0%;border-radius:8px;
+  background:linear-gradient(90deg,#1B6FB8,var(--blue) 60%,#9BE1FF);
+  box-shadow:0 0 14px rgba(47,168,255,.7);transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.progress .lbl{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;
+  letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-/* ===========================================================
-   5. RECHERCHE
-   =========================================================== */
-#search{align-items:center;justify-content:center;gap:22px;text-align:center}
-.radar{position:relative;width:210px;height:210px}
-.radar i{
-  position:absolute;inset:0;border:1px solid rgba(0,240,255,.35);border-radius:50%;
-  animation:ping 2.6s cubic-bezier(.2,.7,.3,1) infinite;
-}
-.radar i:nth-child(2){animation-delay:.85s}
-.radar i:nth-child(3){animation-delay:1.7s}
-@keyframes ping{0%{transform:scale(.25);opacity:1}100%{transform:scale(1);opacity:0}}
-.radar .core{
-  position:absolute;inset:0;display:grid;place-items:center;
-  font-size:13px;letter-spacing:.24em;color:var(--cyan)
-}
-.searchlog{font-size:12px;letter-spacing:.14em;color:var(--ink-dim);min-height:18px}
+/* ============================================================ RANGS */
+.ladder{display:flex;flex-direction:column;gap:8px}
+.rung{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;
+  background:linear-gradient(180deg,rgba(34,48,78,.55),rgba(17,26,49,.55));
+  box-shadow:inset 0 0 0 1px rgba(160,190,230,.12)}
+.rung.cur{background:linear-gradient(180deg,#2A3C63,#16223E);
+  box-shadow:inset 0 0 0 1px rgba(255,194,74,.55),0 0 26px -8px rgba(255,194,74,.7)}
+.rung .b{width:46px;height:53px;flex:0 0 46px}
+.rung .t{flex:1;min-width:0}
+.rung .t .nm{font-family:'Saira Condensed';font-weight:900;font-size:17px;letter-spacing:.05em}
+.rung .t .rg{font-size:11px;color:var(--dim);letter-spacing:.12em}
+.rung .you{font-size:10px;font-weight:700;letter-spacing:.16em;color:#2A1A00;background:var(--gold);
+  padding:3px 8px;border-radius:20px}
+.divrow{display:flex;gap:6px;margin-top:6px}
+.divrow i{width:26px;height:5px;border-radius:3px;background:rgba(160,190,230,.2)}
+.divrow i.on{background:var(--gold);box-shadow:0 0 8px rgba(255,194,74,.8)}
 
-/* ===========================================================
-   6. ARÈNE
-   =========================================================== */
+/* ============================================================ PROFIL / DRILLS / HISTO */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{padding:12px 8px;text-align:center;border-radius:12px;
+  background:linear-gradient(180deg,rgba(34,48,78,.6),rgba(17,26,49,.6));
+  box-shadow:inset 0 0 0 1px rgba(160,190,230,.12)}
+.kpi .v{font-family:'JetBrains Mono';font-weight:800;font-size:24px}
+.kpi .k{font-size:10px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-top:2px}
+.idrow{display:flex;gap:14px;align-items:center}
+.idrow .pic{width:74px;height:74px;flex:0 0 74px;border-radius:16px;overflow:hidden;
+  box-shadow:inset 0 0 0 2px var(--edge)}
+.idrow .pic svg,.idrow .pic img{width:100%;height:100%;display:block;object-fit:cover}
+.rule{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid rgba(160,190,230,.12)}
+.rule:first-of-type{border-top:0}
+.rule .num{font-family:'JetBrains Mono';font-weight:800;font-size:13px;color:var(--gold);flex:0 0 26px}
+.rule p{margin:0;font-size:14px;line-height:1.5;color:#C6D4E6}
+.rule b{color:var(--ink)}
+.hrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(160,190,230,.12)}
+.hrow:first-child{border-top:0}
+.hrow .res{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:0 0 34px;
+  font-family:'Saira Condensed';font-weight:900;font-size:15px}
+.hrow .res.w{background:rgba(155,255,87,.16);color:var(--lime);box-shadow:inset 0 0 0 1px rgba(155,255,87,.35)}
+.hrow .res.l{background:rgba(255,77,77,.14);color:var(--red);box-shadow:inset 0 0 0 1px rgba(255,77,77,.32)}
+.hrow .res.d{background:rgba(160,190,230,.12);color:var(--dim)}
+.hrow .mid{flex:1;min-width:0}
+.hrow .mid .a{font-family:'Saira Condensed';font-weight:900;font-size:15px;letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hrow .mid .b{font-size:11px;color:var(--dim);letter-spacing:.1em}
+.hrow .sc{font-family:'JetBrains Mono';font-weight:800;font-size:16px}
+.hrow .dl{font-family:'JetBrains Mono';font-weight:800;font-size:13px;width:44px;text-align:right}
+.dl.up{color:var(--lime)}.dl.down{color:var(--red)}.dl.flat{color:var(--dim)}
+.empty{text-align:center;color:var(--dim);font-size:14px;padding:26px 10px;line-height:1.6}
+
+/* ============================================================ VUES PLEIN ÉCRAN */
+.view{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;
+  padding:calc(var(--safe-t) + 18px) 16px calc(var(--safe-b) + 18px)}
+.view.on{display:flex;animation:tab-in .28s cubic-bezier(.2,.8,.2,1)}
+
+#search{align-items:center;justify-content:center;gap:20px;text-align:center;background:rgba(7,11,22,.96)}
+.scan{position:relative;width:230px;height:230px;display:grid;place-items:center}
+.scan i{position:absolute;inset:0;border:2px solid rgba(47,168,255,.35);border-radius:50%;
+  animation:ping 2.8s cubic-bezier(.2,.7,.3,1) infinite}
+.scan i:nth-child(2){animation-delay:.9s}
+.scan i:nth-child(3){animation-delay:1.8s}
+@keyframes ping{0%{transform:scale(.28);opacity:1}100%{transform:scale(1);opacity:0}}
+.scan svg.ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
+.scan .track{fill:none;stroke:rgba(160,190,230,.14);stroke-width:6}
+.scan .arc{fill:none;stroke:var(--gold);stroke-width:6;stroke-linecap:round;
+  filter:drop-shadow(0 0 8px rgba(255,194,74,.8));transition:stroke-dashoffset .25s linear}
+.scan .core{display:flex;flex-direction:column;align-items:center;gap:2px}
+.scan .core .t{font-family:'Saira Condensed';font-weight:900;font-size:15px;letter-spacing:.14em;color:var(--blue)}
+.scan .core .c{font-family:'JetBrains Mono';font-weight:800;font-size:40px}
+.scan .core .s{font-size:10px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+#searchLog{font-size:13px;letter-spacing:.1em;color:var(--dim);min-height:20px}
+
 #arena{padding:0;background:#000}
 #stage{position:absolute;inset:0;overflow:hidden}
 #cam,#overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 #cam{background:#000}
 .mirror{transform:scaleX(-1)}
-
-/* Barre de duel : tug-of-war en haut, la frontière EST le score relatif */
-.duel{
-  position:absolute;top:calc(var(--safe-t) + 10px);left:12px;right:12px;z-index:3;
-}
-.duel .names{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.2em;margin-bottom:6px}
-.duel .me{color:var(--cyan)}
-.duel .op{color:var(--magenta)}
-.bar{position:relative;height:10px;background:rgba(255,46,126,.28);overflow:hidden}
-.bar>span{
-  position:absolute;inset:0 auto 0 0;width:50%;
-  background:linear-gradient(90deg,rgba(0,240,255,.55),var(--cyan));
-  transition:width .35s cubic-bezier(.2,.8,.2,1);
-}
-.duel .nums{display:flex;justify-content:space-between;margin-top:6px}
-.duel .nums b{font-family:'JetBrains Mono';font-size:30px;font-weight:800;line-height:1}
-.duel .nums b:first-child{color:var(--cyan)}
-.duel .nums b:last-child{color:var(--magenta)}
-
-/* Chrono */
-.clock{
-  position:absolute;top:calc(var(--safe-t) + 96px);left:0;right:0;z-index:3;text-align:center;
-  font-family:'JetBrains Mono';font-size:44px;font-weight:800;letter-spacing:.04em;
-  text-shadow:0 2px 24px rgba(0,0,0,.8);
-}
+.duel{position:absolute;top:calc(var(--safe-t) + 10px);left:10px;right:10px;z-index:3}
+.duel .heads{display:flex;align-items:center;gap:8px}
+.head{flex:1;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:11px;
+  background:linear-gradient(180deg,rgba(34,48,78,.9),rgba(12,19,38,.9));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 0 1px var(--edge)}
+.head.op{flex-direction:row-reverse;text-align:right}
+.head .av{width:34px;height:34px;flex:0 0 34px;border-radius:9px;overflow:hidden}
+.head .av svg,.head .av img{width:100%;height:100%;display:block;object-fit:cover}
+.head.me .av{box-shadow:inset 0 0 0 2px var(--blue)}
+.head.op .av{box-shadow:inset 0 0 0 2px var(--orange)}
+.head .nm{flex:1;font-family:'Saira Condensed';font-weight:900;font-size:13px;letter-spacing:.06em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.head .sc{font-family:'JetBrains Mono';font-weight:800;font-size:26px;line-height:1}
+.head.me .sc{color:var(--blue)}.head.op .sc{color:var(--orange)}
+.duel .bar{position:relative;height:12px;margin-top:7px;border-radius:8px;overflow:hidden;
+  background:linear-gradient(180deg,#C25E00,var(--orange));
+  box-shadow:inset 0 0 0 1px var(--edge),inset 0 2px 5px rgba(0,0,0,.5)}
+.duel .bar>span{position:absolute;inset:0 auto 0 0;width:50%;
+  background:linear-gradient(180deg,#63C4FF,var(--blue));box-shadow:2px 0 12px rgba(47,168,255,.85);
+  transition:width .35s cubic-bezier(.2,.8,.2,1)}
+.clock{position:absolute;top:calc(var(--safe-t) + 106px);left:0;right:0;z-index:3;text-align:center;
+  font-family:'JetBrains Mono';font-weight:800;font-size:46px;text-shadow:0 3px 20px rgba(0,0,0,.9)}
 .clock.low{color:var(--red);animation:tick 1s steps(2) infinite}
-@keyframes tick{50%{opacity:.45}}
-
-/* Signature : jauge de profondeur latérale — se remplit quand tu descends,
-   se brise en rouge si l'alignement du corps casse. */
-.depth{
-  position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:3;
-  width:8px;height:34vh;background:rgba(255,255,255,.08);
-}
-.depth>span{
-  position:absolute;left:0;right:0;bottom:0;height:0%;
-  background:linear-gradient(180deg,var(--cyan),rgba(0,240,255,.25));
-  transition:height .08s linear,background .2s;
-}
-.depth.bad>span{background:linear-gradient(180deg,var(--red),rgba(255,59,59,.2))}
-.depth::after{
-  content:'';position:absolute;left:-5px;right:-5px;bottom:78%;height:2px;background:var(--lime);
-  opacity:.9; /* seuil de validation de profondeur */
-}
-
-/* Verdict de forme */
-.form{
-  position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 92px);z-index:3;text-align:center;
-  font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);
-  transition:color .2s;
-}
-.form.bad{color:var(--red)}
-.form.ok{color:var(--lime)}
-
-/* Flash de rep : cyan = validée, rouge = refusée */
-#flash{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;background:var(--cyan);mix-blend-mode:screen}
-@keyframes fl{from{opacity:.28}to{opacity:0}}
-
-.arena-actions{
-  position:absolute;left:14px;right:14px;bottom:calc(var(--safe-b) + 14px);z-index:4;display:flex;gap:10px;
-}
-.icon-btn{
-  flex:0 0 52px;height:52px;display:grid;place-items:center;border:0;cursor:pointer;
-  background:rgba(10,14,22,.75);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);font-size:18px;
-}
-
-/* Compte à rebours plein écran */
-#countdown{
-  position:absolute;inset:0;z-index:6;display:none;place-items:center;
-  background:rgba(4,6,10,.82);backdrop-filter:blur(3px);text-align:center;
-}
+@keyframes tick{50%{opacity:.4}}
+/* étiquette de vue : indique au joueur ce que la détection utilise */
+.viewtag{position:absolute;top:calc(var(--safe-t) + 160px);left:0;right:0;z-index:3;text-align:center;
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);text-shadow:0 2px 10px #000}
+.viewtag b{color:var(--blue);font-weight:700}
+.viewtag.calib b{color:var(--gold)}
+.depth{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:3;width:14px;height:36vh;
+  border-radius:9px;background:rgba(8,14,28,.85);overflow:hidden;
+  box-shadow:inset 0 0 0 1px var(--edge),inset 0 2px 6px rgba(0,0,0,.7)}
+.depth>span{position:absolute;left:0;right:0;bottom:0;height:0%;
+  background:linear-gradient(180deg,#9BE1FF,var(--blue));transition:height .08s linear,background .2s}
+.depth.bad>span{background:linear-gradient(180deg,#FF9A9A,var(--red))}
+.depth::after{content:'';position:absolute;left:-3px;right:-3px;bottom:70%;height:3px;
+  background:var(--lime);box-shadow:0 0 10px var(--lime)}
+.formmsg{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 96px);z-index:3;text-align:center;
+  font-family:'Saira Condensed';font-weight:900;font-size:15px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);text-shadow:0 2px 12px #000;transition:color .2s}
+.formmsg.bad{color:var(--red)}.formmsg.ok{color:var(--lime)}
+#flash{position:absolute;inset:0;z-index:2;pointer-events:none;opacity:0;background:var(--blue);mix-blend-mode:screen}
+@keyframes fl{from{opacity:.3}to{opacity:0}}
+.arena-actions{position:absolute;left:12px;right:12px;bottom:calc(var(--safe-b) + 12px);z-index:4;display:flex;gap:10px}
+.icon-btn{flex:0 0 54px;height:54px;border:0;cursor:pointer;border-radius:12px;font-size:20px;color:var(--ink);
+  background:linear-gradient(180deg,#3B4E74,#243354);box-shadow:0 5px 0 #131C33,inset 0 1px 0 rgba(255,255,255,.18)}
+.icon-btn:active{transform:translateY(4px);box-shadow:0 1px 0 #131C33}
+#countdown{position:absolute;inset:0;z-index:6;display:none;place-items:center;text-align:center;
+  background:rgba(5,8,18,.86);backdrop-filter:blur(3px)}
 #countdown.on{display:grid}
-#countdown .n{font-family:'JetBrains Mono';font-size:26vw;font-weight:800;color:var(--cyan);line-height:.9}
-#countdown .n.pop{animation:pop .9s cubic-bezier(.2,.8,.2,1)}
-@keyframes pop{from{transform:scale(.55);opacity:0}60%{opacity:1}to{transform:scale(1);opacity:1}}
-#countdown .hint{font-size:13px;letter-spacing:.2em;color:var(--ink-dim);margin-top:14px;padding:0 30px}
+#cdNum{font-family:'JetBrains Mono';font-weight:800;font-size:27vw;line-height:.9;color:var(--gold);
+  text-shadow:0 0 40px rgba(255,194,74,.5)}
+#cdNum.pop{animation:pop .9s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{from{transform:scale(.5);opacity:0}60%{opacity:1}to{transform:scale(1);opacity:1}}
+#cdHint{font-size:14px;letter-spacing:.12em;color:var(--dim);margin-top:16px;padding:0 26px;line-height:1.5}
+#cdCal{margin-top:10px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold)}
 
-/* ===========================================================
-   7. RÉSULTAT
-   =========================================================== */
-#result{gap:18px;justify-content:center;text-align:center}
-.verdict{font-size:44px;font-weight:700;letter-spacing:.16em}
-.verdict.win{color:var(--lime);text-shadow:0 0 30px rgba(198,255,61,.35)}
-.verdict.loss{color:var(--magenta)}
-.verdict.draw{color:var(--ink-dim)}
-.scoreline{display:flex;align-items:center;justify-content:center;gap:18px;font-family:'JetBrains Mono';font-size:52px;font-weight:800}
-.scoreline .s1{color:var(--cyan)}
-.scoreline .s2{color:var(--magenta)}
-.delta{font-size:26px;font-weight:800;font-family:'JetBrains Mono'}
-.delta.up{color:var(--lime)}
-.delta.down{color:var(--red)}
+#result{align-items:center;justify-content:center;gap:16px;text-align:center;background:rgba(7,11,22,.97)}
+.verdict{font-family:'Saira Condensed';font-weight:900;font-size:46px;letter-spacing:.1em}
+.verdict.win{color:var(--lime);text-shadow:0 0 34px rgba(155,255,87,.4)}
+.verdict.loss{color:var(--orange)}.verdict.draw{color:var(--dim)}
+.scoreline{display:flex;align-items:center;justify-content:center;gap:16px;
+  font-family:'JetBrains Mono';font-weight:800;font-size:54px}
+.scoreline .s1{color:var(--blue)}.scoreline .s2{color:var(--orange)}
+.delta{font-family:'JetBrains Mono';font-weight:800;font-size:26px}
+.delta.up{color:var(--lime)}.delta.down{color:var(--red)}.delta.flat{color:var(--dim)}
 
-/* ===========================================================
-   8. FEUILLE / TOAST
-   =========================================================== */
-.sheet{
-  position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;
-  background:rgba(3,5,9,.7);backdrop-filter:blur(4px);
-}
-.sheet.on{display:flex;animation:screen-in .2s}
-.sheet .inner{width:100%;padding:22px 18px calc(var(--safe-b) + 22px);background:var(--panel);
-  box-shadow:0 -1px 0 var(--line);display:flex;flex-direction:column;gap:14px}
-.sheet h3{margin:0;font-size:18px;letter-spacing:.16em;text-transform:uppercase}
-.sheet p{margin:0;font-size:14px;line-height:1.55;color:var(--ink-dim)}
-#toast{
-  position:fixed;left:50%;bottom:calc(var(--safe-b) + 22px);transform:translateX(-50%);
-  z-index:30;background:var(--panel-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);
-  padding:11px 16px;font-size:13px;letter-spacing:.1em;opacity:0;pointer-events:none;transition:opacity .25s;
-  max-width:88vw;text-align:center;
-}
+.sheet{position:fixed;inset:0;z-index:20;display:none;align-items:flex-end;
+  background:rgba(3,6,14,.72);backdrop-filter:blur(4px)}
+.sheet.on{display:flex;animation:tab-in .2s}
+.sheet .inner{width:100%;padding:20px 16px calc(var(--safe-b) + 20px);border-radius:18px 18px 0 0;
+  background:linear-gradient(180deg,#1A2542,#0C1326);box-shadow:0 -1px 0 var(--edge);
+  display:flex;flex-direction:column;gap:12px;max-height:86vh;overflow-y:auto}
+.sheet h3{font-size:20px;letter-spacing:.08em}
+.sheet p{margin:0;font-size:14px;line-height:1.55;color:#C6D4E6}
+#toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + var(--nav-h) + 14px);transform:translateX(-50%);
+  z-index:30;padding:11px 16px;border-radius:10px;font-size:13px;letter-spacing:.06em;text-align:center;
+  background:linear-gradient(180deg,#2A3C63,#16223E);box-shadow:inset 0 0 0 1px var(--edge),0 10px 24px -10px #000;
+  opacity:0;pointer-events:none;transition:opacity .25s;max-width:88vw}
 #toast.on{opacity:1}
-
-@media (prefers-reduced-motion:reduce){
-  *{animation-duration:.01ms !important;transition-duration:.01ms !important}
-}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+@media (max-height:680px){.hero .badge-xl{width:140px;height:160px}.hero .tiername{font-size:25px}}
 </style>
 </head>
 <body>
+<div id="bg"></div>
 
-<!-- ================= ACCUEIL ================= -->
-<section id="home" class="screen on">
-  <div>
-    <div class="brand">
-      <h1>PUSH<span>DUEL</span></h1>
-      <div class="eyebrow" id="netState">hors ligne</div>
+<!-- ================= PORTAIL : INSCRIPTION / CONNEXION ================= -->
+<section id="gate">
+  <div class="gate-head">
+    <div class="logo">PUSH<b>DUEL</b></div>
+    <div class="eyebrow" id="gateSub">Création du compte</div>
+    <div class="dots" id="gateDots"><i class="on"></i><i></i><i></i><i></i></div>
+  </div>
+
+  <!-- Étape 1 — pseudo -->
+  <div class="step on" id="step1">
+    <h2>Ton nom de combattant</h2>
+    <p class="sub">Il apparaît dans l'arène et dans les classements. 3 à 12 caractères.</p>
+    <input id="inName" class="field up" maxlength="12" autocomplete="nickname" placeholder="PSEUDO" />
+    <div class="hint" id="errName">Lettres, chiffres, tirets et points.</div>
+  </div>
+
+  <!-- Étape 2 — photo -->
+  <div class="step" id="step2">
+    <h2>Ta photo de profil</h2>
+    <p class="sub">Prends une photo ou choisis un emblème. Elle reste sur ton appareil.</p>
+    <div class="avbig" id="avPreview"></div>
+    <button class="btn steel sm" id="btnPhoto">Prendre ou importer une photo</button>
+    <input type="file" id="filePhoto" accept="image/*" capture="user" hidden />
+    <div class="eyebrow" style="margin-top:2px">Emblèmes</div>
+    <div class="avgrid" id="avGrid"></div>
+    <div class="hint" id="errPhoto"></div>
+  </div>
+
+  <!-- Étape 3 — e-mail -->
+  <div class="step" id="step3">
+    <h2>Ton adresse e-mail</h2>
+    <p class="sub">Elle sert d'identifiant de connexion sur cet appareil.</p>
+    <input id="inMail" class="field low" type="email" inputmode="email" autocomplete="email" placeholder="toi@exemple.com" />
+    <div class="hint" id="errMail">Format attendu : nom@domaine.fr</div>
+  </div>
+
+  <!-- Étape 4 — mot de passe -->
+  <div class="step" id="step4">
+    <h2>Ton mot de passe</h2>
+    <p class="sub">6 caractères minimum. Il est haché avant d'être stocké, jamais conservé en clair.</p>
+    <input id="inPass" class="field low" type="password" autocomplete="new-password" placeholder="Mot de passe" />
+    <input id="inPass2" class="field low" type="password" autocomplete="new-password" placeholder="Confirmation" />
+    <div class="hint" id="errPass"></div>
+    <div class="plate" style="margin-top:4px">
+      <div class="eyebrow">Compte local</div>
+      <p style="font-size:13px;line-height:1.5;color:#C6D4E6;margin-top:6px">
+        Tout est enregistré sur cet appareil : aucun serveur ne reçoit ton e-mail ni ton mot de passe.
+        Tu resteras connecté automatiquement au prochain lancement.</p>
     </div>
   </div>
 
-  <div class="rankwrap">
-    <div class="seal">
-      <svg viewBox="0 0 200 200" aria-hidden="true">
-        <circle class="track" cx="100" cy="100" r="92"></circle>
-        <circle class="prog" id="ringProg" cx="100" cy="100" r="92"
-                stroke-dasharray="578" stroke-dashoffset="578"></circle>
-      </svg>
-      <div class="hex">
-        <div class="tier" id="rankTier">FER</div>
-        <div class="div" id="rankDiv">III</div>
-      </div>
-    </div>
-    <div class="elo">ELO <b class="mono" id="eloVal">1000</b></div>
-    <div class="eyebrow" id="nextRank">— points avant le rang suivant</div>
+  <!-- Connexion (session expirée ou déconnexion) -->
+  <div class="step" id="stepLogin">
+    <h2>Content de te revoir</h2>
+    <p class="sub" id="loginWho">Connecte-toi pour reprendre ta progression.</p>
+    <input id="inLogMail" class="field low" type="email" inputmode="email" autocomplete="email" placeholder="E-mail" />
+    <input id="inLogPass" class="field low" type="password" autocomplete="current-password" placeholder="Mot de passe" />
+    <div class="hint" id="errLogin"></div>
+    <button class="btn steel sm" id="btnForget" style="margin-top:6px">Supprimer ce compte et recommencer</button>
   </div>
 
-  <div class="stats">
-    <div class="stat"><div class="v mono" id="stW">0</div><div class="k">victoires</div></div>
-    <div class="stat"><div class="v mono" id="stL">0</div><div class="k">défaites</div></div>
-    <div class="stat"><div class="v mono" id="stB">0</div><div class="k">record</div></div>
-  </div>
-
-  <div style="display:flex;flex-direction:column;gap:10px">
-    <input id="pseudo" class="pseudo" maxlength="12" placeholder="TON PSEUDO" />
-    <button class="btn" id="btnRanked">Chercher un adversaire</button>
-    <div class="row">
-      <button class="btn ghost" id="btnSolo">Entraînement</button>
-      <button class="btn ghost" id="btnPrivate">Duel privé</button>
-    </div>
-    <button class="btn ghost" id="btnRules" style="letter-spacing:.1em;font-size:13px;padding:11px">Comment une pompe est validée</button>
+  <div class="gate-foot">
+    <button class="btn steel back" id="btnBack">Retour</button>
+    <button class="btn gold" id="btnNext">Continuer</button>
   </div>
 </section>
 
+<!-- ================= COQUE À ONGLETS ================= -->
+<div id="shell">
+  <header id="topbar">
+    <div id="tbAvatar"></div>
+    <div id="topMini"></div>
+    <div class="who">
+      <div class="n" id="tbName">JOUEUR</div>
+      <div class="r" id="tbRank">Argent II</div>
+    </div>
+    <div class="chip"><span class="k">ELO</span><span class="mono" id="tbElo">1000</span></div>
+  </header>
+
+  <main id="tabs">
+    <!-- PROFIL -->
+    <section class="tab" id="tab-profil">
+      <div class="plate idrow">
+        <div class="pic" id="pfAvatar"></div>
+        <div style="flex:1;min-width:0">
+          <div class="disp" style="font-size:19px" id="pfName">JOUEUR</div>
+          <div style="font-size:12px;color:var(--dim);word-break:break-all" id="pfMail">—</div>
+          <button class="btn steel sm" id="btnChangePhoto" style="margin-top:8px">Changer la photo</button>
+        </div>
+      </div>
+      <input type="file" id="filePhoto2" accept="image/*" capture="user" hidden />
+      <div class="plate">
+        <div class="eyebrow">Pseudonyme</div>
+        <input id="pseudo" class="field up" maxlength="12" placeholder="TON PSEUDO" style="margin-top:8px" />
+      </div>
+      <div class="grid3">
+        <div class="kpi"><div class="v mono" id="stW">0</div><div class="k">Victoires</div></div>
+        <div class="kpi"><div class="v mono" id="stL">0</div><div class="k">Défaites</div></div>
+        <div class="kpi"><div class="v mono" id="stR">—</div><div class="k">Ratio</div></div>
+      </div>
+      <div class="grid3">
+        <div class="kpi"><div class="v mono" id="stB">0</div><div class="k">Record</div></div>
+        <div class="kpi"><div class="v mono" id="stT">0</div><div class="k">Pompes</div></div>
+        <div class="kpi"><div class="v mono" id="stX">0</div><div class="k">Série</div></div>
+      </div>
+      <div class="plate">
+        <div class="eyebrow">Caméra par défaut</div>
+        <div class="quick" style="margin-top:10px">
+          <button class="btn steel sm" id="btnCamFront">Avant</button>
+          <button class="btn steel sm" id="btnCamBack">Arrière</button>
+        </div>
+      </div>
+      <button class="btn steel sm" id="btnLogout">Se déconnecter</button>
+      <button class="btn steel sm" id="btnReset">Réinitialiser la progression</button>
+    </section>
+
+    <!-- RANGS -->
+    <section class="tab" id="tab-rangs">
+      <div class="plate" style="display:flex;gap:14px;align-items:center">
+        <div id="curBadge" style="width:64px;height:74px;flex:0 0 64px"></div>
+        <div style="flex:1">
+          <div class="disp" style="font-size:20px" id="curTier">ARGENT</div>
+          <div class="eyebrow" id="curDiv">Division II</div>
+          <div class="divrow" id="curDivRow"></div>
+        </div>
+      </div>
+      <div class="eyebrow" style="margin-top:4px">Échelle compétitive</div>
+      <div class="ladder" id="ladder"></div>
+      <p class="empty" style="padding:8px 4px">Chaque palier compte trois divisions. Un duel classé rapporte ou coûte jusqu'à 32 points selon l'écart d'Elo.</p>
+    </section>
+
+    <!-- DUEL -->
+    <section class="tab on" id="tab-duel">
+      <div class="plate hero">
+        <div class="badge-xl" id="heroBadge"></div>
+        <div class="tiername" id="heroTier">ARGENT</div>
+        <div class="divname" id="heroDiv">Division II</div>
+        <div class="progress">
+          <div class="rail"><div class="fill" id="heroFill"></div></div>
+          <div class="lbl"><span id="heroFrom">900</span><span id="heroTo">Or · 1050</span></div>
+        </div>
+      </div>
+      <button class="btn gold" id="btnRanked" style="font-size:23px;padding:19px 18px 22px">Duel classé</button>
+      <div class="quick">
+        <button class="btn steel sm" id="btnSolo">Entraînement libre</button>
+        <button class="btn steel sm" id="btnPrivate">Duel privé</button>
+      </div>
+      <div class="plate" style="display:flex;gap:10px;align-items:center">
+        <div style="font-size:26px">⚡</div>
+        <div style="flex:1">
+          <div class="disp" style="font-size:15px">File d'attente courte</div>
+          <div style="font-size:12px;color:var(--dim);line-height:1.4">Sans adversaire humain au bout de 40 s, un sparring-partner IA calibré sur ton Elo prend le relais.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DRILLS -->
+    <section class="tab" id="tab-drill">
+      <button class="btn" id="btnSolo2">Séance libre · 60 s</button>
+      <div class="plate">
+        <div class="eyebrow">Sparring IA</div>
+        <p style="font-size:13px;color:#C6D4E6;line-height:1.5;margin:8px 0 12px">Choisis toi-même l'intensité du partenaire virtuel. Sans effet sur l'Elo.</p>
+        <div class="quick" style="grid-template-columns:repeat(3,1fr)">
+          <button class="btn steel sm" data-bot="easy">Souple</button>
+          <button class="btn steel sm" data-bot="fair">Égal</button>
+          <button class="btn steel sm" data-bot="hard">Féroce</button>
+        </div>
+      </div>
+      <div class="plate">
+        <div class="eyebrow">Ce qui valide une répétition</div>
+        <div style="margin-top:10px">
+          <div class="rule"><div class="num">01</div><p><b>Descente.</b> La poitrine descend jusqu'au repère vert de la jauge, soit environ 90° de coude.</p></div>
+          <div class="rule"><div class="num">02</div><p><b>Remontée.</b> Bras tendus, retour à la position de départ mesurée pendant le décompte.</p></div>
+          <div class="rule"><div class="num">03</div><p><b>Alignement.</b> Épaules, hanches et genoux tenus. Le squelette passe au rouge dès que le corps casse.</p></div>
+          <div class="rule"><div class="num">04</div><p><b>Tempo.</b> Une répétition bouclée en moins de 0,45 s est ignorée.</p></div>
+        </div>
+      </div>
+      <div class="plate">
+        <div class="eyebrow">Placement du téléphone</div>
+        <p style="font-size:13px;color:#C6D4E6;line-height:1.55;margin-top:8px">
+          <b>De profil</b> à 1,5–2 m : lecture la plus précise.<br>
+          <b>De face</b>, posé au sol devant toi : désormais géré. Reste immobile bras tendus pendant le décompte,
+          c'est ce moment qui sert de référence pour mesurer ta descente.</p>
+      </div>
+    </section>
+
+    <!-- HISTORIQUE -->
+    <section class="tab" id="tab-histo">
+      <div class="grid3">
+        <div class="kpi"><div class="v mono" id="hvP">0</div><div class="k">Duels</div></div>
+        <div class="kpi"><div class="v mono" id="hvA">0</div><div class="k">Moy. pompes</div></div>
+        <div class="kpi"><div class="v mono" id="hvE">0</div><div class="k">Elo 7 j</div></div>
+      </div>
+      <div class="plate"><div id="histList"></div></div>
+    </section>
+  </main>
+
+  <nav id="navbar">
+    <button class="navbtn" data-tab="tab-profil">
+      <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5Z"/></svg><span>Profil</span></button>
+    <button class="navbtn" data-tab="tab-rangs">
+      <svg viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.9 9 10 5.2-1.1 9-5 9-10V6Zm0 4 1.6 3.4 3.6.5-2.6 2.6.6 3.7L12 14.4 8.8 16.2l.6-3.7-2.6-2.6 3.6-.5Z"/></svg><span>Rangs</span></button>
+    <button class="navbtn main on" data-tab="tab-duel">
+      <span class="disc"><svg viewBox="0 0 24 24"><path d="m6.5 2 3 3-1.6 1.6L4.8 3.5 6.5 2ZM3 6.4l2-2 13.6 13.6 2-2 1.4 1.4-3.4 3.4-1.4-1.4 1-1L4.6 5 3.6 6ZM17.5 2l1.7 1.5-3.1 3.1L14.5 5Z"/></svg></span><span>Duel</span></button>
+    <button class="navbtn" data-tab="tab-drill">
+      <svg viewBox="0 0 24 24"><path d="M20.6 5.5 18.5 3.4 16.4 5.5l1 1-9.9 9.9-1-1L4.4 17.5l2.1 2.1 2.1-2.1-1-1 9.9-9.9 1 1ZM2 20l2-2 2 2-2 2Zm16-16 2-2 2 2-2 2Z"/></svg><span>Drills</span></button>
+    <button class="navbtn" data-tab="tab-histo">
+      <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v4l5-5-5-5Zm-1 5v5l4 2 .8-1.6-3.3-1.7V8Z"/></svg><span>Historique</span></button>
+  </nav>
+</div>
+
 <!-- ================= RECHERCHE ================= -->
-<section id="search" class="screen">
-  <div class="eyebrow">Recherche classée</div>
-  <div class="radar"><i></i><i></i><i></i><div class="core mono" id="radarTxt">ELO ±50</div></div>
-  <div class="searchlog" id="searchLog">Ouverture du canal pair-à-pair…</div>
-  <button class="btn ghost" id="btnCancel" style="max-width:280px">Annuler</button>
+<section id="search" class="view">
+  <div class="eyebrow">File classée</div>
+  <div class="scan">
+    <i></i><i></i><i></i>
+    <svg class="ring" viewBox="0 0 240 240"><circle class="track" cx="120" cy="120" r="112"></circle>
+      <circle class="arc" id="qArc" cx="120" cy="120" r="112" stroke-dasharray="703.7" stroke-dashoffset="0"></circle></svg>
+    <div class="core">
+      <div class="t" id="qRange">ELO ±50</div>
+      <div class="c mono" id="qTime">40</div>
+      <div class="s">avant sparring IA</div>
+    </div>
+  </div>
+  <div id="searchLog">Ouverture du canal pair-à-pair…</div>
+  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
+    <button class="btn gold sm" id="btnBotNow">Affronter l'IA maintenant</button>
+    <button class="btn steel sm" id="btnCancel">Annuler</button>
+  </div>
 </section>
 
 <!-- ================= ARÈNE ================= -->
-<section id="arena" class="screen">
+<section id="arena" class="view">
   <div id="stage">
     <video id="cam" playsinline muted autoplay></video>
     <canvas id="overlay"></canvas>
     <div id="flash"></div>
-
     <div class="duel">
-      <div class="names"><span class="me" id="nameMe">TOI</span><span class="op" id="nameOp">ADVERSAIRE</span></div>
+      <div class="heads">
+        <div class="head me"><div class="av" id="avMe"></div><div class="nm" id="nameMe">TOI</div><div class="sc mono" id="scoreMe">0</div></div>
+        <div class="head op"><div class="av" id="avOp"></div><div class="nm" id="nameOp">ADVERSAIRE</div><div class="sc mono" id="scoreOp">0</div></div>
+      </div>
       <div class="bar"><span id="tug"></span></div>
-      <div class="nums"><b class="mono" id="scoreMe">0</b><b class="mono" id="scoreOp">0</b></div>
     </div>
-
     <div class="clock mono" id="clock">01:00</div>
+    <div class="viewtag" id="viewTag">Analyse de la position…</div>
     <div class="depth" id="depthGauge"><span id="depthFill"></span></div>
-    <div class="form" id="formMsg">Mets-toi en position</div>
-
+    <div class="formmsg" id="formMsg">Mets-toi en position</div>
     <div class="arena-actions">
       <button class="icon-btn" id="btnSwitchCam" title="Changer de caméra">⟲</button>
       <button class="btn danger" id="btnQuit" style="flex:1">Abandonner</button>
     </div>
-
-    <div id="countdown"><div><div class="n mono" id="cdNum">5</div><div class="hint" id="cdHint">Cadre tout ton corps de profil, puis mets-toi en position de planche.</div></div></div>
+    <div id="countdown"><div>
+      <div id="cdNum" class="mono">5</div>
+      <div id="cdHint">Cale le téléphone et cadre tout ton corps.</div>
+      <div id="cdCal">Calibration…</div>
+    </div></div>
   </div>
 </section>
 
 <!-- ================= RÉSULTAT ================= -->
-<section id="result" class="screen">
+<section id="result" class="view">
   <div class="eyebrow" id="resMode">Duel classé</div>
   <div class="verdict" id="verdict">VICTOIRE</div>
-  <div class="scoreline"><span class="s1 mono" id="resMe">0</span><span style="font-size:22px;color:var(--ink-dim)">—</span><span class="s2 mono" id="resOp">0</span></div>
-  <div class="card" style="text-align:center">
-    <div class="eyebrow">Elo</div>
-    <div style="display:flex;align-items:baseline;justify-content:center;gap:14px;margin-top:8px">
-      <span class="mono" style="font-size:30px" id="resElo">1000</span>
-      <span class="delta" id="resDelta">+16</span>
+  <div class="scoreline"><span class="s1 mono" id="resMe">0</span><span style="font-size:22px;color:var(--dim)">—</span><span class="s2 mono" id="resOp">0</span></div>
+  <div class="plate" style="width:100%;max-width:360px;display:flex;gap:14px;align-items:center">
+    <div id="resBadge" style="flex:0 0 96px;width:96px;height:110px"></div>
+    <div style="flex:1;text-align:left">
+      <div class="eyebrow">Nouveau total</div>
+      <div style="display:flex;align-items:baseline;gap:12px;margin-top:2px">
+        <span class="mono" style="font-size:30px;font-weight:800" id="resElo">1000</span>
+        <span class="delta" id="resDelta">+16</span>
+      </div>
+      <div class="eyebrow" id="resTier" style="margin-top:6px">Argent II</div>
+      <div style="font-size:12px;color:var(--dim);margin-top:8px" id="resRefused">0 répétition refusée</div>
     </div>
-    <div class="eyebrow" id="resRefused" style="margin-top:12px">0 répétition refusée</div>
   </div>
-  <button class="btn" id="btnAgain">Rejouer</button>
-  <button class="btn ghost" id="btnHome">Accueil</button>
+  <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px">
+    <button class="btn gold" id="btnAgain">Rejouer</button>
+    <button class="btn steel sm" id="btnHome">Menu principal</button>
+  </div>
 </section>
 
-<!-- ================= FEUILLES ================= -->
-<div class="sheet" id="sheetRules"><div class="inner">
-  <h3>Ce qui compte comme une pompe</h3>
-  <p><b style="color:var(--cyan)">Descente</b> — les coudes passent sous 90°. La jauge de droite doit dépasser le trait vert.</p>
-  <p><b style="color:var(--cyan)">Remontée</b> — bras tendus à plus de 160°, sinon la répétition reste ouverte.</p>
-  <p><b style="color:var(--red)">Alignement</b> — épaules, hanches et genoux sur une ligne (plus de 155°). Si tu casses le corps pendant la descente, la répétition est refusée et le squelette passe au rouge.</p>
-  <p><b style="color:var(--red)">Rythme</b> — une répétition sous 0,45 s est ignorée.</p>
-  <p>Place le téléphone au sol à 1,5–2 m, de profil, tout le corps dans le cadre.</p>
-  <button class="btn" data-close>Compris</button>
-</div></div>
-
+<!-- ================= FEUILLE DUEL PRIVÉ ================= -->
 <div class="sheet" id="sheetPrivate"><div class="inner">
   <h3>Duel privé</h3>
-  <p>Un joueur crée le salon, l'autre entre le code. Aucun Elo n'est en jeu.</p>
+  <p>Un joueur crée le salon, l'autre saisit le code. Aucun Elo en jeu.</p>
   <button class="btn" id="btnHost">Créer un salon</button>
-  <div class="row">
-    <input id="joinCode" class="pseudo" maxlength="6" placeholder="CODE" style="flex:1" />
-    <button class="btn" id="btnJoin" style="flex:0 0 120px">Rejoindre</button>
+  <div style="display:flex;gap:10px">
+    <input id="joinCode" class="field up" maxlength="6" placeholder="CODE" style="flex:1" />
+    <button class="btn sm" id="btnJoin" style="flex:0 0 130px">Rejoindre</button>
   </div>
   <div class="eyebrow" id="privateInfo"></div>
-  <button class="btn ghost" data-close>Fermer</button>
+  <button class="btn steel sm" data-close>Fermer</button>
 </div></div>
 
 <div id="toast"></div>
 
 <script type="module">
-/* =====================================================================
-   0. IMPORTS IA
-   MediaPipe Tasks Vision : plus léger et plus rapide que la version
-   "solutions" historique, et le modèle *lite* tourne à 25-30 fps sur un
-   mobile milieu de gamme avec le délégué GPU.
-   ===================================================================== */
 import { FilesetResolver, PoseLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 
 /* =====================================================================
-   1. CONSTANTES DE JEU
+   1. RÉGLAGES
    ===================================================================== */
-const NS            = "pushduel-v1";   // préfixe des identifiants PeerJS
-const SLOTS         = 6;               // salons d'attente par palier d'Elo
-const BUCKET        = 100;             // largeur d'un palier d'Elo
-const PROBE_MS      = 2200;            // délai d'essai de connexion à un salon
-const HOST_WAIT_MS  = 6000;            // temps d'attente en tant qu'hôte avant d'élargir
-const MATCH_SECONDS = 60;
-const K_FACTOR      = 32;
+const NS = "pushduel-v3", SLOTS = 6, BUCKET = 100;
+const PROBE_MS = 2000, HOST_WAIT_MS = 5000, QUEUE_MS = 40000;
+const MATCH_SECONDS = 60, K_RANKED = 32, K_BOT = 16;
 
-// Seuils biomécaniques (degrés)
-const ANGLE_DOWN   = 90;    // coudes pliés → profondeur atteinte
-const ANGLE_UP     = 160;   // bras tendus → répétition bouclée
-const ANGLE_BODY   = 155;   // épaule-hanche-genou → corps aligné
-const MIN_REP_MS   = 450;   // anti-tremblement
-const MIN_VIS      = 0.55;  // confiance minimale des points clés
+/* Seuils du détecteur — exprimés sur l'extension normalisée (1 = bras tendus) */
+const EXT_DOWN = .30;     // équivaut à ~90° de coude
+const EXT_UP   = .86;     // retour bras tendus
+const ANGLE_BODY = 155;   // alignement épaule-hanche-genou (vue de profil)
+const MIN_REP_MS = 450, MIN_VIS = .5;
 
-const RANKS = [
-  { name:"FER",     min:0    }, { name:"BRONZE",  min:900  },
-  { name:"ARGENT",  min:1100 }, { name:"OR",      min:1300 },
-  { name:"PLATINE", min:1500 }, { name:"DIAMANT", min:1700 },
-  { name:"ÉLITE",   min:1900 }, { name:"LÉGENDE", min:2100 }
+const TIERS = [
+  { n:"BRONZE",               min:0,    gem:"#D98A45", dark:"#5E2F0E", metal:"#8A5A34" },
+  { n:"ARGENT",               min:900,  gem:"#D6E2EE", dark:"#5A6675", metal:"#96A6B8" },
+  { n:"OR",                   min:1050, gem:"#FFD16A", dark:"#8A5A00", metal:"#C9962B" },
+  { n:"PLATINE",              min:1200, gem:"#7DF0E4", dark:"#0E5C58", metal:"#3FA79E" },
+  { n:"DIAMANT",              min:1350, gem:"#8CA3FF", dark:"#1B2470", metal:"#4C5DC4" },
+  { n:"CHAMPION",             min:1500, gem:"#C58AFF", dark:"#3D1273", metal:"#7B41C4" },
+  { n:"GRAND CHAMPION",       min:1700, gem:"#FF7A7A", dark:"#6E0F0F", metal:"#C33636" },
+  { n:"LÉGENDE SUPERSONIQUE", min:1900, gem:"#F4F8FF", dark:"#5C6BA8", metal:"#AFC0E6" }
 ];
+const ROMAN = ["I","II","III"];
 
 /* =====================================================================
    2. STOCKAGE
-   window.storage existe dans le lecteur d'artefacts ; localStorage quand
-   le fichier est ouvert directement. On retombe sur la mémoire sinon.
    ===================================================================== */
 const Store = (() => {
   const mem = {};
   const hasW = typeof window.storage?.get === "function";
   return {
-    async get(k, d){
+    async get(k,d){
       try{
         if(hasW){ const r = await window.storage.get(k); return r ? JSON.parse(r.value) : d; }
         const v = localStorage.getItem(k); return v ? JSON.parse(v) : d;
-      }catch{ return k in mem ? mem[k] : d; }
+      }catch{ return (k in mem) ? mem[k] : d; }
     },
-    async set(k, v){
+    async set(k,v){
       const s = JSON.stringify(v);
       try{
-        if(hasW){ await window.storage.set(k, s); return; }
-        localStorage.setItem(k, s);
+        if(hasW){ await window.storage.set(k,s); return; }
+        localStorage.setItem(k,s);
       }catch{ mem[k] = v; }
+    },
+    async del(k){
+      try{
+        if(hasW){ await window.storage.delete(k); return; }
+        localStorage.removeItem(k);
+      }catch{ delete mem[k]; }
     }
   };
 })();
 
-let profile = { name:"", elo:1000, wins:0, losses:0, best:0 };
+let account = null;   // { name, mail, salt, hash, avatar, createdAt }
+let profile = { elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:"user", history:[] };
 
 /* =====================================================================
-   3. OUTILS UI
+   3. UTILITAIRES
    ===================================================================== */
 const $ = s => document.querySelector(s);
-const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const $$ = s => document.querySelectorAll(s);
+const clamp = (v,a,b) => Math.max(a, Math.min(b,v));
 
-function show(id){
-  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
-}
 let toastT;
 function toast(msg, ms=2400){
   const t = $("#toast"); t.textContent = msg; t.classList.add("on");
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms);
 }
+function showView(v){                 // gate | menu | search | arena | result
+  $("#gate").classList.toggle("on", v === "gate");
+  $("#shell").classList.toggle("on", v === "menu");
+  ["search","arena","result"].forEach(id => $("#"+id).classList.toggle("on", id === v));
+}
+function showTab(id){
+  $$(".tab").forEach(t => t.classList.toggle("on", t.id === id));
+  $$(".navbtn").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
+}
 function rankOf(elo){
   let i = 0;
-  for(let k=0;k<RANKS.length;k++) if(elo >= RANKS[k].min) i = k;
-  const cur = RANKS[i], next = RANKS[i+1];
-  const span = next ? next.min - cur.min : 200;
-  const prog = next ? clamp((elo - cur.min) / span, 0, 1) : 1;
-  // Division I → III à l'intérieur d'un rang (III = entrée du rang)
-  const div = ["III","II","I"][clamp(Math.floor(prog*3),0,2)];
-  return { tier:cur.name, div, prog, toNext: next ? next.min - elo : 0 };
+  for(let k=0;k<TIERS.length;k++) if(elo >= TIERS[k].min) i = k;
+  const cur = TIERS[i], next = TIERS[i+1];
+  const span = next ? next.min - cur.min : 250;
+  const prog = next ? clamp((elo - cur.min)/span, 0, 1) : 1;
+  return { idx:i, tier:cur, next, div:clamp(Math.floor(prog*3),0,2), prog };
 }
-function paintHome(){
-  const r = rankOf(profile.elo);
-  $("#rankTier").textContent = r.tier;
-  $("#rankDiv").textContent  = r.div;
-  $("#eloVal").textContent   = Math.round(profile.elo);
-  $("#nextRank").textContent = r.toNext > 0 ? `${r.toNext} points avant le rang suivant` : "Rang maximal atteint";
-  $("#ringProg").style.strokeDashoffset = String(578 - 578 * r.prog);
-  $("#stW").textContent = profile.wins;
-  $("#stL").textContent = profile.losses;
-  $("#stB").textContent = profile.best;
-  $("#pseudo").value = profile.name;
+
+/* Hachage : Web Crypto si contexte sécurisé, repli déterministe sinon. */
+async function hashPass(pass, salt){
+  const txt = salt + "::" + pass;
+  if(window.crypto?.subtle){
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+  let h1 = 0x811c9dc5, h2 = 0x1000193;              // repli FNV-1a double passe
+  for(let i=0;i<txt.length;i++){
+    h1 = Math.imul(h1 ^ txt.charCodeAt(i), 16777619) >>> 0;
+    h2 = Math.imul(h2 ^ txt.charCodeAt(txt.length-1-i), 2246822519) >>> 0;
+  }
+  return h1.toString(16).padStart(8,"0") + h2.toString(16).padStart(8,"0");
+}
+function randHex(n=8){
+  const a = new Uint8Array(n);
+  (window.crypto?.getRandomValues ? crypto : { getRandomValues:arr => arr.forEach((_,i) => arr[i] = Math.random()*256|0) })
+    .getRandomValues(a);
+  return [...a].map(b => b.toString(16).padStart(2,"0")).join("");
 }
 
 /* =====================================================================
-   4. MOTEUR DE VISION — détection et validation des pompes
+   4. EMBLÈMES DE RANG ET AVATARS
+   ===================================================================== */
+let uid = 0;
+function rankBadge(tierIdx, div){
+  const t = TIERS[clamp(tierIdx,0,TIERS.length-1)];
+  const u = "b" + (++uid);
+  const chevrons = [0,1,2].map(i =>
+    `<path d="M${34+i*16} 100 l6 -7 6 7 -6 4 z" fill="${i<=div ? t.gem : "rgba(255,255,255,.16)"}" ${i<=div?`filter="url(#g${u})"`:""}/>`).join("");
+  return `
+<svg viewBox="0 0 100 116" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+  <defs>
+    <linearGradient id="m${u}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E9F1FA"/><stop offset=".22" stop-color="${t.metal}"/>
+      <stop offset=".55" stop-color="${t.dark}"/><stop offset="1" stop-color="#0B1020"/></linearGradient>
+    <linearGradient id="w${u}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${t.metal}"/><stop offset="1" stop-color="${t.dark}"/></linearGradient>
+    <radialGradient id="j${u}" cx=".38" cy=".3" r=".78">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset=".35" stop-color="${t.gem}"/>
+      <stop offset="1" stop-color="${t.dark}"/></radialGradient>
+    <filter id="g${u}" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <path d="M22 34 L2 44 L10 50 L2 58 L22 66 Z" fill="url(#w${u})" opacity=".95"/>
+  <path d="M78 34 L98 44 L90 50 L98 58 L78 66 Z" fill="url(#w${u})" opacity=".95"/>
+  <path d="M50 3 L88 21 L88 60 L50 92 L12 60 L12 21 Z" fill="url(#m${u})"/>
+  <path d="M50 3 L88 21 L88 60 L50 92 L12 60 L12 21 Z" fill="none" stroke="#EAF3FF" stroke-opacity=".55" stroke-width="1.6"/>
+  <path d="M50 10 L81 25 L81 57 L50 84 L19 57 L19 25 Z" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1.2"/>
+  <path d="M50 4 L86 21 L50 38 L14 21 Z" fill="#FFFFFF" opacity=".14"/>
+  <path d="M50 26 L69 40 L61 66 L39 66 L31 40 Z" fill="url(#j${u})" filter="url(#g${u})"/>
+  <path d="M50 26 L69 40 L50 46 L31 40 Z" fill="#FFFFFF" opacity=".28"/>
+  <path d="M50 46 L61 66 L39 66 Z" fill="#000" opacity=".18"/>
+  ${tierIdx>=5 ? `<path d="M50 0 l5 9 h-10 z" fill="${t.gem}" filter="url(#g${u})"/>` : ""}
+  ${tierIdx===7 ? `<circle cx="50" cy="46" r="21" fill="none" stroke="${t.gem}" stroke-opacity=".7" stroke-width="1.2"/>` : ""}
+  ${chevrons}
+</svg>`;
+}
+
+/* 8 emblèmes d'avatar : plaque colorée + glyphe */
+const AV = [
+  { c1:"#2FA8FF", c2:"#0B3D77", g:"M50 14 L30 56 h16 l-6 32 24-44H48z" },                       // éclair
+  { c1:"#FF8A1F", c2:"#7A3400", g:"M50 12c10 16 22 22 22 38a22 22 0 0 1-44 0c0-16 12-22 22-38z" }, // flamme
+  { c1:"#9BFF57", c2:"#2C6B10", g:"M50 16 60 40 86 42 66 58 72 84 50 70 28 84 34 58 14 42 40 40z" },// étoile
+  { c1:"#C58AFF", c2:"#3D1273", g:"M50 14 82 32v36L50 86 18 68V32z" },                            // hexagone
+  { c1:"#FF4D4D", c2:"#6E0F0F", g:"M26 30h48v26a24 24 0 0 1-24 24 24 24 0 0 1-24-24z M36 40h10v12H36z M54 40h10v12H54z" }, // masque
+  { c1:"#7DF0E4", c2:"#0E5C58", g:"M50 12l30 18v22c0 18-14 30-30 36-16-6-30-18-30-36V30z M50 34l8 16h-16z" }, // bouclier
+  { c1:"#FFD16A", c2:"#8A5A00", g:"M20 62 38 26l12 22 12-22 18 36z M28 70h44v10H28z" },           // couronne
+  { c1:"#EAF1FB", c2:"#3B4E74", g:"M50 12a38 38 0 1 0 0 76 38 38 0 0 0 0-76zm0 14a24 24 0 1 1 0 48 24 24 0 0 1 0-48z" } // cible
+];
+function presetAvatar(i){
+  const a = AV[i % AV.length], u = "a" + (++uid);
+  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+    <defs><linearGradient id="${u}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${a.c1}"/><stop offset="1" stop-color="${a.c2}"/></linearGradient></defs>
+    <rect width="100" height="100" fill="url(#${u})"/>
+    <rect width="100" height="50" fill="#FFFFFF" opacity=".10"/>
+    <path d="${a.g}" fill="#08111F" opacity=".82"/>
+  </svg>`;
+}
+/* avatar = {t:"p", i:0..7} (emblème) ou {t:"img", d:"data:image/jpeg;base64,…"} */
+function avatarHTML(av){
+  if(av?.t === "img" && av.d) return `<img src="${av.d}" alt="" />`;
+  return presetAvatar(av?.i ?? 0);
+}
+
+/* Redimensionne une photo importée en carré 200 px pour rester légère */
+function fileToAvatar(file){
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error("lecture"));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("image"));
+      img.onload = () => {
+        const S = 200, c = document.createElement("canvas");
+        c.width = c.height = S;
+        const ctx = c.getContext("2d");
+        const side = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S, S);
+        resolve({ t:"img", d:c.toDataURL("image/jpeg", .82) });
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* =====================================================================
+   5. PORTAIL — inscription en 4 étapes, connexion, session
+   ===================================================================== */
+const Gate = {
+  step:1, draft:{ name:"", avatar:{t:"p", i:0}, mail:"", pass:"" }, mode:"signup",
+
+  open(mode){
+    this.mode = mode; this.step = mode === "login" ? 0 : 1;
+    showView("gate"); this.render();
+    if(mode === "login"){
+      $("#loginWho").textContent = `Compte ${account.mail} enregistré sur cet appareil.`;
+      $("#inLogMail").value = account.mail;
+    }else{
+      $("#avGrid").innerHTML = AV.map((_,i) =>
+        `<button class="avpick ${i===0?"on":""}" data-av="${i}">${presetAvatar(i)}</button>`).join("");
+      $$("[data-av]").forEach(b => b.onclick = () => {
+        this.draft.avatar = { t:"p", i:+b.dataset.av };
+        $$(".avpick").forEach(x => x.classList.remove("on"));
+        b.classList.add("on");
+        $("#avPreview").innerHTML = avatarHTML(this.draft.avatar);
+      });
+      $("#avPreview").innerHTML = avatarHTML(this.draft.avatar);
+    }
+  },
+
+  render(){
+    ["step1","step2","step3","step4","stepLogin"].forEach(id => $("#"+id).classList.remove("on"));
+    $("#" + (this.step === 0 ? "stepLogin" : "step" + this.step)).classList.add("on");
+    $("#gateDots").style.display = this.step === 0 ? "none" : "flex";
+    $$("#gateDots i").forEach((d,i) => d.classList.toggle("on", i < this.step));
+    $("#gateSub").textContent = this.step === 0 ? "Connexion" : `Création du compte · étape ${this.step} sur 4`;
+    $("#btnBack").style.display = (this.step <= 1) ? "none" : "flex";
+    $("#btnNext").textContent = this.step === 0 ? "Se connecter" : this.step === 4 ? "Créer mon compte" : "Continuer";
+  },
+
+  /* Validation par étape : message d'erreur explicite, jamais de blocage muet */
+  async next(){
+    if(this.step === 0) return this.login();
+    if(this.step === 1){
+      const v = $("#inName").value.trim().toUpperCase();
+      if(!/^[A-Z0-9ÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ._-]{3,12}$/.test(v)){
+        return this.err("#errName", "3 à 12 caractères, sans espace ni symbole exotique.");
+      }
+      this.draft.name = v; this.ok("#errName", "Pseudo disponible.");
+    }
+    if(this.step === 2 && !this.draft.avatar) return this.err("#errPhoto", "Choisis une photo ou un emblème.");
+    if(this.step === 3){
+      const v = $("#inMail").value.trim().toLowerCase();
+      if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(v)) return this.err("#errMail", "Cette adresse ne semble pas valide.");
+      this.draft.mail = v; this.ok("#errMail", "Adresse enregistrée.");
+    }
+    if(this.step === 4){
+      const p = $("#inPass").value, p2 = $("#inPass2").value;
+      if(p.length < 6) return this.err("#errPass", "6 caractères minimum.");
+      if(p !== p2)     return this.err("#errPass", "Les deux mots de passe diffèrent.");
+      return this.create(p);
+    }
+    this.step++; this.render();
+  },
+  back(){ if(this.step > 1){ this.step--; this.render(); } },
+  err(sel, msg){ const e = $(sel); e.textContent = msg; e.className = "hint err"; if(navigator.vibrate) navigator.vibrate([30,40,30]); },
+  ok(sel, msg){ const e = $(sel); e.textContent = msg; e.className = "hint ok"; },
+
+  async create(pass){
+    const salt = randHex(8);
+    account = {
+      name:this.draft.name, mail:this.draft.mail, avatar:this.draft.avatar,
+      salt, hash:await hashPass(pass, salt), createdAt:Date.now()
+    };
+    await Store.set("account", account);
+    await Session.open(account.mail);
+    profile = { elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:"user", history:[] };
+    await Store.set("profile", profile);
+    paintAll(); showView("menu"); showTab("tab-duel");
+    toast(`Bienvenue, ${account.name}`);
+  },
+
+  async login(){
+    const mail = $("#inLogMail").value.trim().toLowerCase();
+    const pass = $("#inLogPass").value;
+    if(mail !== account.mail) return this.err("#errLogin", "Aucun compte avec cette adresse sur cet appareil.");
+    if(await hashPass(pass, account.salt) !== account.hash) return this.err("#errLogin", "Mot de passe incorrect.");
+    await Session.open(mail);
+    $("#inLogPass").value = "";
+    paintAll(); showView("menu"); showTab("tab-duel");
+    toast(`Content de te revoir, ${account.name}`);
+  }
+};
+
+/* Session persistante : un jeton local, sans expiration tant que l'utilisateur
+   ne se déconnecte pas explicitement. */
+const Session = {
+  async open(mail){ await Store.set("session", { mail, token:randHex(12), at:Date.now() }); },
+  async read(){ return await Store.get("session", null); },
+  async close(){ await Store.del("session"); }
+};
+
+/* =====================================================================
+   6. RENDU DES MENUS
+   ===================================================================== */
+function paintAll(){
+  const r = rankOf(profile.elo);
+  $("#tbAvatar").innerHTML = avatarHTML(account?.avatar);
+  $("#topMini").innerHTML  = rankBadge(r.idx, r.div);
+  $("#tbName").textContent = account?.name || "JOUEUR";
+  $("#tbRank").textContent = `${r.tier.n} ${ROMAN[r.div]}`;
+  $("#tbElo").textContent  = Math.round(profile.elo);
+
+  $("#pfAvatar").innerHTML = avatarHTML(account?.avatar);
+  $("#pfName").textContent = account?.name || "JOUEUR";
+  $("#pfMail").textContent = account?.mail || "—";
+  $("#pseudo").value = account?.name || "";
+
+  $("#heroBadge").innerHTML = rankBadge(r.idx, r.div);
+  $("#heroTier").textContent = r.tier.n;
+  $("#heroDiv").textContent  = "Division " + ROMAN[r.div];
+  $("#heroFill").style.width = (r.prog*100).toFixed(1) + "%";
+  $("#heroFrom").textContent = r.tier.min;
+  $("#heroTo").textContent   = r.next ? `${r.next.n} · ${r.next.min}` : "Sommet atteint";
+
+  $("#curBadge").innerHTML = rankBadge(r.idx, r.div);
+  $("#curTier").textContent = r.tier.n;
+  $("#curDiv").textContent  = "Division " + ROMAN[r.div];
+  $("#curDivRow").innerHTML = [0,1,2].map(i => `<i class="${i<=r.div?"on":""}"></i>`).join("");
+  $("#ladder").innerHTML = TIERS.map((t,i) => {
+    const hi = TIERS[i+1] ? TIERS[i+1].min - 1 : "∞";
+    return `<div class="rung ${i===r.idx?"cur":""}">
+      <div class="b">${rankBadge(i, i===r.idx ? r.div : 2)}</div>
+      <div class="t"><div class="nm">${t.n}</div><div class="rg mono">${t.min} – ${hi}</div></div>
+      ${i===r.idx ? `<span class="you">TOI</span>` : ""}</div>`;
+  }).join("");
+
+  $("#stW").textContent = profile.wins;
+  $("#stL").textContent = profile.losses;
+  $("#stR").textContent = (profile.wins + profile.losses) ? (profile.wins/Math.max(1,profile.losses)).toFixed(2) : "—";
+  $("#stB").textContent = profile.best;
+  $("#stT").textContent = profile.totalReps;
+  $("#stX").textContent = profile.streak;
+  paintHistory();
+}
+function paintHistory(){
+  const h = profile.history || [];
+  $("#hvP").textContent = h.length;
+  $("#hvA").textContent = h.length ? Math.round(h.reduce((s,x)=>s+x.me,0)/h.length) : 0;
+  const week = h.filter(x => Date.now()-x.at < 7*864e5).reduce((s,x)=>s+(x.d||0),0);
+  $("#hvE").textContent = (week>0?"+":"") + week;
+  $("#histList").innerHTML = h.length ? h.map(x => {
+    const cls = x.r === "win" ? "w" : x.r === "loss" ? "l" : "d";
+    const ltr = x.r === "win" ? "V" : x.r === "loss" ? "D" : "N";
+    const dcl = x.d > 0 ? "up" : x.d < 0 ? "down" : "flat";
+    const mode = x.m === "ranked" ? "Classé" : x.m === "bot" ? "Sparring IA" : x.m === "private" ? "Privé" : "Entraînement";
+    return `<div class="hrow"><div class="res ${cls}">${ltr}</div>
+      <div class="mid"><div class="a">${x.op}</div><div class="b">${mode} · ${new Date(x.at).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</div></div>
+      <div class="sc mono">${x.me}<span style="color:var(--dim)">–</span>${x.opS<0?"—":x.opS}</div>
+      <div class="dl ${dcl} mono">${x.d>0?"+":""}${x.d||0}</div></div>`;
+  }).join("") : `<div class="empty">Aucun duel enregistré.<br>Lance ta première recherche depuis l'onglet Duel.</div>`;
+}
+
+/* =====================================================================
+   7. VISION — détection profil ET face
+   -------------------------------------------------------------------
+   Problème corrigé : de face, l'angle du coude est écrasé par la
+   perspective et les bras se confondent avec le tronc en bas du
+   mouvement, si bien que la descente complète n'était jamais atteinte.
+   Solution : deux signaux mesurés en parallèle, puis fusionnés selon
+   l'orientation détectée du corps.
+     • sE — extension du coude (fiable de profil, bruitée de face)
+     • sV — course verticale épaules→poignets, normalisée par la longueur
+            du tronc et calibrée bras tendus pendant le décompte
+   La pondération suit la "frontalité" : largeur d'épaules rapportée à la
+   longueur du tronc, qui passe de ~0,2 de profil à ~1,0 de face.
    ===================================================================== */
 const Vision = {
-  landmarker:null, stream:null, facing:"user",
-  running:false, lastVideoTime:-1, raf:0,
-
-  // état de comptage
-  reps:0, refused:0, phase:"up", depthReached:false, formBroken:false,
-  repStart:0, smoothElbow:180, smoothBody:180, active:false,
-  onRep:null,
+  landmarker:null, stream:null, running:false, lastVideoTime:-1, raf:0,
+  reps:0, refused:0, phase:"up", depthReached:false, formBroken:false, repStart:0,
+  active:false, onRep:null,
+  sE:1, sV:1, ext:1, frontality:0,                  // signaux lissés
+  base:{ span:0, hip:0, n:0 }, calibrating:false, calibrated:false,
 
   async load(){
     if(this.landmarker) return;
-    const fileset = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
-    );
+    const fs = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
     const opts = {
       baseOptions:{
         modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
@@ -531,152 +1021,173 @@ const Vision = {
       runningMode:"VIDEO", numPoses:1,
       minPoseDetectionConfidence:.5, minPosePresenceConfidence:.5, minTrackingConfidence:.5
     };
-    try{
-      this.landmarker = await PoseLandmarker.createFromOptions(fileset, opts);
-    }catch{
-      opts.baseOptions.delegate = "CPU"; // repli si pas de WebGL exploitable
-      this.landmarker = await PoseLandmarker.createFromOptions(fileset, opts);
-    }
+    try{ this.landmarker = await PoseLandmarker.createFromOptions(fs, opts); }
+    catch{ opts.baseOptions.delegate = "CPU"; this.landmarker = await PoseLandmarker.createFromOptions(fs, opts); }
   },
 
   async startCamera(){
     if(this.stream) this.stream.getTracks().forEach(t => t.stop());
     this.stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:this.facing, width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:30} },
-      audio:false
-    });
-    const v = $("#cam");
-    v.srcObject = this.stream;
-    v.classList.toggle("mirror", this.facing === "user");
-    $("#overlay").classList.toggle("mirror", this.facing === "user");
+      video:{ facingMode:profile.facing, width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:30} }, audio:false });
+    const v = $("#cam"); v.srcObject = this.stream;
+    const mir = profile.facing === "user";
+    v.classList.toggle("mirror", mir); $("#overlay").classList.toggle("mirror", mir);
     await v.play();
   },
-
   async switchCamera(){
-    this.facing = this.facing === "user" ? "environment" : "user";
-    try{ await this.startCamera(); }catch{ toast("Cette caméra n'est pas disponible"); }
+    profile.facing = profile.facing === "user" ? "environment" : "user";
+    Store.set("profile", profile);
+    try{ await this.startCamera(); this.beginCalibration(); }catch{ toast("Cette caméra n'est pas disponible"); }
   },
 
   reset(){
     this.reps = 0; this.refused = 0; this.phase = "up";
     this.depthReached = false; this.formBroken = false;
-    this.smoothElbow = 180; this.smoothBody = 180; this.active = false;
+    this.sE = this.sV = this.ext = 1; this.frontality = 0;
+    this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = false;
+    this.active = false;
   },
-
+  beginCalibration(){ this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = true; },
+  endCalibration(){ this.calibrating = false; },
   stop(){
-    this.running = false;
-    cancelAnimationFrame(this.raf);
+    this.running = false; cancelAnimationFrame(this.raf);
     if(this.stream){ this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
   },
 
   loop(){
     this.running = true;
     const v = $("#cam"), c = $("#overlay"), ctx = c.getContext("2d");
-
     const step = () => {
       if(!this.running) return;
       this.raf = requestAnimationFrame(step);
       if(v.readyState < 2) return;
       if(c.width !== v.videoWidth){ c.width = v.videoWidth; c.height = v.videoHeight; }
+      if(v.currentTime === this.lastVideoTime) return;
+      this.lastVideoTime = v.currentTime;
 
-      if(v.currentTime !== this.lastVideoTime){
-        this.lastVideoTime = v.currentTime;
-        const res = this.landmarker.detectForVideo(v, performance.now());
-        ctx.clearRect(0,0,c.width,c.height);
-        if(res.landmarks?.length){
-          const lm = res.landmarks[0];
-          const wl = res.worldLandmarks?.[0] || lm;  // coords métriques → angles fiables
-          const st = this.analyse(lm, wl);
-          this.draw(ctx, lm, c.width, c.height, st);
-          this.hud(st);
-        }else{
-          this.hud({ ok:false, msg:"Aucun corps détecté" });
-        }
-      }
+      const res = this.landmarker.detectForVideo(v, performance.now());
+      ctx.clearRect(0,0,c.width,c.height);
+      if(res.landmarks?.length){
+        const lm = res.landmarks[0];
+        const wl = res.worldLandmarks?.[0] || lm;
+        const st = this.analyse(lm, wl);
+        this.draw(ctx, lm, c.width, c.height, st);
+        this.hud(st);
+      }else this.hud({ ok:false, msg:"Aucun corps détecté" });
     };
     step();
   },
 
-  /* ---- angle ABC en degrés (3D si disponible) ---- */
   angle(a,b,c){
-    const v1 = { x:a.x-b.x, y:a.y-b.y, z:(a.z||0)-(b.z||0) };
-    const v2 = { x:c.x-b.x, y:c.y-b.y, z:(c.z||0)-(b.z||0) };
-    const dot = v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
+    const v1 = {x:a.x-b.x, y:a.y-b.y, z:(a.z||0)-(b.z||0)};
+    const v2 = {x:c.x-b.x, y:c.y-b.y, z:(c.z||0)-(b.z||0)};
     const m1 = Math.hypot(v1.x,v1.y,v1.z), m2 = Math.hypot(v2.x,v2.y,v2.z);
     if(!m1 || !m2) return 180;
-    return Math.acos(clamp(dot/(m1*m2), -1, 1)) * 180 / Math.PI;
+    return Math.acos(clamp((v1.x*v2.x + v1.y*v2.y + v1.z*v2.z)/(m1*m2), -1, 1)) * 180/Math.PI;
   },
+  mid(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; },
+  d2(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); },
 
-  /* ---- cœur de la validation ---- */
   analyse(lm, wl){
     const vis = i => lm[i]?.visibility ?? 0;
-    // On travaille sur le côté le mieux vu (le téléphone est posé de profil)
-    const leftVis  = (vis(11)+vis(13)+vis(15)+vis(23))/4;
-    const rightVis = (vis(12)+vis(14)+vis(16)+vis(24))/4;
-    const L = leftVis >= rightVis;
+    const lV = (vis(11)+vis(13)+vis(15)+vis(23))/4;
+    const rV = (vis(12)+vis(14)+vis(16)+vis(24))/4;
+    if(Math.max(lV,rV) < MIN_VIS) return { ok:false, msg:"Cadre tout ton corps", depth:0 };
+    const L = lV >= rV;
     const S=L?11:12, E=L?13:14, W=L?15:16, H=L?23:24, K=L?25:26;
 
-    if(Math.max(leftVis,rightVis) < MIN_VIS)
-      return { ok:false, msg:"Cadre tout ton corps", depth:0, side:L };
+    /* --- géométrie image, utilisée pour l'orientation et la course --- */
+    const shMid = this.mid(lm[11], lm[12]);
+    const hpMid = this.mid(lm[23], lm[24]);
+    const wrMid = this.mid(lm[15], lm[16]);
+    const torso = Math.max(this.d2(shMid, hpMid), 1e-3);
+    const shW   = this.d2(lm[11], lm[12]);
+    // frontalité : 0 = profil pur, 1 = face pleine
+    const front = clamp((shW/torso - .42) / (.85 - .42), 0, 1);
+    this.frontality += (front - this.frontality) * .12;
 
-    const elbow = this.angle(wl[S], wl[E], wl[W]);
-    const body  = this.angle(wl[S], wl[H], wl[K]);
-    // Lissage exponentiel : supprime le tremblement sans ajouter de latence perçue
-    this.smoothElbow += (elbow - this.smoothElbow) * .45;
-    this.smoothBody  += (body  - this.smoothBody ) * .35;
-    const eA = this.smoothElbow, bA = this.smoothBody;
+    // course verticale épaules → poignets, normalisée (invariante à la distance)
+    const spanN = (wrMid.y - shMid.y) / torso;
+    const hipN  = (hpMid.y - shMid.y) / torso;
 
-    // 0 % bras tendus → 100 % coudes à 60°
-    const depth = clamp((ANGLE_UP - eA) / (ANGLE_UP - 60), 0, 1);
-    const aligned = bA >= ANGLE_BODY;
+    /* --- calibration : position haute, bras tendus --- */
+    const elbowNow = (this.angle(wl[S], wl[E], wl[W]) + this.angle(wl[L?12:11], wl[L?14:13], wl[L?16:15]))/2;
+    if(this.calibrating && elbowNow > 150 && spanN > .2){
+      this.base.n++;
+      this.base.span += (spanN - this.base.span) / this.base.n;   // moyenne courante
+      this.base.hip  += (hipN  - this.base.hip ) / this.base.n;
+      if(this.base.n >= 8) this.calibrated = true;
+    }
+
+    /* --- signaux --- */
+    const sE = clamp((elbowNow - 55) / (170 - 55), 0, 1);
+    this.sE += (sE - this.sE) * .45;
+    let sV = 1;
+    if(this.calibrated && this.base.span > .05){
+      // 1 = position haute mesurée ; 0 = poitrine au sol
+      sV = clamp((spanN / this.base.span - .18) / (1 - .18), 0, 1.1);
+      this.sV += (sV - this.sV) * .40;
+    }else this.sV = this.sE;
+
+    // Fusion : plus la vue est frontale, plus la course verticale prime
+    const wV = this.calibrated ? .70 * this.frontality : 0;
+    this.ext = this.sE * (1 - wV) + this.sV * wV;
+    const depth = clamp(1 - this.ext, 0, 1);
+
+    /* --- alignement du corps --- */
+    let aligned = true, alignCheck = true;
+    if(this.frontality < .55 && vis(K) > .45){
+      aligned = this.angle(wl[S], wl[H], wl[K]) >= ANGLE_BODY;     // mesure directe, vue de profil
+    }else if(this.calibrated){
+      // De face les genoux sont masqués : on surveille la dérive du bassin
+      aligned = Math.abs(hipN - this.base.hip) < .38;
+    }else alignCheck = false;
+
+    /* --- machine à états --- */
     const now = performance.now();
     let event = null;
-
     if(this.active){
       if(!aligned && this.phase === "down") this.formBroken = true;
-
-      if(this.phase === "up" && eA < ANGLE_DOWN){
+      if(this.phase === "up" && this.ext < EXT_DOWN){
         this.phase = "down"; this.repStart = now;
         this.depthReached = true; this.formBroken = !aligned;
-      }else if(this.phase === "down" && eA > ANGLE_UP){
+      }else if(this.phase === "down" && this.ext > EXT_UP){
         this.phase = "up";
         const fast = now - this.repStart < MIN_REP_MS;
-        if(this.depthReached && !this.formBroken && !fast){
-          this.reps++; event = "valid";
-        }else{
-          this.refused++; event = "refused";
-        }
+        if(this.depthReached && !this.formBroken && !fast){ this.reps++; event = "valid"; }
+        else { this.refused++; event = "refused"; }
         this.depthReached = false; this.formBroken = false;
-        if(event && this.onRep) this.onRep(event, this.reps);
+        if(this.onRep) this.onRep(event, this.reps);
+      }
+      // Recalage permanent : chaque passage bras tendus rafraîchit la référence
+      if(this.phase === "up" && this.sE > .92 && spanN > .2){
+        this.base.span += (spanN - this.base.span) * .06;
+        this.base.hip  += (hipN  - this.base.hip ) * .06;
+        this.calibrated = true;
       }
     }
 
     let msg = "Bras tendus, prêt";
-    if(!aligned) msg = "Aligne épaules, hanches et genoux";
-    else if(this.phase === "down") msg = this.formBroken ? "Corps cassé — répétition refusée" : "Descente valide";
-    else if(depth > .1) msg = "Descends plus bas";
+    if(!alignCheck) msg = "Position détectée";
+    else if(!aligned) msg = this.frontality > .55 ? "Bassin décalé" : "Aligne épaules, hanches, genoux";
+    else if(this.phase === "down") msg = this.formBroken ? "Corps cassé — refusée" : "Descente valide";
+    else if(depth > .12) msg = "Descends plus bas";
 
-    return { ok:true, aligned, depth, elbow:eA, body:bA, msg, event, side:L };
+    return { ok:true, aligned, depth, msg, event, front:this.frontality, calibrated:this.calibrated };
   },
 
-  /* ---- squelette néon ---- */
   draw(ctx, lm, w, h, st){
-    const C = PoseLandmarker.POSE_CONNECTIONS;
-    const color = !st.ok ? "rgba(122,135,152,.6)"
-                : (st.aligned ? "#00F0FF" : "#FF3B3B");
-    ctx.lineWidth = Math.max(2, w/220);
-    ctx.strokeStyle = color;
-    ctx.shadowBlur = 14; ctx.shadowColor = color;
+    const color = !st.ok ? "rgba(132,151,179,.55)" : (st.aligned ? "#2FA8FF" : "#FF4D4D");
+    ctx.lineWidth = Math.max(2.5, w/200);
+    ctx.strokeStyle = color; ctx.shadowBlur = 16; ctx.shadowColor = color;
     ctx.beginPath();
-    for(const cn of C){
+    for(const cn of PoseLandmarker.POSE_CONNECTIONS){
       const a = lm[cn.start], b = lm[cn.end];
       if(!a || !b) continue;
       if((a.visibility ?? 1) < .35 || (b.visibility ?? 1) < .35) continue;
       ctx.moveTo(a.x*w, a.y*h); ctx.lineTo(b.x*w, b.y*h);
     }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = color;
+    ctx.stroke(); ctx.shadowBlur = 0; ctx.fillStyle = color;
     for(const p of lm){
       if((p.visibility ?? 1) < .45) continue;
       ctx.beginPath(); ctx.arc(p.x*w, p.y*h, Math.max(2.5, w/300), 0, 6.283); ctx.fill();
@@ -684,159 +1195,162 @@ const Vision = {
   },
 
   hud(st){
-    const f = $("#formMsg"), g = $("#depthGauge");
+    const f = $("#formMsg"), g = $("#depthGauge"), v = $("#viewTag");
     f.textContent = st.msg || "";
     f.classList.toggle("bad", st.ok === true && st.aligned === false);
     f.classList.toggle("ok",  st.ok === true && st.aligned === true && (st.depth||0) > .5);
-    $("#depthFill").style.height = ((st.depth || 0) * 100).toFixed(0) + "%";
+    $("#depthFill").style.height = ((st.depth||0)*100).toFixed(0) + "%";
     g.classList.toggle("bad", st.ok === true && st.aligned === false);
+    if(st.ok){
+      const face = st.front > .55;
+      v.innerHTML = st.calibrated
+        ? `Vue <b>${face ? "de face" : "de profil"}</b> · référence calée`
+        : `Vue <b>${face ? "de face" : "de profil"}</b> · calibration en cours`;
+      v.classList.toggle("calib", !st.calibrated);
+    }else{ v.textContent = "Corps hors cadre"; v.classList.add("calib"); }
   }
 };
 
 /* =====================================================================
-   5. RÉSEAU — PeerJS
-   Matchmaking sans serveur applicatif : les identifiants de pairs servent
-   eux-mêmes d'annuaire. Chaque palier d'Elo possède N "salons" au nom
-   déterministe. Chercher = tenter de se connecter à ces noms ; ne trouver
-   personne = réserver un de ces noms et attendre. La collision d'ID que
-   PeerJS renvoie ("unavailable-id") est le signal qu'un salon est occupé.
+   8. SPARRING IA
+   ===================================================================== */
+const NAMES = ["SENTINELLE","VECTEUR","ATLAS-9","NOVA","BASTION","ORION","TITAN-4","KRONOS","ECHO-7","VULCAIN"];
+const Bot = {
+  active:false, score:0, target:0, timers:[], elo:1000, name:"", avatar:{t:"p", i:4},
+  configure(level="auto"){
+    let base = 11 + (profile.elo - 800)/34;
+    if(profile.best > 0) base = base*.55 + profile.best*.45;
+    const mult = level === "easy" ? .78 : level === "hard" ? 1.22 : 1;
+    this.target = clamp(Math.round(base * mult * (.93 + Math.random()*.14)), 5, 70);
+    this.elo = level === "auto" ? Math.round(profile.elo + (Math.random()*70 - 35))
+                                : Math.round(profile.elo * (level === "easy" ? .9 : level === "hard" ? 1.1 : 1));
+    this.name = NAMES[Math.floor(Math.random()*NAMES.length)] + "·IA";
+    this.avatar = { t:"p", i:Math.floor(Math.random()*AV.length) };
+    this.score = 0;
+    return this;
+  },
+  start(onScore){
+    this.active = true; this.score = 0; this.timers = [];
+    for(let i = 1; i <= this.target; i++){
+      const f = Math.pow(i/this.target, .78);                       // fatigue progressive
+      const t = clamp(f*(MATCH_SECONDS-1.2) + (Math.random()-.5)*.9, .8, MATCH_SECONDS-.3)*1000;
+      this.timers.push(setTimeout(() => { this.score = i; onScore(i); }, t));
+    }
+  },
+  stop(){ this.timers.forEach(clearTimeout); this.timers = []; this.active = false; }
+};
+
+/* =====================================================================
+   9. RÉSEAU — PeerJS
    ===================================================================== */
 const Net = {
-  peer:null, conn:null, isHost:false, searching:false, matched:false,
-  opponent:{ name:"ADVERSAIRE", elo:1000 }, ranked:true,
+  peer:null, conn:null, isHost:false, searching:false, matched:false, userCancel:false,
+  deadline:0, opponent:{ name:"ADVERSAIRE", elo:1000, avatar:{t:"p",i:1} },
   onData:null, onClose:null,
 
-  slot(bucket, i){ return `${NS}-b${bucket}-s${i}`; },
-  bucketOf(elo){ return Math.max(0, Math.floor(elo / BUCKET)); },
-
-  destroy(){
-    try{ this.conn?.close(); }catch{}
-    try{ this.peer?.destroy(); }catch{}
-    this.conn = null; this.peer = null;
+  slot(b,i){ return `${NS}-b${b}-s${i}`; },
+  bucketOf(elo){ return Math.max(0, Math.floor(elo/BUCKET)); },
+  wait(ms){ return new Promise(r => setTimeout(r, ms)); },
+  expired(){ return this.deadline > 0 && Date.now() > this.deadline; },
+  /* On n'envoie une photo que si elle est raisonnablement légère */
+  card(){
+    const av = account?.avatar;
+    return { name:account?.name || "JOUEUR", elo:profile.elo,
+             av:(av?.t === "img" && av.d.length > 30000) ? { t:"p", i:0 } : av };
   },
+  destroy(){ try{ this.conn?.close(); }catch{} try{ this.peer?.destroy(); }catch{} this.conn = null; this.peer = null; },
 
-  /* Crée un pair avec l'ID demandé (ou aléatoire). Résout null si l'ID est pris. */
   makePeer(id){
     return new Promise(resolve => {
       let done = false;
-      const p = id ? new Peer(id, { debug:0 }) : new Peer({ debug:0 });
-      const finish = v => { if(!done){ done = true; resolve(v); } };
-      p.on("open", () => finish(p));
+      const p = id ? new Peer(id, {debug:0}) : new Peer({debug:0});
+      const fin = v => { if(!done){ done = true; resolve(v); } };
+      p.on("open", () => fin(p));
       p.on("error", e => {
-        if(e.type === "unavailable-id" || e.type === "network" || e.type === "server-error"){
-          try{ p.destroy(); }catch{}
-          finish(null);
-        }
+        if(["unavailable-id","network","server-error","socket-error"].includes(e.type)){ try{ p.destroy(); }catch{} fin(null); }
       });
-      setTimeout(() => { if(!done){ try{ p.destroy(); }catch{} finish(null); } }, 9000);
+      setTimeout(() => { if(!done){ try{ p.destroy(); }catch{} fin(null); } }, 8000);
     });
   },
+  take(d){ this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000, avatar:d.av || {t:"p",i:1} }; },
 
-  /* Essaie de rejoindre un salon existant. */
   tryJoin(peer, target){
     return new Promise(resolve => {
       let done = false;
-      const finish = v => { if(!done){ done = true; cleanup(); resolve(v); } };
-      const conn = peer.connect(target, { reliable:true,
-        metadata:{ name:profile.name, elo:profile.elo } });
-
-      const onErr = e => { if(e.type === "peer-unavailable") finish(null); };
-      const cleanup = () => peer.off("error", onErr);
+      const onErr = e => { if(e.type === "peer-unavailable") fin(null); };
+      const fin = v => { if(!done){ done = true; peer.off("error", onErr); resolve(v); } };
       peer.on("error", onErr);
-
-      conn.on("open", () => {
-        // L'hôte répond "welcome" (libre) ou "busy" (déjà apparié)
-        conn.send({ t:"hello", name:profile.name, elo:profile.elo });
-      });
+      const conn = peer.connect(target, { reliable:true, metadata:{ name:account?.name, elo:profile.elo } });
+      conn.on("open", () => conn.send(Object.assign({t:"hello"}, this.card())));
       conn.on("data", d => {
-        if(d?.t === "welcome"){
-          this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000 };
-          finish(conn);
-        }else if(d?.t === "busy"){
-          try{ conn.close(); }catch{}
-          finish(null);
-        }
+        if(d?.t === "welcome"){ this.take(d); fin(conn); }
+        else if(d?.t === "busy"){ try{ conn.close(); }catch{} fin(null); }
       });
-      conn.on("error", () => finish(null));
-      setTimeout(() => { if(!done){ try{ conn.close(); }catch{} finish(null); } }, PROBE_MS);
+      conn.on("error", () => fin(null));
+      setTimeout(() => { if(!done){ try{ conn.close(); }catch{} fin(null); } }, PROBE_MS);
     });
   },
 
-  /* Réserve un salon libre et attend un adversaire. */
   hostAndWait(bucket, ms){
     return new Promise(async resolve => {
       let peer = null;
-      for(let i = 0; i < SLOTS && this.searching; i++){
+      for(let i = 0; i < SLOTS && this.searching && !this.expired(); i++){
         peer = await this.makePeer(this.slot(bucket, i));
         if(peer) break;
       }
-      if(!peer || !this.searching){ resolve(null); return; }
+      if(!peer || !this.searching || this.expired()){ try{ peer?.destroy(); }catch{} resolve(null); return; }
       this.peer = peer;
-
       let done = false;
-      const finish = v => { if(!done){ done = true; resolve(v); } };
-
+      const fin = v => { if(!done){ done = true; clearInterval(watch); resolve(v); } };
+      const watch = setInterval(() => {
+        if(!this.searching || this.expired()){ try{ peer.destroy(); }catch{} this.peer = null; fin(null); }
+      }, 300);
       peer.on("connection", conn => {
-        if(done){ conn.on("open", () => { conn.send({ t:"busy" }); setTimeout(()=>conn.close(),200); }); return; }
+        if(done){ conn.on("open", () => { conn.send({t:"busy"}); setTimeout(() => conn.close(), 200); }); return; }
         conn.on("data", d => {
           if(d?.t === "hello" && !done){
-            this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000 };
-            conn.send({ t:"welcome", name:profile.name, elo:profile.elo });
-            finish(conn);
+            this.take(d); conn.send(Object.assign({t:"welcome"}, this.card())); fin(conn);
           }
         });
       });
-      setTimeout(() => { if(!done){ try{ peer.destroy(); }catch{} this.peer = null; finish(null); } }, ms);
+      setTimeout(() => { if(!done){ try{ peer.destroy(); }catch{} this.peer = null; fin(null); } }, ms);
     });
   },
 
-  /* Boucle de matchmaking : palier exact, puis élargissement progressif. */
   async findMatch(log){
-    this.searching = true; this.matched = false; this.ranked = true;
+    this.searching = true; this.matched = false; this.userCancel = false;
+    this.deadline = Date.now() + QUEUE_MS;
     const myB = this.bucketOf(profile.elo);
     let widen = 0;
-
-    while(this.searching){
+    while(this.searching && !this.expired()){
       const buckets = [myB];
-      for(let d = 1; d <= widen; d++){ buckets.push(myB + d, myB - d); }
-      const range = (widen + 1) * BUCKET / 2;
-      log(`Palier ELO ±${Math.round(range)}`, `Analyse de ${buckets.length * SLOTS} salons…`);
+      for(let d = 1; d <= widen; d++) buckets.push(myB+d, myB-d);
+      const range = Math.round((widen+1)*BUCKET/2);
+      log(`ELO ±${range}`, `Analyse de ${buckets.length*SLOTS} salons…`);
 
-      // Phase 1 — chercher un hôte déjà en attente
       const probe = await this.makePeer(null);
-      if(!probe){ log("ELO ±?", "Signalisation indisponible. Nouvelle tentative…"); await this.wait(1500); continue; }
+      if(!probe){ log(`ELO ±${range}`, "Signalisation indisponible, nouvelle tentative…"); await this.wait(1200); continue; }
       this.peer = probe;
-
       for(const b of buckets){
         if(b < 0) continue;
         for(let i = 0; i < SLOTS; i++){
-          if(!this.searching){ this.destroy(); return null; }
-          const conn = await this.tryJoin(probe, this.slot(b, i));
-          if(conn){
-            this.conn = conn; this.isHost = false; this.matched = true;
-            this.bind(); return conn;
-          }
+          if(!this.searching || this.expired()){ this.destroy(); return null; }
+          const conn = await this.tryJoin(probe, this.slot(b,i));
+          if(conn){ this.conn = conn; this.isHost = false; this.matched = true; this.bind(); return conn; }
         }
       }
       try{ probe.destroy(); }catch{} this.peer = null;
-      if(!this.searching) return null;
+      if(!this.searching || this.expired()) return null;
 
-      // Phase 2 — devenir hôte et attendre
-      log(`Palier ELO ±${Math.round(range)}`, "Salon ouvert, en attente d'un adversaire…");
-      const hosted = await this.hostAndWait(myB, HOST_WAIT_MS + widen * 2000);
-      if(hosted){
-        this.conn = hosted; this.isHost = true; this.matched = true;
-        this.bind(); return hosted;
-      }
-      widen++;
-      if(widen > 6) widen = 6;
+      log(`ELO ±${range}`, "Salon ouvert, en attente d'un adversaire…");
+      const hosted = await this.hostAndWait(myB, HOST_WAIT_MS + widen*1500);
+      if(hosted){ this.conn = hosted; this.isHost = true; this.matched = true; this.bind(); return hosted; }
+      widen = Math.min(widen+1, 6);
     }
-    return null;
+    this.destroy(); return null;
   },
 
-  /* Salon privé par code. */
   async hostPrivate(code){
-    this.ranked = false;
     const peer = await this.makePeer(`${NS}-priv-${code}`);
     if(!peer) return null;
     this.peer = peer; this.isHost = true;
@@ -844,8 +1358,7 @@ const Net = {
       peer.on("connection", conn => {
         conn.on("data", d => {
           if(d?.t === "hello"){
-            this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000 };
-            conn.send({ t:"welcome", name:profile.name, elo:profile.elo });
+            this.take(d); conn.send(Object.assign({t:"welcome"}, this.card()));
             this.conn = conn; this.matched = true; this.bind(); resolve(conn);
           }
         });
@@ -853,7 +1366,6 @@ const Net = {
     });
   },
   async joinPrivate(code){
-    this.ranked = false;
     const peer = await this.makePeer(null);
     if(!peer) return null;
     this.peer = peer; this.isHost = false;
@@ -861,72 +1373,78 @@ const Net = {
     if(conn){ this.conn = conn; this.matched = true; this.bind(); }
     return conn;
   },
-
   bind(){
-    this.searching = false;
+    this.searching = false; this.deadline = 0;
     this.conn.on("data", d => this.onData && this.onData(d));
     this.conn.on("close", () => this.onClose && this.onClose());
     this.peer?.on("disconnected", () => { try{ this.peer.reconnect(); }catch{} });
   },
   send(o){ try{ if(this.conn?.open) this.conn.send(o); }catch{} },
-  wait(ms){ return new Promise(r => setTimeout(r, ms)); },
-  cancel(){ this.searching = false; this.destroy(); }
+  cancel(){ this.userCancel = true; this.searching = false; this.deadline = 0; this.destroy(); }
 };
 
 /* =====================================================================
-   6. BOUCLE DE MATCH
+   10. BOUCLE DE MATCH
    ===================================================================== */
 const Game = {
-  mode:"ranked",     // ranked | solo | private
-  myScore:0, opScore:0, opFinal:null, timeLeft:MATCH_SECONDS,
-  timer:null, running:false, startedAt:0,
+  mode:"ranked", myScore:0, opScore:0, opFinal:null, timeLeft:MATCH_SECONDS,
+  timer:null, running:false, startedAt:0, botLevel:"auto",
 
-  async enter(mode){
-    this.mode = mode;
-    this.myScore = 0; this.opScore = 0; this.opFinal = null;
-    this.timeLeft = MATCH_SECONDS; this.running = false;
-    Vision.reset();
+  async enter(mode, opts={}){
+    this.mode = mode; this.botLevel = opts.level || "auto";
+    this.myScore = 0; this.opScore = 0; this.opFinal = null; this.running = false;
+    Vision.reset(); Bot.stop();
+    const solo = mode === "solo";
+    if(mode === "bot"){ Bot.configure(this.botLevel); Net.opponent = { name:Bot.name, elo:Bot.elo, avatar:Bot.avatar }; }
 
-    $("#nameMe").textContent = (profile.name || "TOI").toUpperCase();
-    $("#nameOp").textContent = mode === "solo" ? "OBJECTIF" : (Net.opponent.name || "ADVERSAIRE").toUpperCase();
+    $("#avMe").innerHTML = avatarHTML(account?.avatar);
+    $("#avOp").innerHTML = solo ? "" : avatarHTML(Net.opponent.avatar);
+    $("#nameMe").textContent = (account?.name || "TOI").toUpperCase();
+    $("#nameOp").textContent = solo ? "OBJECTIF" : (Net.opponent.name || "ADVERSAIRE").toUpperCase();
     $("#scoreMe").textContent = "0"; $("#scoreOp").textContent = "0";
     $("#tug").style.width = "50%";
     $("#clock").textContent = this.fmt(MATCH_SECONDS);
     $("#clock").classList.remove("low");
-    $("#btnQuit").textContent = mode === "solo" ? "Terminer" : "Abandonner";
-    show("arena");
+    $("#btnQuit").textContent = solo ? "Terminer" : "Abandonner";
+    showView("arena");
 
     try{
-      $("#cdHint").textContent = "Chargement du modèle de détection…";
-      $("#cdNum").textContent = "…";
       $("#countdown").classList.add("on");
+      $("#cdNum").textContent = "…";
+      $("#cdHint").textContent = "Chargement du modèle de détection…";
+      $("#cdCal").textContent = "";
       await Vision.load();
       await Vision.startCamera();
       Vision.loop();
-    }catch(e){
+    }catch{
       $("#countdown").classList.remove("on");
-      toast("Caméra refusée ou indisponible");
-      show("home"); return;
+      Net.destroy(); Bot.stop(); toast("Caméra refusée ou indisponible"); showView("menu"); return;
     }
 
-    Vision.onRep = (event, reps) => this.onRep(event, reps);
-
-    // Synchronisation : l'hôte donne le départ, les deux comptent 5 s en local.
-    if(this.mode !== "solo" && Net.isHost) Net.send({ t:"go" });
+    Vision.onRep = (ev, reps) => this.onRep(ev, reps);
+    if(mode !== "solo" && mode !== "bot" && Net.isHost) Net.send({t:"go"});
     await this.countdown();
+    Vision.endCalibration();
     this.start();
   },
 
+  /* Le décompte sert aussi de calibration : on y mesure la position haute. */
   countdown(){
     return new Promise(resolve => {
-      const el = $("#cdNum"), box = $("#countdown");
+      const el = $("#cdNum"), box = $("#countdown"), cal = $("#cdCal");
       box.classList.add("on");
-      $("#cdHint").textContent = "Téléphone au sol, de profil. Position de planche, bras tendus.";
+      $("#cdHint").textContent = "Position de planche, bras tendus, sans bouger : c'est ta référence.";
+      Vision.beginCalibration();
+      const calTick = setInterval(() => {
+        cal.textContent = Vision.calibrated ? "Référence enregistrée ✓" : "Calibration de la position haute…";
+        cal.style.color = Vision.calibrated ? "var(--lime)" : "var(--gold)";
+      }, 200);
       let n = 5;
       const tick = () => {
         el.textContent = n > 0 ? String(n) : "GO";
         el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
-        if(n < 0){ box.classList.remove("on"); resolve(); return; }
+        if(navigator.vibrate) navigator.vibrate(n > 0 ? 18 : 60);
+        if(n < 0){ clearInterval(calTick); box.classList.remove("on"); resolve(); return; }
         n--; setTimeout(tick, 1000);
       };
       tick();
@@ -936,155 +1454,200 @@ const Game = {
   start(){
     this.running = true; Vision.active = true; this.startedAt = Date.now();
     $("#formMsg").textContent = "Go";
+    if(this.mode === "bot") Bot.start(v => this.setOpScore(v));
     this.timer = setInterval(() => {
-      this.timeLeft = Math.max(0, MATCH_SECONDS - Math.round((Date.now() - this.startedAt)/1000));
+      this.timeLeft = Math.max(0, MATCH_SECONDS - Math.round((Date.now()-this.startedAt)/1000));
       $("#clock").textContent = this.fmt(this.timeLeft);
       $("#clock").classList.toggle("low", this.timeLeft <= 10);
       if(this.timeLeft <= 0) this.finish();
     }, 250);
   },
 
-  onRep(event, reps){
+  onRep(ev, reps){
     const f = $("#flash");
-    f.style.background = event === "valid" ? "var(--cyan)" : "var(--red)";
+    f.style.background = ev === "valid" ? "var(--blue)" : "var(--red)";
     f.style.animation = "none"; void f.offsetWidth; f.style.animation = "fl .45s ease-out";
-    if(navigator.vibrate) navigator.vibrate(event === "valid" ? 30 : [20,40,20]);
-    if(event !== "valid") return;
-    this.myScore = reps;
-    $("#scoreMe").textContent = reps;
-    this.paintTug();
-    Net.send({ t:"score", v:reps });
+    if(navigator.vibrate) navigator.vibrate(ev === "valid" ? 30 : [20,40,20]);
+    if(ev !== "valid") return;
+    this.myScore = reps; $("#scoreMe").textContent = reps; this.paintTug();
+    if(this.mode === "ranked" || this.mode === "private") Net.send({t:"score", v:reps});
   },
-
-  setOpScore(v){
-    this.opScore = v; $("#scoreOp").textContent = v; this.paintTug();
-  },
-
+  setOpScore(v){ this.opScore = v; $("#scoreOp").textContent = v; this.paintTug(); },
   paintTug(){
     const tot = this.myScore + this.opScore;
-    const pct = tot === 0 ? 50 : (this.myScore / tot) * 100;
-    $("#tug").style.width = clamp(pct, 4, 96) + "%";
+    $("#tug").style.width = clamp(tot === 0 ? 50 : (this.myScore/tot)*100, 5, 95) + "%";
   },
-
   fmt(s){ return `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`; },
 
-  async finish(forfeitByOpponent=false){
+  async finish(forfeit=false){
     if(!this.running) return;
     this.running = false; Vision.active = false;
-    clearInterval(this.timer);
-    Vision.stop();
-
-    if(this.mode !== "solo"){
-      Net.send({ t:"final", v:this.myScore });
-      if(!forfeitByOpponent && this.opFinal === null){
-        // On laisse 4 s au pair pour envoyer son score final
-        $("#formMsg").textContent = "Score de l'adversaire…";
+    clearInterval(this.timer); Vision.stop(); Bot.stop();
+    if(this.mode === "ranked" || this.mode === "private"){
+      Net.send({t:"final", v:this.myScore});
+      if(!forfeit && this.opFinal === null){
+        $("#formMsg").textContent = "Score adverse…";
         const t0 = Date.now();
-        while(this.opFinal === null && Date.now() - t0 < 4000) await Net.wait(200);
+        while(this.opFinal === null && Date.now()-t0 < 4000) await Net.wait(200);
       }
     }
-    this.report(forfeitByOpponent);
+    this.report(forfeit);
   },
 
   async report(forfeit){
     const me = this.myScore;
-    const op = forfeit ? -1 : (this.opFinal ?? this.opScore);
+    const op = forfeit ? -1 : (this.mode === "bot" ? Bot.score : (this.opFinal ?? this.opScore));
     let delta = 0, outcome = "draw";
+    const scored = this.mode === "ranked" || this.mode === "bot";
 
     if(this.mode === "solo"){
       $("#resMode").textContent = "Entraînement";
-      outcome = "draw";
       $("#verdict").textContent = "SÉANCE TERMINÉE";
     }else{
-      outcome = forfeit ? "win" : (me > op ? "win" : me < op ? "loss" : "draw");
-      $("#resMode").textContent = this.mode === "ranked" ? "Duel classé" : "Duel privé";
+      outcome = forfeit ? "win" : me > op ? "win" : me < op ? "loss" : "draw";
+      $("#resMode").textContent = this.mode === "ranked" ? "Duel classé" : this.mode === "bot" ? "Sparring IA" : "Duel privé";
       $("#verdict").textContent = forfeit ? "VICTOIRE PAR FORFAIT"
         : outcome === "win" ? "VICTOIRE" : outcome === "loss" ? "DÉFAITE" : "ÉGALITÉ";
-
-      if(this.mode === "ranked"){
+      if(scored){
         const S = outcome === "win" ? 1 : outcome === "loss" ? 0 : .5;
-        const E = 1 / (1 + Math.pow(10, (Net.opponent.elo - profile.elo) / 400));
-        delta = Math.round(K_FACTOR * (S - E));
+        const E = 1/(1 + Math.pow(10, (Net.opponent.elo - profile.elo)/400));
+        delta = Math.round((this.mode === "bot" ? K_BOT : K_RANKED) * (S - E));
         profile.elo = Math.max(100, profile.elo + delta);
-        if(outcome === "win") profile.wins++;
-        if(outcome === "loss") profile.losses++;
+        if(outcome === "win"){ profile.wins++; profile.streak = Math.max(1, profile.streak+1); }
+        else if(outcome === "loss"){ profile.losses++; profile.streak = Math.min(-1, profile.streak-1); }
       }
     }
 
     if(me > profile.best) profile.best = me;
+    profile.totalReps += me;
+    profile.history = [{ at:Date.now(), m:this.mode, op:(this.mode === "solo" ? "SÉANCE LIBRE" : (Net.opponent.name||"ADVERSAIRE")).toUpperCase(),
+                         me, opS:this.mode === "solo" ? -1 : op, d:delta, r:outcome },
+                       ...(profile.history || [])].slice(0,20);
     await Store.set("profile", profile);
 
+    const r = rankOf(profile.elo);
     $("#verdict").className = "verdict " + outcome;
     $("#resMe").textContent = me;
-    $("#resOp").textContent = this.mode === "solo" ? "—" : (op < 0 ? "—" : op);
+    $("#resOp").textContent = (this.mode === "solo" || op < 0) ? "—" : op;
     $("#resElo").textContent = Math.round(profile.elo);
+    $("#resTier").textContent = `${r.tier.n} ${ROMAN[r.div]}`;
+    $("#resBadge").innerHTML = rankBadge(r.idx, r.div);
     const d = $("#resDelta");
     d.textContent = delta === 0 ? "±0" : (delta > 0 ? "+" : "") + delta;
-    d.className = "delta " + (delta > 0 ? "up" : delta < 0 ? "down" : "");
-    $("#resRefused").textContent = `${Vision.refused} répétition${Vision.refused > 1 ? "s" : ""} refusée${Vision.refused > 1 ? "s" : ""} pour forme incorrecte`;
-
-    Net.destroy();
-    paintHome();
-    show("result");
+    d.className = "delta " + (delta > 0 ? "up" : delta < 0 ? "down" : "flat");
+    $("#resRefused").textContent = `${Vision.refused} répétition${Vision.refused>1?"s":""} refusée${Vision.refused>1?"s":""} pour forme incorrecte`;
+    Net.destroy(); paintAll(); showView("result");
   },
 
   quit(){
-    if(this.mode === "solo"){ this.finish(); return; }
-    Net.send({ t:"quit" });
+    if(this.mode === "solo" || this.mode === "bot"){
+      this.running = false; Vision.active = false;
+      clearInterval(this.timer); Vision.stop(); Bot.stop();
+      paintAll(); showView("menu"); toast("Séance interrompue"); return;
+    }
+    Net.send({t:"quit"});
     this.running = false; Vision.active = false;
-    clearInterval(this.timer); Vision.stop(); Net.destroy();
+    clearInterval(this.timer); Vision.stop();
     if(this.mode === "ranked"){
-      // Un abandon coûte le maximum : on applique une défaite sèche
-      const E = 1 / (1 + Math.pow(10, (Net.opponent.elo - profile.elo) / 400));
-      profile.elo = Math.max(100, profile.elo + Math.round(K_FACTOR * (0 - E)));
-      profile.losses++;
+      const E = 1/(1 + Math.pow(10, (Net.opponent.elo - profile.elo)/400));
+      profile.elo = Math.max(100, profile.elo + Math.round(K_RANKED*(0-E)));
+      profile.losses++; profile.streak = Math.min(-1, profile.streak-1);
       Store.set("profile", profile);
     }
-    paintHome(); show("home");
-    toast("Duel abandonné");
+    Net.destroy(); paintAll(); showView("menu"); toast("Duel abandonné");
   }
 };
 
-/* ---- réception des messages du pair ---- */
 Net.onData = d => {
   if(!d) return;
   if(d.t === "score") Game.setOpScore(d.v);
   else if(d.t === "final"){ Game.opFinal = d.v; Game.setOpScore(d.v); }
   else if(d.t === "quit"){ if(Game.running) Game.finish(true); }
-  else if(d.t === "go" && !Game.running && !Net.isHost){ /* départ déjà géré localement */ }
 };
-Net.onClose = () => {
-  if(Game.running) Game.finish(true);
-};
+Net.onClose = () => { if(Game.running) Game.finish(true); };
 
 /* =====================================================================
-   7. ÉVÉNEMENTS D'INTERFACE
+   11. RECHERCHE + BASCULE IA
    ===================================================================== */
-$("#btnRules").onclick   = () => $("#sheetRules").classList.add("on");
-$("#btnPrivate").onclick = () => $("#sheetPrivate").classList.add("on");
-document.querySelectorAll("[data-close]").forEach(b =>
-  b.onclick = () => b.closest(".sheet").classList.remove("on"));
-
-$("#pseudo").onchange = async e => {
-  profile.name = (e.target.value || "").trim().toUpperCase().slice(0,12) || "JOUEUR";
-  e.target.value = profile.name;
-  await Store.set("profile", profile);
-};
-
-$("#btnSolo").onclick = () => Game.enter("solo");
-
-$("#btnRanked").onclick = async () => {
+let queueTimer = null;
+function startQueueUI(){
+  const t0 = Date.now();
+  $("#qArc").style.strokeDashoffset = "0";
+  clearInterval(queueTimer);
+  queueTimer = setInterval(() => {
+    const left = Math.max(0, QUEUE_MS - (Date.now()-t0));
+    $("#qTime").textContent = Math.ceil(left/1000);
+    $("#qArc").style.strokeDashoffset = String(703.7*(1 - left/QUEUE_MS));
+    if(left <= 0) clearInterval(queueTimer);
+  }, 100);
+}
+async function launchRanked(){
   if(!window.Peer){ toast("PeerJS n'a pas pu être chargé"); return; }
-  show("search");
-  const log = (a, b) => { $("#radarTxt").textContent = a; $("#searchLog").textContent = b; };
+  showView("search"); startQueueUI();
+  const log = (a,b) => { $("#qRange").textContent = a; $("#searchLog").textContent = b; };
   log("ELO ±50", "Ouverture du canal pair-à-pair…");
   const conn = await Net.findMatch(log);
-  if(!conn){ if(Net.searching === false && !Net.matched) return; return; }
-  toast(`Adversaire trouvé — ${Net.opponent.name} (${Math.round(Net.opponent.elo)})`);
-  Game.enter("ranked");
+  clearInterval(queueTimer);
+  if(Net.userCancel) return;
+  if(conn){
+    toast(`Adversaire trouvé — ${Net.opponent.name} (${Math.round(Net.opponent.elo)})`);
+    Game.enter("ranked");
+  }else{
+    $("#searchLog").textContent = "Aucun joueur disponible — sparring IA engagé.";
+    Bot.configure("auto"); toast(`${Bot.name} entre dans l'arène`);
+    await Net.wait(700); Game.enter("bot", { level:"auto" });
+  }
+}
+
+/* =====================================================================
+   12. ÉVÉNEMENTS
+   ===================================================================== */
+$("#btnNext").onclick = () => Gate.next();
+$("#btnBack").onclick = () => Gate.back();
+$$("#gate input").forEach(i => i.addEventListener("keydown", e => { if(e.key === "Enter") Gate.next(); }));
+$("#btnPhoto").onclick = () => $("#filePhoto").click();
+$("#filePhoto").onchange = async e => {
+  const f = e.target.files?.[0]; if(!f) return;
+  try{
+    Gate.draft.avatar = await fileToAvatar(f);
+    $("#avPreview").innerHTML = avatarHTML(Gate.draft.avatar);
+    $$(".avpick").forEach(x => x.classList.remove("on"));
+    Gate.ok("#errPhoto", "Photo enregistrée sur cet appareil.");
+  }catch{ Gate.err("#errPhoto", "Impossible de lire cette image."); }
+};
+$("#btnForget").onclick = async () => {
+  await Store.del("account"); await Store.del("profile"); await Session.close();
+  account = null; toast("Compte supprimé"); Gate.open("signup");
 };
 
-$("#btnCancel").onclick = () => { Net.cancel(); show("home"); };
+$$(".navbtn").forEach(b => b.onclick = () => { showTab(b.dataset.tab); if(navigator.vibrate) navigator.vibrate(8); });
+$$("[data-close]").forEach(b => b.onclick = () => b.closest(".sheet").classList.remove("on"));
+
+$("#pseudo").onchange = async e => {
+  const v = e.target.value.trim().toUpperCase().slice(0,12) || account.name;
+  account.name = v; await Store.set("account", account); paintAll(); toast("Pseudonyme enregistré");
+};
+$("#btnChangePhoto").onclick = () => $("#filePhoto2").click();
+$("#filePhoto2").onchange = async e => {
+  const f = e.target.files?.[0]; if(!f) return;
+  try{ account.avatar = await fileToAvatar(f); await Store.set("account", account); paintAll(); toast("Photo mise à jour"); }
+  catch{ toast("Impossible de lire cette image"); }
+};
+$("#btnCamFront").onclick = async () => { profile.facing = "user"; await Store.set("profile", profile); toast("Caméra avant"); };
+$("#btnCamBack").onclick  = async () => { profile.facing = "environment"; await Store.set("profile", profile); toast("Caméra arrière"); };
+$("#btnLogout").onclick = async () => { await Session.close(); toast("Déconnecté"); Gate.open("login"); };
+$("#btnReset").onclick = async () => {
+  profile = { elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:profile.facing, history:[] };
+  await Store.set("profile", profile); paintAll(); toast("Progression remise à zéro");
+};
+
+$("#btnRanked").onclick = launchRanked;
+$("#btnSolo").onclick   = () => Game.enter("solo");
+$("#btnSolo2").onclick  = () => Game.enter("solo");
+$$("[data-bot]").forEach(b => b.onclick = () => Game.enter("bot", { level:b.dataset.bot }));
+$("#btnPrivate").onclick = () => $("#sheetPrivate").classList.add("on");
+$("#btnCancel").onclick = () => { clearInterval(queueTimer); Net.cancel(); showView("menu"); };
+$("#btnBotNow").onclick = () => { clearInterval(queueTimer); Net.cancel(); Bot.configure("auto"); Game.enter("bot", { level:"auto" }); };
 
 $("#btnHost").onclick = async () => {
   const code = Math.random().toString(36).slice(2,7).toUpperCase();
@@ -1094,8 +1657,8 @@ $("#btnHost").onclick = async () => {
   else $("#privateInfo").textContent = "Impossible d'ouvrir le salon. Réessaie.";
 };
 $("#btnJoin").onclick = async () => {
-  const code = ($("#joinCode").value || "").trim().toUpperCase();
-  if(code.length < 4){ $("#privateInfo").textContent = "Entre le code à 5 caractères de l'hôte."; return; }
+  const code = $("#joinCode").value.trim().toUpperCase();
+  if(code.length < 4){ $("#privateInfo").textContent = "Saisis le code à 5 caractères de l'hôte."; return; }
   $("#privateInfo").textContent = "Connexion au salon…";
   const conn = await Net.joinPrivate(code);
   if(conn){ $("#sheetPrivate").classList.remove("on"); Game.enter("private"); }
@@ -1104,25 +1667,29 @@ $("#btnJoin").onclick = async () => {
 
 $("#btnSwitchCam").onclick = () => Vision.switchCamera();
 $("#btnQuit").onclick = () => Game.quit();
-$("#btnAgain").onclick = () => { Net.destroy(); $("#btnRanked").click(); };
-$("#btnHome").onclick = () => { Net.destroy(); show("home"); };
-
-// Sécurité : couper la caméra si l'onglet passe en arrière-plan hors match
-document.addEventListener("visibilitychange", () => {
-  if(document.hidden && !Game.running) Vision.stop();
-});
+$("#btnAgain").onclick = () => {
+  Net.destroy();
+  if(Game.mode === "solo") Game.enter("solo");
+  else if(Game.mode === "bot") Game.enter("bot", { level:Game.botLevel });
+  else launchRanked();
+};
+$("#btnHome").onclick = () => { Net.destroy(); showView("menu"); showTab("tab-duel"); };
+document.addEventListener("visibilitychange", () => { if(document.hidden && !Game.running) Vision.stop(); });
 
 /* =====================================================================
-   8. DÉMARRAGE
+   13. DÉMARRAGE — compte, session, puis menu
    ===================================================================== */
 (async function boot(){
-  profile = await Store.get("profile", profile);
-  if(!profile.name){
-    profile.name = "JOUEUR" + Math.floor(Math.random()*900+100);
-    await Store.set("profile", profile);
+  account = await Store.get("account", null);
+  profile = Object.assign({ elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:"user", history:[] },
+                          await Store.get("profile", {}));
+  if(!account){ Gate.open("signup"); return; }               // première ouverture
+  const s = await Session.read();
+  if(s && s.mail === account.mail){                          // session retrouvée
+    paintAll(); showView("menu"); showTab("tab-duel");
+  }else{
+    Gate.open("login");                                      // compte connu, session fermée
   }
-  paintHome();
-  $("#netState").textContent = window.Peer ? "signalisation prête" : "hors ligne";
 })();
 </script>
 </body>
