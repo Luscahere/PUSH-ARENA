@@ -283,7 +283,8 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
 .depth>span{position:absolute;left:0;right:0;bottom:0;height:0%;
   background:linear-gradient(180deg,#9BE1FF,var(--blue));transition:height .08s linear,background .2s}
 .depth.bad>span{background:linear-gradient(180deg,#FF9A9A,var(--red))}
-.depth::after{content:'';position:absolute;left:-3px;right:-3px;bottom:70%;height:3px;
+.depth.hit>span{background:linear-gradient(180deg,#D8FFAE,var(--lime))}
+.depth::after{content:'';position:absolute;left:-3px;right:-3px;bottom:55%;height:3px;
   background:var(--lime);box-shadow:0 0 10px var(--lime)}
 .formmsg{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 96px);z-index:3;text-align:center;
   font-family:'Saira Condensed';font-weight:900;font-size:15px;letter-spacing:.16em;text-transform:uppercase;
@@ -506,10 +507,11 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
       <div class="plate">
         <div class="eyebrow">Ce qui valide une répétition</div>
         <div style="margin-top:10px">
-          <div class="rule"><div class="num">01</div><p><b>Descente.</b> La poitrine descend jusqu'au repère vert de la jauge, soit environ 90° de coude.</p></div>
-          <div class="rule"><div class="num">02</div><p><b>Remontée.</b> Bras tendus, retour à la position de départ mesurée pendant le décompte.</p></div>
-          <div class="rule"><div class="num">03</div><p><b>Alignement.</b> Épaules, hanches et genoux tenus. Le squelette passe au rouge dès que le corps casse.</p></div>
-          <div class="rule"><div class="num">04</div><p><b>Tempo.</b> Une répétition bouclée en moins de 0,45 s est ignorée.</p></div>
+          <div class="rule"><div class="num">01</div><p><b>Descente.</b> La jauge doit franchir le repère vert, soit environ 105° de coude. Inutile de coller la poitrine au sol : le seuil est atteint avant, et descendre plus bas ne rapporte rien de plus.</p></div>
+          <div class="rule"><div class="num">02</div><p><b>Amplitude.</b> L'écart entre ton point haut et ton point bas doit être réel. Une oscillation autour du repère ne compte pas.</p></div>
+          <div class="rule"><div class="num">03</div><p><b>Remontée.</b> Bras tendus, retour à la position de départ mesurée pendant le décompte.</p></div>
+          <div class="rule"><div class="num">04</div><p><b>Alignement.</b> Épaules, hanches et genoux tenus. Le squelette passe au rouge dès que le corps casse.</p></div>
+          <div class="rule"><div class="num">05</div><p><b>Tempo.</b> Une répétition bouclée en moins de 0,45 s est ignorée.</p></div>
         </div>
       </div>
       <div class="plate">
@@ -644,10 +646,19 @@ const PROBE_MS = 2000, HOST_WAIT_MS = 5000, QUEUE_MS = 40000;
 const MATCH_SECONDS = 60, K_RANKED = 32, K_BOT = 16;
 
 /* Seuils du détecteur — exprimés sur l'extension normalisée (1 = bras tendus) */
-const EXT_DOWN = .30;     // équivaut à ~90° de coude
-const EXT_UP   = .86;     // retour bras tendus
+/* Seuils du détecteur — exprimés sur l'extension normalisée (1 = bras tendus)
+   EXT_DOWN est volontairement intermédiaire (~105° de coude) : le suivi se
+   dégrade quand la poitrine touche le sol (bras masqués par le buste, points
+   confondus), donc on valide AVANT cette zone. Pour que ce seuil plus doux ne
+   laisse pas passer de fausses répétitions, on exige en plus une amplitude
+   réellement parcourue (MIN_RANGE) entre le point haut et le point bas. */
+const EXT_DOWN  = .45;    // profondeur validante ≈ 105° de coude
+const EXT_UP    = .84;    // retour bras tendus
+const MIN_RANGE = .34;    // course minimale haut → bas sur une même répétition
 const ANGLE_BODY = 155;   // alignement épaule-hanche-genou (vue de profil)
-const MIN_REP_MS = 450, MIN_VIS = .5;
+const MIN_REP_MS = 450;   // tempo minimal
+const MIN_VIS    = .40;   // tolérance de visibilité (on accepte une perte partielle en bas)
+const TRUST_VIS  = .55;   // au-dessus : mesure jugée fiable (fautes de forme, remontée)
 
 const TIERS = [
   { n:"BRONZE",               min:0,    gem:"#D98A45", dark:"#5E2F0E", metal:"#8A5A34" },
@@ -1005,7 +1016,8 @@ function paintHistory(){
    ===================================================================== */
 const Vision = {
   landmarker:null, stream:null, running:false, lastVideoTime:-1, raf:0,
-  reps:0, refused:0, phase:"up", depthReached:false, formBroken:false, repStart:0,
+  reps:0, refused:0, phase:"up", formBroken:false, repStart:0,
+  extTop:1, extMin:1, upFrames:0, lost:0, descentAt:0, flash:null,
   active:false, onRep:null,
   sE:1, sV:1, ext:1, frontality:0,                  // signaux lissés
   base:{ span:0, hip:0, n:0 }, calibrating:false, calibrated:false,
@@ -1041,12 +1053,15 @@ const Vision = {
   },
 
   reset(){
-    this.reps = 0; this.refused = 0; this.phase = "up";
-    this.depthReached = false; this.formBroken = false;
+    this.reps = 0; this.refused = 0; this.phase = "up"; this.formBroken = false;
+    this.extTop = 1; this.extMin = 1; this.upFrames = 0; this.lost = 0;
+    this.descentAt = 0; this.flash = null;
     this.sE = this.sV = this.ext = 1; this.frontality = 0;
     this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = false;
     this.active = false;
   },
+  /* Message court affiché par-dessus le retour permanent (motif d'un refus) */
+  flashMsg(txt, ms=1300){ this.flash = { txt, until:performance.now() + ms }; },
   beginCalibration(){ this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = true; },
   endCalibration(){ this.calibrating = false; },
   stop(){
@@ -1092,7 +1107,19 @@ const Vision = {
     const vis = i => lm[i]?.visibility ?? 0;
     const lV = (vis(11)+vis(13)+vis(15)+vis(23))/4;
     const rV = (vis(12)+vis(14)+vis(16)+vis(24))/4;
-    if(Math.max(lV,rV) < MIN_VIS) return { ok:false, msg:"Cadre tout ton corps", depth:0 };
+    const q  = Math.max(lV, rV);
+
+    /* Suivi dégradé — typiquement en bas du mouvement, bras masqués par le
+       buste. On GÈLE l'état plutôt que de le perdre : une descente déjà
+       validée le reste, et la répétition pourra se boucler à la remontée. */
+    if(q < MIN_VIS){
+      this.lost++;
+      const held = this.active && this.phase === "down";
+      return { ok:false, held, depth:clamp(1 - this.ext, 0, 1),
+               msg:held ? "Position basse tenue — remonte" : "Cadre tout ton corps" };
+    }
+    this.lost = 0;
+    const trust = q > TRUST_VIS;          // mesure assez sûre pour juger la forme
     const L = lV >= rV;
     const S=L?11:12, E=L?13:14, W=L?15:16, H=L?23:24, K=L?25:26;
 
@@ -1121,12 +1148,12 @@ const Vision = {
 
     /* --- signaux --- */
     const sE = clamp((elbowNow - 55) / (170 - 55), 0, 1);
-    this.sE += (sE - this.sE) * .45;
+    this.sE += (sE - this.sE) * .55;   // alpha relevé : moins de retard sur une descente rapide
     let sV = 1;
     if(this.calibrated && this.base.span > .05){
       // 1 = position haute mesurée ; 0 = poitrine au sol
       sV = clamp((spanN / this.base.span - .18) / (1 - .18), 0, 1.1);
-      this.sV += (sV - this.sV) * .40;
+      this.sV += (sV - this.sV) * .50;
     }else this.sV = this.sE;
 
     // Fusion : plus la vue est frontale, plus la course verticale prime
@@ -1143,21 +1170,46 @@ const Vision = {
       aligned = Math.abs(hipN - this.base.hip) < .38;
     }else alignCheck = false;
 
-    /* --- machine à états --- */
+    /* --- machine à états ---
+       Valider ne repose plus sur un point bas absolu mais sur la COURSE
+       réellement parcourue : on retient l'extension au point haut, la plus
+       basse atteinte, et on compare l'écart à MIN_RANGE. Un simple
+       tremblement autour du seuil ne peut donc pas produire de répétition. */
     const now = performance.now();
     let event = null;
     if(this.active){
-      if(!aligned && this.phase === "down") this.formBroken = true;
-      if(this.phase === "up" && this.ext < EXT_DOWN){
-        this.phase = "down"; this.repStart = now;
-        this.depthReached = true; this.formBroken = !aligned;
-      }else if(this.phase === "down" && this.ext > EXT_UP){
-        this.phase = "up";
-        const fast = now - this.repStart < MIN_REP_MS;
-        if(this.depthReached && !this.formBroken && !fast){ this.reps++; event = "valid"; }
-        else { this.refused++; event = "refused"; }
-        this.depthReached = false; this.formBroken = false;
-        if(this.onRep) this.onRep(event, this.reps);
+      if(this.phase === "up"){
+        if(this.ext > this.extTop) this.extTop = this.ext;      // point haut de référence
+        // Départ du mouvement : c'est de là qu'on mesure le tempo, sinon un
+        // seuil plus haut raccourcirait artificiellement la durée mesurée
+        if(this.ext < EXT_UP && !this.descentAt) this.descentAt = now;
+        if(this.ext > EXT_UP) this.descentAt = 0;
+        if(this.ext < EXT_DOWN){
+          this.phase = "down"; this.repStart = this.descentAt || now;
+          this.extMin = this.ext; this.upFrames = 0;
+          this.formBroken = trust ? !aligned : false;
+        }
+      }else{
+        this.extMin = Math.min(this.extMin, this.ext);
+        if(trust && !aligned) this.formBroken = true;
+        if(this.ext > EXT_UP){
+          // deux images consécutives : évite qu'une saccade de reprise de
+          // suivi ne clôture la répétition trop tôt
+          if(++this.upFrames >= 2){
+            const range = this.extTop - this.extMin;
+            const fast  = now - this.repStart < MIN_REP_MS;
+            if(range >= MIN_RANGE && !this.formBroken && !fast){
+              this.reps++; event = "valid";
+            }else{
+              this.refused++; event = "refused";
+              this.flashMsg(range < MIN_RANGE ? "Amplitude insuffisante"
+                          : fast ? "Trop rapide" : "Forme incorrecte");
+            }
+            this.phase = "up"; this.formBroken = false;
+            this.extTop = this.ext; this.upFrames = 0; this.descentAt = 0;
+            if(this.onRep) this.onRep(event, this.reps);
+          }
+        }else this.upFrames = 0;
       }
       // Recalage permanent : chaque passage bras tendus rafraîchit la référence
       if(this.phase === "up" && this.sE > .92 && spanN > .2){
@@ -1167,13 +1219,14 @@ const Vision = {
       }
     }
 
+    const hit = depth >= 1 - EXT_DOWN;      // seuil de validation franchi
     let msg = "Bras tendus, prêt";
     if(!alignCheck) msg = "Position détectée";
     else if(!aligned) msg = this.frontality > .55 ? "Bassin décalé" : "Aligne épaules, hanches, genoux";
-    else if(this.phase === "down") msg = this.formBroken ? "Corps cassé — refusée" : "Descente valide";
-    else if(depth > .12) msg = "Descends plus bas";
+    else if(this.phase === "down") msg = this.formBroken ? "Corps cassé — refusée" : "Profondeur atteinte — remonte";
+    else if(depth > .12) msg = "Encore un peu plus bas";
 
-    return { ok:true, aligned, depth, msg, event, front:this.frontality, calibrated:this.calibrated };
+    return { ok:true, aligned, depth, hit, msg, event, front:this.frontality, calibrated:this.calibrated };
   },
 
   draw(ctx, lm, w, h, st){
@@ -1196,17 +1249,22 @@ const Vision = {
 
   hud(st){
     const f = $("#formMsg"), g = $("#depthGauge"), v = $("#viewTag");
-    f.textContent = st.msg || "";
-    f.classList.toggle("bad", st.ok === true && st.aligned === false);
-    f.classList.toggle("ok",  st.ok === true && st.aligned === true && (st.depth||0) > .5);
+    const flashing = this.flash && performance.now() < this.flash.until;
+    f.textContent = flashing ? this.flash.txt : (st.msg || "");
+    f.classList.toggle("bad", flashing || (st.ok === true && st.aligned === false));
+    f.classList.toggle("ok",  !flashing && st.ok === true && st.aligned === true && st.hit === true);
     $("#depthFill").style.height = ((st.depth||0)*100).toFixed(0) + "%";
     g.classList.toggle("bad", st.ok === true && st.aligned === false);
+    g.classList.toggle("hit", st.hit === true || st.held === true);
     if(st.ok){
       const face = st.front > .55;
       v.innerHTML = st.calibrated
         ? `Vue <b>${face ? "de face" : "de profil"}</b> · référence calée`
         : `Vue <b>${face ? "de face" : "de profil"}</b> · calibration en cours`;
       v.classList.toggle("calib", !st.calibrated);
+    }else if(st.held){
+      v.innerHTML = `Suivi partiel · <b>descente acquise</b>`;   // l'état est gelé, rien n'est perdu
+      v.classList.remove("calib");
     }else{ v.textContent = "Corps hors cadre"; v.classList.add("calib"); }
   }
 };
