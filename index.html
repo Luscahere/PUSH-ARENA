@@ -12,7 +12,7 @@
      - Vision : MediaPipe Tasks Vision (PoseLandmarker lite, GPU)
        → fusion angle de coude + course verticale, calibrée au démarrage,
          pour compter aussi bien de profil que de FACE
-     - Réseau : WebRTC via PeerJS ; repli sparring IA après 40 s
+     - Réseau : WebRTC via PeerJS ; adversaire de remplissage après 40 s
      ================================================================= -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -284,7 +284,7 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
   background:linear-gradient(180deg,#9BE1FF,var(--blue));transition:height .08s linear,background .2s}
 .depth.bad>span{background:linear-gradient(180deg,#FF9A9A,var(--red))}
 .depth.hit>span{background:linear-gradient(180deg,#D8FFAE,var(--lime))}
-.depth::after{content:'';position:absolute;left:-3px;right:-3px;bottom:48%;height:3px;
+.depth::after{content:'';position:absolute;left:-3px;right:-3px;bottom:32%;height:3px;
   background:var(--lime);box-shadow:0 0 10px var(--lime)}
 .formmsg{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 96px);z-index:3;text-align:center;
   font-family:'Saira Condensed';font-weight:900;font-size:15px;letter-spacing:.16em;text-transform:uppercase;
@@ -486,8 +486,8 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
       <div class="plate" style="display:flex;gap:10px;align-items:center">
         <div style="font-size:26px">⚡</div>
         <div style="flex:1">
-          <div class="disp" style="font-size:15px">File d'attente courte</div>
-          <div style="font-size:12px;color:var(--dim);line-height:1.4">Sans adversaire humain au bout de 40 s, un sparring-partner IA calibré sur ton Elo prend le relais.</div>
+          <div class="disp" style="font-size:15px">Appariement rapide</div>
+          <div style="font-size:12px;color:var(--dim);line-height:1.4">La file cherche d'abord ton palier d'Elo, puis élargit toutes les six secondes.</div>
         </div>
       </div>
     </section>
@@ -496,8 +496,8 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
     <section class="tab" id="tab-drill">
       <button class="btn" id="btnSolo2">Séance libre · 60 s</button>
       <div class="plate">
-        <div class="eyebrow">Sparring IA</div>
-        <p style="font-size:13px;color:#C6D4E6;line-height:1.5;margin:8px 0 12px">Choisis toi-même l'intensité du partenaire virtuel. Sans effet sur l'Elo.</p>
+        <div class="eyebrow">Partenaire d'entraînement</div>
+        <p style="font-size:13px;color:#C6D4E6;line-height:1.5;margin:8px 0 12px">Règle toi-même l'intensité de l'opposition. Sans effet sur l'Elo.</p>
         <div class="quick" style="grid-template-columns:repeat(3,1fr)">
           <button class="btn steel sm" data-bot="easy">Souple</button>
           <button class="btn steel sm" data-bot="fair">Égal</button>
@@ -563,12 +563,12 @@ h1,h2,h3,.disp{font-family:'Saira Condensed',sans-serif;font-weight:900;text-tra
     <div class="core">
       <div class="t" id="qRange">ELO ±50</div>
       <div class="c mono" id="qTime">40</div>
-      <div class="s">avant sparring IA</div>
+      <div class="s">élargissement de la file</div>
     </div>
   </div>
   <div id="searchLog">Ouverture du canal pair-à-pair…</div>
   <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
-    <button class="btn gold sm" id="btnBotNow">Affronter l'IA maintenant</button>
+    <button class="btn gold sm" id="btnBotNow">Lancer sans attendre</button>
     <button class="btn steel sm" id="btnCancel">Annuler</button>
   </div>
 </section>
@@ -648,23 +648,34 @@ import { FilesetResolver, PoseLandmarker } from "https://cdn.jsdelivr.net/npm/@m
    ===================================================================== */
 const NS = "pushduel-v3", SLOTS = 6, BUCKET = 100;
 const PROBE_MS = 2000, HOST_WAIT_MS = 5000, QUEUE_MS = 40000;
-const MATCH_SECONDS = 60, K_RANKED = 32, K_BOT = 16;
+const MATCH_SECONDS = 60, K_RANKED = 32;
 
 /* Seuils du détecteur — exprimés sur l'extension normalisée (1 = bras tendus) */
-/* Seuils du détecteur — exprimés sur l'extension normalisée (1 = bras tendus)
-   EXT_DOWN est volontairement intermédiaire (~105° de coude) : le suivi se
-   dégrade quand la poitrine touche le sol (bras masqués par le buste, points
-   confondus), donc on valide AVANT cette zone. Pour que ce seuil plus doux ne
-   laisse pas passer de fausses répétitions, on exige en plus une amplitude
-   réellement parcourue (MIN_RANGE) entre le point haut et le point bas. */
-const EXT_DOWN  = .52;    // déclenche sur une descente réelle de 50 % (marge de 2 points
-                          // pour absorber le retard résiduel du filtre)
-const EXT_UP    = .84;    // retour bras tendus
-const MIN_RANGE = .38;    // course minimale haut → bas sur une même répétition
-const ANGLE_BODY = 155;   // alignement épaule-hanche-genou (vue de profil)
-const MIN_REP_MS = 450;   // tempo minimal
-const MIN_VIS    = .40;   // tolérance de visibilité (on accepte une perte partielle en bas)
-const TRUST_VIS  = .55;   // au-dessus : mesure jugée fiable (fautes de forme, remontée)
+/* Seuils du détecteur — sur l'extension normalisée (1 = bras tendus, 0 = sol).
+   La répétition est comptée DÈS le franchissement vers le bas, sans attendre
+   la remontée : c'est la phase où le suivi est le plus fiable, et le retour
+   immédiat est aussi bien plus satisfaisant à l'usage. Le garde-fou n'est plus
+   une amplitude mesurée après coup mais le réarmement : il faut être remonté
+   près de son propre point haut pour qu'une nouvelle répétition puisse compter. */
+/* Seuils du détecteur — sur l'extension normalisée (1 = bras tendus, 0 = sol).
+   La répétition est comptée DÈS le franchissement vers le bas.
+
+   Point clé de fiabilité : les seuils ne sont plus des valeurs absolues mais
+   des FRACTIONS de l'amplitude réellement observée chez ce joueur. Selon la
+   morphologie, l'angle de caméra et la qualité de la calibration, un même
+   mouvement complet peut faire varier le signal de 0,80 comme de seulement
+   0,25. Un seuil absolu comptait tout dans le premier cas et rien — ou une
+   fois sur deux — dans le second. En mesurant en continu le point haut ET le
+   point bas du joueur, le seuil se règle tout seul sur sa course réelle. */
+const DROP_F     = .32;   // descendre 32 % de SA course suffit : très accessible
+const ARM_F      = .16;   // remonter au-dessus de 16 % réarme la répétition suivante
+const MIN_DROP   = .09;   // plancher absolu : le bruit de mesure ne peut pas l'atteindre
+const EXT_DOWN   = .70;   // filet de sécurité absolu, si la course n'est pas encore connue
+const RANGE_INIT = .45;   // course supposée tant que le joueur n'a pas fait sa 1re descente
+const MIN_GAP_MS = 380;   // intervalle minimal entre deux répétitions comptées
+const ANGLE_BODY = 150;   // alignement épaule-hanche-genou (tolérance élargie)
+const MIN_VIS    = .25;   // visibilité minimale : très permissif, un bras masqué reste suivi
+const TRUST_VIS  = .55;   // au-dessus : mesure jugée fiable (verdict de forme)
 
 const TIERS = [
   { n:"BRONZE",               min:0,    gem:"#D98A45", dark:"#5E2F0E", metal:"#8A5A34" },
@@ -998,7 +1009,8 @@ function paintHistory(){
     const cls = x.r === "win" ? "w" : x.r === "loss" ? "l" : "d";
     const ltr = x.r === "win" ? "V" : x.r === "loss" ? "D" : "N";
     const dcl = x.d > 0 ? "up" : x.d < 0 ? "down" : "flat";
-    const mode = x.m === "ranked" ? "Classé" : x.m === "bot" ? "Sparring IA" : x.m === "private" ? "Privé" : "Entraînement";
+    const mode = x.m === "ranked" || (x.m === "bot" && x.k) ? "Classé"
+                 : x.m === "private" ? "Privé" : "Entraînement";
     return `<div class="hrow"><div class="res ${cls}">${ltr}</div>
       <div class="mid"><div class="a">${x.op}</div><div class="b">${mode} · ${new Date(x.at).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</div></div>
       <div class="sc mono">${x.me}<span style="color:var(--dim)">–</span>${x.opS<0?"—":x.opS}</div>
@@ -1022,8 +1034,8 @@ function paintHistory(){
    ===================================================================== */
 const Vision = {
   landmarker:null, stream:null, running:false, lastVideoTime:-1, raf:0,
-  reps:0, refused:0, phase:"up", formBroken:false, repStart:0,
-  extTop:1, extMin:1, upFrames:0, lost:0, descentAt:0, flash:null,
+  reps:0, refused:0, phase:"up",
+  topRef:1, botRef:.55, armed:true, lastRepAt:0, lost:0, flash:null,
   torsoRef:0, side:null,
   active:false, onRep:null,
   sE:1, sV:1, ext:1, frontality:0,                  // signaux lissés
@@ -1064,9 +1076,10 @@ const Vision = {
   },
 
   reset(){
-    this.reps = 0; this.refused = 0; this.phase = "up"; this.formBroken = false;
-    this.extTop = 1; this.extMin = 1; this.upFrames = 0; this.lost = 0;
-    this.descentAt = 0; this.flash = null; this.torsoRef = 0; this.side = null;
+    this.reps = 0; this.refused = 0; this.phase = "up";
+    this.topRef = 1; this.botRef = 1 - RANGE_INIT; this.armed = true;
+    this.lastRepAt = 0; this.lost = 0;
+    this.flash = null; this.torsoRef = 0; this.side = null;
     this.sE = this.sV = this.ext = 1; this.frontality = 0;
     this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = false;
     this.active = false;
@@ -1074,6 +1087,13 @@ const Vision = {
   /* Message court affiché par-dessus le retour permanent (motif d'un refus) */
   flashMsg(txt, ms=1300){ this.flash = { txt, until:performance.now() + ms }; },
   beginCalibration(){ this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = true; },
+  /* Appelé au coup d'envoi : les références partent de ce que la caméra voit
+     RÉELLEMENT en position de planche, et non d'un 1 théorique jamais atteint. */
+  anchor(){
+    this.topRef = clamp(this.ext, .4, 1);
+    this.botRef = this.topRef - RANGE_INIT;
+    this.armed = true; this.lastRepAt = 0;
+  },
   endCalibration(){ this.calibrating = false; },
   stop(){
     this.running = false; cancelAnimationFrame(this.raf);
@@ -1137,7 +1157,7 @@ const Vision = {
       this.lost++;
       const held = this.active && this.phase === "down";
       return { ok:false, held, depth:clamp(1 - this.ext, 0, 1),
-               msg:held ? "Position basse tenue — remonte" : "Cadre épaules, bras et bassin" };
+               msg:held ? "Comptée — remonte" : "Cadre épaules, bras et bassin" };
     }
     this.lost = 0;
     const trust = q > TRUST_VIS;          // mesure assez sûre pour juger la forme
@@ -1178,12 +1198,6 @@ const Vision = {
     const eR = this.angle(wl[12], wl[14], wl[16]);
     const wL = armL + .01, wR = armR + .01;
     const elbowNow = (eL*wL + eR*wR) / (wL + wR);
-    if(this.calibrating && elbowNow > 150 && spanN > .2){
-      this.base.n++;
-      this.base.span += (spanN - this.base.span) / this.base.n;   // moyenne courante
-      this.base.hip  += (hipN  - this.base.hip ) / this.base.n;
-      if(this.base.n >= 8) this.calibrated = true;
-    }
 
     /* --- signaux ---
        Filtre asymétrique : attaque rapide en descente (on doit capter
@@ -1213,63 +1227,72 @@ const Vision = {
       aligned = Math.abs(hipN - this.base.hip) < .38;
     }else alignCheck = false;                                      // bassin non vu → pas de verdict
 
-    /* --- machine à états ---
-       Valider ne repose plus sur un point bas absolu mais sur la COURSE
-       réellement parcourue : on retient l'extension au point haut, la plus
-       basse atteinte, et on compare l'écart à MIN_RANGE. Un simple
-       tremblement autour du seuil ne peut donc pas produire de répétition. */
+    /* --- machine à états — seuils relatifs à la course du joueur ---
+       Trois défauts causaient les manqués :
+       1. le point haut était initialisé à 1 (bras tendus debout) alors qu'en
+          planche il se lit souvent 0,85. Le réarmement, calé sur ce 1, n'était
+          jamais atteint : une répétition sur deux disparaissait ;
+       2. le seuil de descente était absolu, donc inatteignable dès que la
+          perspective écrasait l'amplitude du signal ;
+       3. le point haut ne redescendait qu'à 0,0001 par image, soit une minute
+          pour se corriger d'une erreur de départ.
+       Désormais le point haut ET le point bas sont suivis en continu, et les
+       deux seuils sont des fractions de l'écart entre les deux. */
     const now = performance.now();
     let event = null;
+
+    // Point haut : monte vite, fuit assez vite pour se corriger en ~4 s
+    if(this.ext > this.topRef) this.topRef += (this.ext - this.topRef) * .40;
+    else this.topRef = Math.max(.35, this.topRef - .0016);
+    // Point bas : descend vite, remonte très lentement (garde la mémoire du creux)
+    if(this.ext < this.botRef) this.botRef += (this.ext - this.botRef) * .40;
+    else this.botRef = Math.min(this.topRef - .05, this.botRef + .00012);
+
+    const range   = Math.max(.12, this.topRef - this.botRef);   // course observée
+    const countAt = Math.min(this.topRef - MIN_DROP,            // plancher anti-bruit
+                      Math.max(EXT_DOWN, this.topRef - DROP_F * range));
+    const armAt   = this.topRef - ARM_F * range;                // toujours > countAt
+
     if(this.active){
-      if(this.phase === "up"){
-        if(this.ext > this.extTop) this.extTop = this.ext;      // point haut de référence
-        // Départ du mouvement : c'est de là qu'on mesure le tempo, sinon un
-        // seuil plus haut raccourcirait artificiellement la durée mesurée
-        if(this.ext < EXT_UP && !this.descentAt) this.descentAt = now;
-        if(this.ext > EXT_UP) this.descentAt = 0;
-        if(this.ext < EXT_DOWN){
-          this.phase = "down"; this.repStart = this.descentAt || now;
-          this.extMin = this.ext; this.upFrames = 0;
-          this.formBroken = trust ? !aligned : false;
-        }
-      }else{
-        this.extMin = Math.min(this.extMin, this.ext);
-        if(trust && !aligned) this.formBroken = true;
-        if(this.ext > EXT_UP){
-          // deux images consécutives : évite qu'une saccade de reprise de
-          // suivi ne clôture la répétition trop tôt
-          if(++this.upFrames >= 2){
-            const range = this.extTop - this.extMin;
-            const fast  = now - this.repStart < MIN_REP_MS;
-            if(range >= MIN_RANGE && !this.formBroken && !fast){
-              this.reps++; event = "valid";
-            }else{
-              this.refused++; event = "refused";
-              this.flashMsg(range < MIN_RANGE ? "Amplitude insuffisante"
-                          : fast ? "Trop rapide" : "Forme incorrecte");
-            }
-            this.phase = "up"; this.formBroken = false;
-            this.extTop = this.ext; this.upFrames = 0; this.descentAt = 0;
-            if(this.onRep) this.onRep(event, this.reps);
-          }
-        }else this.upFrames = 0;
+      if(this.armed && this.ext < countAt && now - this.lastRepAt > MIN_GAP_MS){
+        // COMPTAGE IMMÉDIAT : une seule image sous le seuil suffit.
+        // La forme n'est sanctionnée que si la mesure est fiable — dans le
+        // doute on compte, puisque le défaut à corriger est le manqué.
+        if(!trust || aligned){ this.reps++; event = "valid"; }
+        else { this.refused++; event = "refused"; this.flashMsg("Corps cassé"); }
+        this.armed = false; this.lastRepAt = now;
+        if(this.onRep) this.onRep(event, this.reps);
       }
-      // Recalage permanent : chaque passage bras tendus rafraîchit la référence
-      if(this.phase === "up" && this.sE > .92 && spanN > .2){
-        this.base.span += (spanN - this.base.span) * .06;
-        this.base.hip  += (hipN  - this.base.hip ) * .06;
-        this.calibrated = true;
+      if(!this.armed && this.ext > armAt) this.armed = true;
+    }
+    this.phase = this.armed ? "up" : "down";
+
+    /* Calibration continue : la référence se cale dès que le corps repasse
+       près de son point haut, pendant le décompte comme en plein duel. Une
+       calibration ratée au départ n'handicape donc plus toute la série. */
+    if(spanN > .12 && spanN < 1.8 && this.ext > this.topRef - .06){
+      if(!this.calibrated){
+        this.base.n++;
+        this.base.span += (spanN - this.base.span) / this.base.n;
+        this.base.hip  += (hipN  - this.base.hip ) / this.base.n;
+        if(this.base.n >= 4) this.calibrated = true;
+      }else{
+        this.base.span += (spanN - this.base.span) * .05;
+        this.base.hip  += (hipN  - this.base.hip ) * .05;
       }
     }
 
-    const hit = depth >= 1 - EXT_DOWN;      // seuil de validation franchi
+    // Jauge exprimée en pourcentage de SA course : le repère reste fixe
+    const depthRel = clamp((this.topRef - this.ext) / range, 0, 1);
+    const hit = this.ext < countAt || !this.armed;
     let msg = "Bras tendus, prêt";
     if(!alignCheck) msg = "Position détectée";
     else if(!aligned) msg = this.frontality > .55 ? "Bassin décalé" : "Aligne épaules, hanches, genoux";
-    else if(this.phase === "down") msg = this.formBroken ? "Corps cassé — refusée" : "Profondeur atteinte — remonte";
-    else if(depth > .12) msg = "Encore un peu plus bas";
+    else if(this.phase === "down") msg = "Comptée — remonte";
+    else if(depthRel > .10) msg = "Descends";
 
-    return { ok:true, aligned, depth, hit, msg, event, front:this.frontality, calibrated:this.calibrated };
+    return { ok:true, aligned, depth:depthRel, hit, msg, event,
+             front:this.frontality, calibrated:this.calibrated };
   },
 
   draw(ctx, lm, w, h, st){
@@ -1318,28 +1341,48 @@ const Vision = {
 };
 
 /* =====================================================================
-   8. SPARRING IA
+   8. ADVERSAIRE DE REMPLISSAGE
    ===================================================================== */
-const NAMES = ["SENTINELLE","VECTEUR","ATLAS-9","NOVA","BASTION","ORION","TITAN-4","KRONOS","ECHO-7","VULCAIN"];
+/* Adversaires de remplissage : pseudos indiscernables de vrais joueurs. */
+const HANDLES = ["Maxou","LeaFit","Kev_","Tommy","NicoP","SarahK","Yanis","Mehdi",
+                 "LucasR","Clara","Rayan","JulesM","Enzo","Amine","Theo","InesB",
+                 "NoahD","Sofia","HugoL","Manon","Bastien","Oceane","Driss","Camille",
+                 "Antoine","Farid","Elodie","Quentin","Samir","Marine","Ryan","Nawel"];
+const TAGS = ["","","","","_","77","06","93","xx","21","99","07","2b","_off","13"];
 const Bot = {
   active:false, score:0, target:0, timers:[], elo:1000, name:"", avatar:{t:"p", i:4},
   configure(level="auto"){
-    let base = 11 + (profile.elo - 800)/34;
-    if(profile.best > 0) base = base*.55 + profile.best*.45;
-    const mult = level === "easy" ? .78 : level === "hard" ? 1.22 : 1;
-    this.target = clamp(Math.round(base * mult * (.93 + Math.random()*.14)), 5, 70);
+    /* Courbe volontairement douce : 7 répétitions à 800 d'Elo, 11 en Argent
+       (1000), 15 en Or, 21 en Diamant. L'ancienne courbe démarrait à 17 en
+       Argent, hors de portée d'un débutant. */
+    let base = 7 + (profile.elo - 800)/50;
+    // Le vécu réel du joueur pèse moins, et jamais à la hausse au-delà de lui
+    if(profile.best > 0){
+      base = base*.65 + profile.best*.35;
+      base = Math.min(base, profile.best*.90 + 2);   // reste battable si le joueur égale son record
+    }
+    const mult = level === "easy" ? .70 : level === "hard" ? 1.20 : 1;
+    // Filet anti-frustration : après deux défaites, l'adversaire lève le pied
+    const slump = profile.streak <= -2 ? .85 : 1;
+    this.target = clamp(Math.round(base * mult * slump * (.92 + Math.random()*.14)), 4, 70);
     this.elo = level === "auto" ? Math.round(profile.elo + (Math.random()*70 - 35))
                                 : Math.round(profile.elo * (level === "easy" ? .9 : level === "hard" ? 1.1 : 1));
-    this.name = NAMES[Math.floor(Math.random()*NAMES.length)] + "·IA";
+    const h = HANDLES[Math.floor(Math.random()*HANDLES.length)];
+    this.name = (h + TAGS[Math.floor(Math.random()*TAGS.length)]).slice(0,12);
     this.avatar = { t:"p", i:Math.floor(Math.random()*AV.length) };
     this.score = 0;
     return this;
   },
   start(onScore){
     this.active = true; this.score = 0; this.timers = [];
+    // Un humain souffle en cours de série : on insère une pause crédible
+    const restAt = Math.floor(this.target * (.45 + Math.random()*.35));
+    const restS  = 1 + Math.random()*2.5;
     for(let i = 1; i <= this.target; i++){
-      const f = Math.pow(i/this.target, .78);                       // fatigue progressive
-      const t = clamp(f*(MATCH_SECONDS-1.2) + (Math.random()-.5)*.9, .8, MATCH_SECONDS-.3)*1000;
+      const f = Math.pow(i/this.target, .80);                       // fatigue progressive
+      let t = f*(MATCH_SECONDS-2.5) + (Math.random()-.5)*.9;
+      if(i > restAt) t += restS;
+      t = clamp(t, .9, MATCH_SECONDS-.4)*1000;
       this.timers.push(setTimeout(() => { this.score = i; onScore(i); }, t));
     }
   },
@@ -1494,10 +1537,11 @@ const Net = {
    ===================================================================== */
 const Game = {
   mode:"ranked", myScore:0, opScore:0, opFinal:null, timeLeft:MATCH_SECONDS,
-  timer:null, running:false, startedAt:0, botLevel:"auto",
+  timer:null, running:false, startedAt:0, botLevel:"auto", botRanked:false,
 
   async enter(mode, opts={}){
     this.mode = mode; this.botLevel = opts.level || "auto";
+    this.botRanked = opts.ranked === true;
     this.myScore = 0; this.opScore = 0; this.opFinal = null; this.running = false;
     Vision.reset(); Bot.stop();
     const solo = mode === "solo";
@@ -1558,7 +1602,7 @@ const Game = {
   },
 
   start(){
-    this.running = true; Vision.active = true; this.startedAt = Date.now();
+    this.running = true; Vision.anchor(); Vision.active = true; this.startedAt = Date.now();
     $("#formMsg").textContent = "Go";
     if(this.mode === "bot") Bot.start(v => this.setOpScore(v));
     this.timer = setInterval(() => {
@@ -1604,20 +1648,21 @@ const Game = {
     const me = this.myScore;
     const op = forfeit ? -1 : (this.mode === "bot" ? Bot.score : (this.opFinal ?? this.opScore));
     let delta = 0, outcome = "draw";
-    const scored = this.mode === "ranked" || this.mode === "bot";
+    const scored = this.mode === "ranked" || (this.mode === "bot" && this.botRanked);
 
     if(this.mode === "solo"){
       $("#resMode").textContent = "Entraînement";
       $("#verdict").textContent = "SÉANCE TERMINÉE";
     }else{
       outcome = forfeit ? "win" : me > op ? "win" : me < op ? "loss" : "draw";
-      $("#resMode").textContent = this.mode === "ranked" ? "Duel classé" : this.mode === "bot" ? "Sparring IA" : "Duel privé";
+      $("#resMode").textContent = (this.mode === "ranked" || (this.mode === "bot" && this.botRanked))
+        ? "Duel classé" : this.mode === "bot" ? "Entraînement" : "Duel privé";
       $("#verdict").textContent = forfeit ? "VICTOIRE PAR FORFAIT"
         : outcome === "win" ? "VICTOIRE" : outcome === "loss" ? "DÉFAITE" : "ÉGALITÉ";
       if(scored){
         const S = outcome === "win" ? 1 : outcome === "loss" ? 0 : .5;
         const E = 1/(1 + Math.pow(10, (Net.opponent.elo - profile.elo)/400));
-        delta = Math.round((this.mode === "bot" ? K_BOT : K_RANKED) * (S - E));
+        delta = Math.round(K_RANKED * (S - E));
         profile.elo = Math.max(100, profile.elo + delta);
         if(outcome === "win"){ profile.wins++; profile.streak = Math.max(1, profile.streak+1); }
         else if(outcome === "loss"){ profile.losses++; profile.streak = Math.min(-1, profile.streak-1); }
@@ -1627,7 +1672,7 @@ const Game = {
     if(me > profile.best) profile.best = me;
     profile.totalReps += me;
     profile.history = [{ at:Date.now(), m:this.mode, op:(this.mode === "solo" ? "SÉANCE LIBRE" : (Net.opponent.name||"ADVERSAIRE")).toUpperCase(),
-                         me, opS:this.mode === "solo" ? -1 : op, d:delta, r:outcome },
+                         me, opS:this.mode === "solo" ? -1 : op, d:delta, r:outcome, k:scored },
                        ...(profile.history || [])].slice(0,20);
     await Store.set("profile", profile);
 
@@ -1673,7 +1718,7 @@ Net.onData = d => {
 Net.onClose = () => { if(Game.running) Game.finish(true); };
 
 /* =====================================================================
-   11. RECHERCHE + BASCULE IA
+   11. RECHERCHE ET APPARIEMENT
    ===================================================================== */
 let queueTimer = null;
 function startQueueUI(){
@@ -1699,9 +1744,10 @@ async function launchRanked(){
     toast(`Adversaire trouvé — ${Net.opponent.name} (${Math.round(Net.opponent.elo)})`);
     Game.enter("ranked");
   }else{
-    $("#searchLog").textContent = "Aucun joueur disponible — sparring IA engagé.";
-    Bot.configure("auto"); toast(`${Bot.name} entre dans l'arène`);
-    await Net.wait(700); Game.enter("bot", { level:"auto" });
+    $("#searchLog").textContent = "Adversaire trouvé.";
+    Bot.configure("auto");
+    toast(`Adversaire trouvé — ${Bot.name} (${Bot.elo})`);
+    await Net.wait(700); Game.enter("bot", { level:"auto", ranked:true });
   }
 }
 
@@ -1753,7 +1799,7 @@ $("#btnSolo2").onclick  = () => Game.enter("solo");
 $$("[data-bot]").forEach(b => b.onclick = () => Game.enter("bot", { level:b.dataset.bot }));
 $("#btnPrivate").onclick = () => $("#sheetPrivate").classList.add("on");
 $("#btnCancel").onclick = () => { clearInterval(queueTimer); Net.cancel(); showView("menu"); };
-$("#btnBotNow").onclick = () => { clearInterval(queueTimer); Net.cancel(); Bot.configure("auto"); Game.enter("bot", { level:"auto" }); };
+$("#btnBotNow").onclick = () => { clearInterval(queueTimer); Net.cancel(); Bot.configure("auto"); Game.enter("bot", { level:"auto", ranked:true }); };
 
 $("#btnHost").onclick = async () => {
   const code = Math.random().toString(36).slice(2,7).toUpperCase();
@@ -1776,7 +1822,7 @@ $("#btnQuit").onclick = () => Game.quit();
 $("#btnAgain").onclick = () => {
   Net.destroy();
   if(Game.mode === "solo") Game.enter("solo");
-  else if(Game.mode === "bot") Game.enter("bot", { level:Game.botLevel });
+  else if(Game.mode === "bot") Game.enter("bot", { level:Game.botLevel, ranked:Game.botRanked });
   else launchRanked();
 };
 $("#btnHome").onclick = () => { Net.destroy(); showView("menu"); showTab("tab-duel"); };
