@@ -17,7 +17,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Fredoka:wght@400;500;600&family=Luckiest+Guy&family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
 <style>
@@ -484,9 +484,14 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 
 /* ---------- Fond d'arène : profondeur, faisceaux, poussières ---------- */
 #bg{background:
-  radial-gradient(64vw 40vh at 50% 26%, rgba(120,205,255,.34), transparent 64%),
-  radial-gradient(110vw 52vh at 50% 108%, rgba(8,18,44,.92), transparent 72%),
-  linear-gradient(180deg,#123A6B 0%,#15477E 38%,#0C2450 100%)}
+  /* halo de projecteur au-dessus de l'arène */
+  radial-gradient(58vw 34vh at 50% 20%, rgba(160,225,255,.38), transparent 66%),
+  /* collines lointaines, deux plans */
+  radial-gradient(75vw 22vh at 12% 62%, #17507F 0 99%, transparent 100%),
+  radial-gradient(85vw 26vh at 88% 66%, #12406B 0 99%, transparent 100%),
+  /* eau et vignettage */
+  radial-gradient(120vw 46vh at 50% 112%, rgba(6,16,40,.95), transparent 74%),
+  linear-gradient(180deg,#1B5FA0 0%,#17508A 30%,#0F3163 62%,#0A1D40 100%)}
 #bg::before{content:'';position:absolute;inset:-20% -30% auto;height:110%;left:-30%;right:-30%;
   width:auto;border-radius:0;background:repeating-conic-gradient(from 196deg at 50% -14%,
     rgba(190,235,255,.09) 0deg 3deg, transparent 3deg 13deg);
@@ -642,8 +647,8 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 .hud-row{display:flex;align-items:center;gap:6px}
 .fighter{flex:0 0 62px;display:flex;flex-direction:column;align-items:center;gap:3px}
 .fav{width:50px;height:50px;border:3px solid var(--ink);border-radius:50%;overflow:hidden;background:#fff}
-.fav.me{box-shadow:0 0 0 3px var(--blue)}
-.fav.op{box-shadow:0 0 0 3px var(--orange)}
+.fav.me{box-shadow:0 0 0 3px #6BE84A}
+.fav.op{box-shadow:0 0 0 3px #FF5FA8}
 .fav svg,.fav img{width:100%;height:100%;display:block;object-fit:cover}
 .fname{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;color:#fff;
   max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;
@@ -651,16 +656,16 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 .fsc{flex:1;text-align:center;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;
   font-size:36px;line-height:1;font-variant-numeric:tabular-nums;text-shadow:var(--stroke)}
 .fsc.me{color:#8CFF5A}
-.fsc.op{color:#FF7BC0}
+.fsc.op{color:#FF5FA8}
 .htime{flex:0 0 80px;text-align:center}
 .htime .tl{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:11px;
   color:#A8C4E8;text-transform:uppercase;letter-spacing:.06em}
 .htime .tv{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:28px;color:#fff;
   line-height:1.05;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(20,34,76,.8)}
 .htime .tv.low{color:#FF9A9A;animation:tick 1s steps(2) infinite}
-.hud-bar{position:relative;height:20px;margin-top:9px;border:3px solid var(--ink);
-  border-radius:12px;overflow:hidden;background:linear-gradient(180deg,#FFB160,var(--orange));
-  box-shadow:inset 0 3px 0 rgba(255,255,255,.3)}
+.hud-bar{position:relative;height:22px;margin-top:9px;border:3px solid var(--ink);
+  border-radius:13px;overflow:hidden;background:linear-gradient(180deg,#FF7FBC,#D9327E);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.32)}
 .hud-bar>span{position:absolute;inset:0 auto 0 0;width:50%;
   background:linear-gradient(180deg,#B4FF7A,#5FD41C);border-right:3px solid var(--ink);
   box-shadow:inset 0 3px 0 rgba(255,255,255,.45);
@@ -706,6 +711,147 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 .tab>.eyebrow{color:var(--gold-hi)}
 .tab>.empty{color:#DCE9FF;text-shadow:0 2px 3px rgba(9,18,42,.7)}
 
+
+/* ============================================================ */
+/* ============================================================
+   PASSE DE COMBAT — piste verticale
+   ============================================================ */
+#pass,#deck{background:
+  radial-gradient(60vw 34vh at 50% 0%, rgba(120,205,255,.28), transparent 66%),
+  linear-gradient(180deg,#123A6B 0%,#12365F 50%,#0B1E42 100%);
+  padding:calc(var(--safe-t) + 12px) 12px calc(var(--safe-b) + 12px);gap:10px}
+.pass-head{display:flex;align-items:center;gap:11px;flex:0 0 auto}
+.pass-head .icon-btn{flex:0 0 46px;height:46px;font-size:22px}
+.ph-txt{flex:1;min-width:0}
+.ph-t{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#fff;
+  text-shadow:var(--stroke)}
+.ph-s{font-size:12px;font-weight:600;color:var(--gold-hi)}
+.ph-tier{width:48px;height:48px;flex:0 0 48px;border:3px solid var(--ink);border-radius:14px;
+  display:grid;place-items:center;background:linear-gradient(180deg,var(--gold-hi),var(--gold));
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:21px;color:var(--ink);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.55),0 4px 0 var(--gold-dk)}
+
+.pass-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;
+  padding:6px 2px 10px;display:flex;flex-direction:column-reverse;gap:0}
+/* rail vertical qui relie les paliers */
+.prow{position:relative;display:flex;align-items:center;gap:12px;padding:7px 4px;min-height:76px}
+.prow::before{content:'';position:absolute;left:35px;top:0;bottom:0;width:8px;
+  background:rgba(9,18,42,.75);border-left:3px solid var(--ink);border-right:3px solid var(--ink)}
+.prow.got::before{background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+.prow:first-child::before{bottom:50%}
+.prow:last-child::before{top:50%}
+.pnum{position:relative;width:46px;height:46px;flex:0 0 46px;border:3px solid var(--ink);
+  border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(180deg,#3E63C4,#22397C);color:#fff;
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:18px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.28),0 3px 0 rgba(9,18,42,.8)}
+.prow.got .pnum{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:var(--ink)}
+.prow.next .pnum{animation:pulse 1.8s ease-in-out infinite;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 0 0 4px rgba(255,223,128,.5)}
+.pcard{position:relative;flex:1;display:flex;align-items:center;gap:11px;padding:9px 12px;
+  border:3px solid var(--ink);border-radius:18px;
+  background:linear-gradient(180deg,#FFFDF6,var(--cream));box-shadow:0 4px 0 var(--cream-dk)}
+.prow.got .pcard{background:linear-gradient(180deg,#D6F5AE,#AEE882);box-shadow:0 4px 0 var(--lime-dk)}
+.prow.lock .pcard{filter:saturate(.5) brightness(.86)}
+.pcard .pico{width:46px;height:46px;flex:0 0 46px;border:3px solid var(--ink);border-radius:13px;
+  display:grid;place-items:center;font-size:24px;background:#fff}
+.pcard .ptxt{flex:1;min-width:0}
+.pcard .pt{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:17px;color:var(--ink);
+  line-height:1.1}
+.pcard .ps{font-size:12px;font-weight:600;color:#7C6A44}
+.pcard .pchk{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;
+  color:#fff;background:var(--lime-dk);border:2px solid var(--ink);border-radius:20px;padding:2px 9px}
+
+.pass-foot{flex:0 0 auto;text-align:center}
+.pf-bar{position:relative;height:22px;border:3px solid var(--ink);border-radius:13px;overflow:hidden;
+  background:rgba(9,18,42,.75)}
+.pf-bar i{display:block;height:100%;width:0%;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold));
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.5);transition:width .7s cubic-bezier(.2,1.2,.4,1)}
+.pf-bar b{position:absolute;inset:0;display:grid;place-items:center;color:#fff;
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:13px;text-shadow:var(--stroke)}
+.pf-lab{font-size:12px;font-weight:600;color:#BFD6F5;margin-top:5px}
+
+/* ============================================================
+   STICKERS — vignette, rareté, deck
+   ============================================================ */
+.stk{position:relative;aspect-ratio:1;border:3px solid var(--ink);border-radius:16px;cursor:pointer;
+  display:grid;place-items:center;font-size:clamp(20px,7vw,30px);padding:0;
+  background:linear-gradient(180deg,#FFFDF6,var(--cream));
+  box-shadow:0 4px 0 var(--cream-dk);transition:transform .12s cubic-bezier(.3,1.5,.5,1)}
+.stk:active{transform:translateY(4px) scale(.97)}
+.stk[data-r="commun"]    {box-shadow:0 4px 0 #54688A, inset 0 0 0 3px #A8C0E0}
+.stk[data-r="rare"]      {box-shadow:0 4px 0 #0E5FA8, inset 0 0 0 3px #4FC3FF}
+.stk[data-r="epique"]    {box-shadow:0 4px 0 #5B2A9E, inset 0 0 0 3px #C58AFF}
+.stk[data-r="legendaire"]{box-shadow:0 4px 0 #A56A04, inset 0 0 0 3px #FFD166,0 0 18px rgba(255,209,102,.6)}
+.stk.off{filter:grayscale(1) brightness(.62);cursor:default}
+.stk .rlab{position:absolute;bottom:-2px;left:0;right:0;font-family:'Baloo 2',system-ui,sans-serif;
+  font-weight:800;font-size:8px;text-transform:uppercase;color:#fff;text-shadow:var(--stroke)}
+.stk.eq::after{content:'✓';position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+  border:2px solid var(--ink);border-radius:50%;background:var(--lime);color:var(--ink);
+  font-size:12px;font-weight:800;display:grid;place-items:center}
+
+.slots{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:9px}
+.slot{aspect-ratio:1;border:3px dashed rgba(255,255,255,.35);border-radius:14px;cursor:pointer;
+  display:grid;place-items:center;font-size:clamp(17px,5.4vw,24px);background:rgba(9,18,42,.4);
+  color:rgba(255,255,255,.4);padding:0}
+.slot.full{border-style:solid;border-color:var(--ink);background:linear-gradient(180deg,#FFFDF6,var(--cream))}
+.invgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding:3px 2px 6px;flex:1}
+
+/* Stickers envoyés pendant le duel */
+.stkbar{position:absolute;left:12px;right:12px;bottom:calc(var(--safe-b) + 78px);z-index:5;
+  display:none;grid-template-columns:repeat(6,1fr);gap:7px;padding:9px;
+  border:3px solid var(--ink);border-radius:20px;background:rgba(11,24,54,.9);backdrop-filter:blur(6px)}
+.stkbar.on{display:grid;animation:tab-in .2s cubic-bezier(.2,1.3,.4,1)}
+#stkFly{position:absolute;inset:0;z-index:6;pointer-events:none}
+.fly{position:absolute;font-size:64px;filter:drop-shadow(0 5px 0 rgba(20,34,76,.5));
+  animation:flyup 1.9s cubic-bezier(.2,.9,.4,1) forwards}
+@keyframes flyup{
+  0%{opacity:0;transform:translateY(30px) scale(.4)}
+  18%{opacity:1;transform:translateY(0) scale(1.15)}
+  30%{transform:translateY(0) scale(1)}
+  80%{opacity:1;transform:translateY(-14px) scale(1)}
+  100%{opacity:0;transform:translateY(-40px) scale(.85)}}
+
+/* ============================================================
+   FLAMME, GRAPHIQUE, STYLE DE PSEUDO
+   ============================================================ */
+.flame{display:inline-flex;align-items:center;gap:5px;padding:3px 12px 4px 8px;
+  border:3px solid var(--ink);border-radius:20px;margin-bottom:5px;
+  background:linear-gradient(180deg,#FFAE4D,#F2620E);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 4px 0 #8A3200}
+.flame svg{width:19px;height:19px}
+.flame span{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:16px;color:#fff;
+  text-shadow:0 2px 0 rgba(20,34,76,.6)}
+.flame.cold{background:linear-gradient(180deg,#9FB4D6,#5A6B8C);box-shadow:inset 0 3px 0 rgba(255,255,255,.3),0 4px 0 #35435E}
+
+.chart{width:100%;height:132px;display:block;margin-top:10px}
+.chart .bar{fill:var(--blue);stroke:var(--ink);stroke-width:2}
+.chart .bar.top{fill:var(--lime)}
+.chart .lab{font-family:'Fredoka';font-size:7px;fill:#7C6A44;font-weight:600}
+.chart .val{font-family:'Baloo 2',system-ui,sans-serif;font-size:9px;font-weight:800;fill:var(--ink)}
+.chart .base{stroke:rgba(20,34,76,.25);stroke-width:2}
+
+.nameprev{text-align:center;font-size:30px;padding:14px 10px;border:3px solid var(--ink);
+  border-radius:16px;background:rgba(9,18,42,.5);word-break:break-all}
+.pickrow{display:flex;gap:8px;flex-wrap:wrap}
+.pick{flex:1;min-width:64px;padding:9px 6px;border:3px solid var(--ink);border-radius:14px;
+  cursor:pointer;background:#FFFDF6;color:var(--ink);font-size:15px;box-shadow:0 4px 0 var(--cream-dk)}
+.pick.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold));box-shadow:0 4px 0 var(--gold-dk)}
+.swatch{flex:0 0 44px;height:44px;min-width:0;border-radius:50%;padding:0}
+.nm-blanc{color:#fff;text-shadow:var(--stroke)}
+.nm-or{color:var(--gold);text-shadow:var(--stroke)}
+.nm-lime{color:var(--lime);text-shadow:var(--stroke)}
+.nm-cyan{color:#5FE0FF;text-shadow:var(--stroke)}
+.nm-rose{color:#FF7BC0;text-shadow:var(--stroke)}
+.nm-feu{background:linear-gradient(180deg,#FFE066,#FF6B1A);-webkit-background-clip:text;
+  background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(20,34,76,.85))}
+.nf-baloo{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800}
+.nf-fredoka{font-family:'Fredoka',system-ui,sans-serif;font-weight:600}
+.nf-lucky{font-family:'Luckiest Guy',system-ui,sans-serif;font-weight:400;letter-spacing:.03em}
+.nf-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:800}
+
 </style>
 </head>
 <body>
@@ -741,7 +887,7 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
     <p class="sub">Prends une photo ou choisis un emblème. Elle reste sur ton appareil.</p>
     <div class="avbig" id="avPreview"></div>
     <button class="btn steel sm" id="btnPhoto">Prendre ou importer une photo</button>
-    <input type="file" id="filePhoto" accept="image/*" capture="user" hidden />
+    <input type="file" id="filePhoto" accept="image/*" hidden />
     <div class="eyebrow" style="margin-top:2px">Emblèmes</div>
     <div class="avgrid" id="avGrid"></div>
     <div class="hint" id="errPhoto"></div>
@@ -814,11 +960,16 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
           <button class="btn steel sm" id="btnChangePhoto" style="margin-top:8px">Changer la photo</button>
         </div>
       </div>
-      <input type="file" id="filePhoto2" accept="image/*" capture="user" hidden />
+      <input type="file" id="filePhoto2" accept="image/*" hidden />
       <div class="plate">
         <div class="eyebrow">Pseudonyme</div>
-        <input id="pseudo" class="field up" maxlength="12" placeholder="TON PSEUDO" style="margin-top:8px" />
+        <div class="nameprev" id="nameShow" style="margin-top:9px">JOUEUR</div>
+        <div class="quick" style="margin-top:10px">
+          <button class="btn steel sm" id="btnRename">Changer · 100 💎</button>
+          <button class="btn steel sm" id="btnNameStyle">Apparence</button>
+        </div>
       </div>
+      <button class="btn gold" id="btnDeck">Deck de stickers</button>
       <div class="grid3">
         <div class="kpi"><div class="v mono" id="stW">0</div><div class="k">Victoires</div></div>
         <div class="kpi"><div class="v mono" id="stL">0</div><div class="k">Défaites</div></div>
@@ -828,6 +979,35 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
         <div class="kpi"><div class="v mono" id="stB">0</div><div class="k">Record</div></div>
         <div class="kpi"><div class="v mono" id="stT">0</div><div class="k">Pompes</div></div>
         <div class="kpi"><div class="v mono" id="stX">0</div><div class="k">Série</div></div>
+      </div>
+      <div class="plate">
+        <div class="eyebrow">Série quotidienne</div>
+        <div class="grid3" style="margin-top:9px">
+          <div class="kpi"><div class="v" id="stFlame">0</div><div class="k">Série</div></div>
+          <div class="kpi"><div class="v" id="stFlameBest">0</div><div class="k">Record</div></div>
+          <div class="kpi"><div class="v" id="stToday">0</div><div class="k">Aujourd'hui</div></div>
+        </div>
+      </div>
+      <div class="plate cream">
+        <div class="eyebrow">Pompes des 14 derniers jours</div>
+        <svg class="chart" id="chart" viewBox="0 0 320 132" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="plate">
+        <div class="eyebrow">Sauvegarde</div>
+        <p style="font-size:13px;color:#D5E4FF;line-height:1.45;margin:8px 0 10px">
+          Ta progression est écrite en double sur l'appareil. Exporte-la avant de changer de téléphone.</p>
+        <div class="quick">
+          <button class="btn steel sm" id="btnExport">Exporter</button>
+          <button class="btn steel sm" id="btnImport">Importer</button>
+        </div>
+        <input type="file" id="fileSave" accept="application/json,.json" hidden />
+      </div>
+      <div class="plate">
+        <div class="eyebrow">Sons</div>
+        <div class="quick" style="margin-top:10px">
+          <button class="btn steel sm" id="btnSfxOn">Activés</button>
+          <button class="btn steel sm" id="btnSfxOff">Coupés</button>
+        </div>
       </div>
       <div class="plate">
         <div class="eyebrow">Caméra par défaut</div>
@@ -913,6 +1093,10 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
         </svg>
         <div class="crest" id="heroBadge"></div>
         <div class="caption">
+          <div class="flame" id="flameChip">
+            <svg viewBox="0 0 24 24"><path d="M12 2c1.5 4-3 5.5-3 9a3 3 0 0 0 6 0c0-1 .4-1.9 1-2.6.9 1.4 2 3.2 2 5.6a6 6 0 0 1-12 0C6 9 12 8 12 2Z" fill="#FFE066" stroke="#14224C" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            <span id="flameNum">0</span>
+          </div>
           <div class="t" id="heroTier">ARGENT</div>
           <div class="d" id="heroDiv">Division II</div>
         </div>
@@ -1049,7 +1233,10 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 
     <div class="depth" id="depthGauge"><span id="depthFill"></span></div>
     <div class="viewtag" id="viewTag">Analyse de la position…</div>
+    <div class="stkbar" id="stkBar"></div>
+    <div id="stkFly"></div>
     <div class="arena-actions">
+      <button class="icon-btn" id="btnStk" title="Stickers">😀</button>
       <button class="icon-btn" id="btnSwitchCam" title="Changer de caméra">⟲</button>
       <button class="btn danger giveup" id="btnQuit">
         <svg viewBox="0 0 24 24"><path d="M5 3v18M5 4h13l-3 4 3 4H5" fill="#fff" stroke="#14224C" stroke-width="2" stroke-linejoin="round"/></svg>
@@ -1089,6 +1276,61 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 </section>
 
 <!-- ================= FEUILLE DUEL PRIVÉ ================= -->
+<!-- ================= PASSE DE COMBAT ================= -->
+<section id="pass" class="view">
+  <div class="pass-head">
+    <button class="icon-btn" id="passBack">←</button>
+    <div class="ph-txt">
+      <div class="ph-t">Passe de combat</div>
+      <div class="ph-s">Saison 1 · <span id="phCrowns">0</span> couronnes</div>
+    </div>
+    <div class="ph-tier"><span id="phTier">1</span></div>
+  </div>
+  <div class="pass-scroll" id="passScroll"></div>
+  <div class="pass-foot">
+    <div class="pf-bar"><i id="pfFill"></i><b id="pfVal">0/10</b></div>
+    <div class="pf-lab">Prochain palier</div>
+  </div>
+</section>
+
+<!-- ================= DECK DE STICKERS ================= -->
+<section id="deck" class="view">
+  <div class="pass-head">
+    <button class="icon-btn" id="deckBack">←</button>
+    <div class="ph-txt">
+      <div class="ph-t">Deck de stickers</div>
+      <div class="ph-s">Six emplacements pour le combat</div>
+    </div>
+  </div>
+  <div class="plate" style="flex:0 0 auto">
+    <div class="eyebrow">Équipés</div>
+    <div class="slots" id="deckSlots"></div>
+  </div>
+  <div class="eyebrow" style="margin:10px 0 6px">Collection · <span id="invCount">0</span>/24</div>
+  <div class="invgrid" id="deckInv"></div>
+</section>
+
+<!-- ================= FEUILLE : STYLE DU PSEUDO ================= -->
+<div class="sheet" id="sheetName"><div class="inner">
+  <h3>Affichage du pseudo</h3>
+  <div class="nameprev" id="namePrev">JOUEUR</div>
+  <div class="eyebrow">Police</div>
+  <div class="pickrow" id="fontPick"></div>
+  <div class="eyebrow">Couleur</div>
+  <div class="pickrow" id="colorPick"></div>
+  <button class="btn steel sm" data-close>Fermer</button>
+</div></div>
+
+<!-- ================= FEUILLE : CHANGER DE PSEUDO ================= -->
+<div class="sheet" id="sheetRename"><div class="inner">
+  <h3>Changer de pseudo</h3>
+  <p>Le premier changement est offert. Ensuite chaque modification coûte 100 gemmes.</p>
+  <input id="newName" class="field up" maxlength="12" placeholder="NOUVEAU PSEUDO" />
+  <div class="hint" id="renameInfo"></div>
+  <button class="btn gold" id="btnRenameGo">Confirmer</button>
+  <button class="btn steel sm" data-close>Annuler</button>
+</div></div>
+
 <div class="sheet" id="sheetPass"><div class="inner">
   <h3>Piste de la saison</h3>
   <p>Chaque duel rapporte une couronne, une victoire en rapporte trois. Dix couronnes font monter d'un palier, et la récompense tombe automatiquement.</p>
@@ -1154,42 +1396,181 @@ const TIERS = [
   { n:"PLATINE",              min:1200, gem:"#7DF0E4", dark:"#0E5C58", metal:"#3FA79E" },
   { n:"DIAMANT",              min:1350, gem:"#8CA3FF", dark:"#1B2470", metal:"#4C5DC4" },
   { n:"CHAMPION",             min:1500, gem:"#C58AFF", dark:"#3D1273", metal:"#7B41C4" },
-  { n:"GRAND CHAMPION",       min:1700, gem:"#FF7A7A", dark:"#6E0F0F", metal:"#C33636" },
-  { n:"LÉGENDE SUPERSONIQUE", min:1900, gem:"#F4F8FF", dark:"#5C6BA8", metal:"#AFC0E6" }
+  { n:"MASTER",               min:1700, gem:"#FF7A7A", dark:"#6E0F0F", metal:"#C33636" },
+  { n:"LÉGENDE",              min:1900, gem:"#F4F8FF", dark:"#5C6BA8", metal:"#AFC0E6" }
 ];
 const ROMAN = ["I","II","III"];
 
 /* =====================================================================
-   2. STOCKAGE
+   2. STOCKAGE PERSISTANT
+   Trois garanties contre la perte de données lors d'une mise à jour :
+   1. les clés ne changent JAMAIS de nom d'une version à l'autre ;
+   2. écriture en double (stockage applicatif + localStorage), lecture sur
+      celui qui répond, de sorte qu'un backend indisponible ne perd rien ;
+   3. migration de schéma : les champs ajoutés par une nouvelle version
+      sont complétés avec leur valeur par défaut au lieu de casser la
+      sauvegarde existante.
    ===================================================================== */
+const SCHEMA = 4;                       // à incrémenter à chaque ajout de champs
 const Store = (() => {
   const mem = {};
   const hasW = typeof window.storage?.get === "function";
+  const hasL = (() => { try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; }catch{ return false; } })();
   return {
-    async get(k,d){
-      try{
-        if(hasW){ const r = await window.storage.get(k); return r ? JSON.parse(r.value) : d; }
-        const v = localStorage.getItem(k); return v ? JSON.parse(v) : d;
-      }catch{ return (k in mem) ? mem[k] : d; }
+    async get(k, d){
+      let out = null;
+      if(hasW){ try{ const r = await window.storage.get(k); if(r?.value) out = r.value; }catch{} }
+      if(out === null && hasL){ try{ out = localStorage.getItem(k); }catch{} }
+      if(out === null) return (k in mem) ? mem[k] : d;
+      try{ return JSON.parse(out); }catch{ return d; }
     },
-    async set(k,v){
+    async set(k, v){
       const s = JSON.stringify(v);
-      try{
-        if(hasW){ await window.storage.set(k,s); return; }
-        localStorage.setItem(k,s);
-      }catch{ mem[k] = v; }
+      mem[k] = v;                                   // filet mémoire immédiat
+      if(hasL){ try{ localStorage.setItem(k, s); }catch{} }
+      if(hasW){ try{ await window.storage.set(k, s); }catch{} }
     },
     async del(k){
-      try{
-        if(hasW){ await window.storage.delete(k); return; }
-        localStorage.removeItem(k);
-      }catch{ delete mem[k]; }
+      delete mem[k];
+      if(hasL){ try{ localStorage.removeItem(k); }catch{} }
+      if(hasW){ try{ await window.storage.delete(k); }catch{} }
     }
   };
 })();
 
-let account = null;   // { name, mail, salt, hash, avatar, createdAt }
-let profile = { elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:"user", history:[], xp:0, coins:0, gems:0, crowns:0, tier:0, daily:{ d:"", reps:0, done:false } };
+/* Valeurs par défaut : source unique de vérité pour la migration. */
+function freshProfile(keep = {}){
+  return Object.assign({
+    schema:SCHEMA, elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0,
+    facing:"user", history:[], xp:0, coins:0, gems:0, crowns:0, tier:0,
+    daily:{ d:"", reps:0, done:false },
+    flame:{ cur:0, best:0, last:"" },      // série de jours consécutifs
+    days:{},                               // "AAAA-MM-JJ" → pompes du jour
+    stickers:["s01","s02","s03"],          // inventaire
+    deck:["s01","s02","s03"],              // six emplacements maximum
+    nameStyle:{ font:"baloo", color:"blanc" },
+    renamed:false, sfx:true
+  }, keep);
+}
+/* Complète une sauvegarde ancienne sans jamais écraser ce qui existe. */
+function migrateProfile(saved){
+  const base = freshProfile();
+  const out = Object.assign({}, base, saved || {});
+  for(const k of ["daily","flame","nameStyle"])
+    out[k] = Object.assign({}, base[k], (saved && saved[k]) || {});
+  for(const k of ["history","stickers","deck"])
+    if(!Array.isArray(out[k])) out[k] = base[k].slice();
+  if(typeof out.days !== "object" || !out.days) out.days = {};
+  out.deck = out.deck.filter(id => out.stickers.includes(id)).slice(0, 6);
+  out.schema = SCHEMA;
+  return out;
+}
+
+let account = null;
+let profile = freshProfile();
+
+/* =====================================================================
+   2 bis. SONS — synthèse Web Audio, aucun fichier externe
+   ===================================================================== */
+const Sfx = {
+  ctx:null, on:true,
+  init(){
+    if(this.ctx) return;
+    try{ this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch{}
+  },
+  /* note simple : forme d'onde, fréquence, durée, volume */
+  note(freq, dur = .09, type = "square", vol = .16, delay = 0){
+    if(!this.on || !this.ctx) return;
+    const t = this.ctx.currentTime + delay;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + .012);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t); o.stop(t + dur + .02);
+  },
+  play(kind){
+    if(!this.on) return;
+    this.init();
+    if(!this.ctx) return;
+    if(this.ctx.state === "suspended") this.ctx.resume();
+    switch(kind){
+      case "click":  this.note(660, .07, "square", .14); break;
+      case "nav":    this.note(420, .06, "triangle", .12); this.note(560, .06, "triangle", .09, .05); break;
+      case "back":   this.note(380, .08, "triangle", .12); break;
+      case "reward": [523,659,784,1047].forEach((f,i) => this.note(f, .16, "triangle", .17, i*.075)); break;
+      case "unlock": [392,523,659,880,1175].forEach((f,i) => this.note(f, .20, "sawtooth", .12, i*.065)); break;
+      case "rep":    this.note(880, .05, "square", .10); break;
+      case "fail":   this.note(180, .16, "sawtooth", .13); break;
+      case "level":  [523,659,784,1047,1319].forEach((f,i) => this.note(f, .22, "square", .13, i*.09)); break;
+      case "start":  [330,440,660].forEach((f,i) => this.note(f, .18, "square", .16, i*.12)); break;
+    }
+  }
+};
+/* Tout bouton, tout onglet : un retour sonore, sans avoir à câbler chacun */
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest("button, .avpick, .navbtn, .stk, .slot");
+  if(!el || el.disabled) return;
+  Sfx.play(el.classList.contains("navbtn") ? "nav" : "click");
+}, true);
+
+/* =====================================================================
+   2 ter. STICKERS — raretés, catalogue, deck
+   ===================================================================== */
+const RARITY = {
+  commun:     { n:"Commun",     c:"#A8C0E0", d:"#54688A", g:"rgba(168,192,224,.5)" },
+  rare:       { n:"Rare",       c:"#4FC3FF", d:"#0E5FA8", g:"rgba(79,195,255,.65)" },
+  epique:     { n:"Épique",     c:"#C58AFF", d:"#5B2A9E", g:"rgba(197,138,255,.7)" },
+  legendaire: { n:"Légendaire", c:"#FFD166", d:"#A56A04", g:"rgba(255,209,102,.85)" }
+};
+const STICKERS = [
+  { id:"s01", e:"💪", n:"Biceps",       r:"commun" },
+  { id:"s02", e:"🔥", n:"En feu",       r:"commun" },
+  { id:"s03", e:"😤", n:"Détermination",r:"commun" },
+  { id:"s04", e:"🥵", n:"Cramé",        r:"commun" },
+  { id:"s05", e:"😮‍💨", n:"Souffle",      r:"commun" },
+  { id:"s06", e:"👏", n:"Bravo",        r:"commun" },
+  { id:"s07", e:"🫡", n:"Respect",      r:"commun" },
+  { id:"s08", e:"😴", n:"Trop lent",    r:"commun" },
+  { id:"s09", e:"🎯", n:"Précision",    r:"commun" },
+  { id:"s10", e:"🧊", n:"Sang-froid",   r:"commun" },
+  { id:"s11", e:"⚡", n:"Éclair",       r:"rare" },
+  { id:"s12", e:"😎", n:"Tranquille",   r:"rare" },
+  { id:"s13", e:"🦾", n:"Bras d'acier", r:"rare" },
+  { id:"s14", e:"🚀", n:"Décollage",    r:"rare" },
+  { id:"s15", e:"🤡", n:"Chambrage",    r:"rare" },
+  { id:"s16", e:"🥶", n:"Glacial",      r:"rare" },
+  { id:"s17", e:"🍕", n:"Pause pizza",  r:"rare" },
+  { id:"s18", e:"💀", n:"Terminé",      r:"epique" },
+  { id:"s19", e:"🤖", n:"Machine",      r:"epique" },
+  { id:"s20", e:"🐐", n:"Le GOAT",      r:"epique" },
+  { id:"s21", e:"❤️‍🔥", n:"Cœur ardent", r:"epique" },
+  { id:"s22", e:"🤯", n:"Explosé",      r:"epique" },
+  { id:"s23", e:"👑", n:"Couronne",     r:"legendaire" },
+  { id:"s24", e:"🐉", n:"Dragon",       r:"legendaire" }
+];
+const STK = Object.fromEntries(STICKERS.map(s => [s.id, s]));
+
+/* =====================================================================
+   2 quater. PASSE DE COMBAT — trente paliers
+   Le contenu est déterministe : chaque palier donne toujours la même
+   chose, ce qui rend la piste lisible et planifiable par le joueur.
+   ===================================================================== */
+const PASS_TIERS = 30;
+const PASS_STICKERS = ["s04","s05","s11","s06","s12","s07","s13","s08","s14",
+                       "s18","s09","s15","s19","s10","s16","s20","s17","s21",
+                       "s22","s23","s24"];
+function passReward(t){
+  if(t % 10 === 0) return { k:"gem",  v:3 + Math.floor(t/10), i:"💎" };
+  if(t % 5  === 0) return { k:"gem",  v:1,                    i:"💎" };
+  if(t % 3  === 0){
+    const id = PASS_STICKERS[(Math.floor(t/3) - 1) % PASS_STICKERS.length];
+    return { k:"stk", v:1, id };
+  }
+  if(t % 2  === 0) return { k:"xp",   v:60 + t*8,  i:"⚡" };
+  return                   { k:"coin", v:40 + t*12, i:"🪙" };
+}
 
 /* =====================================================================
    3. UTILITAIRES
@@ -1203,10 +1584,11 @@ function toast(msg, ms=2400){
   const t = $("#toast"); t.textContent = msg; t.classList.add("on");
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms);
 }
-function showView(v){                 // gate | menu | search | arena | result
+function showView(v){        // gate | menu | search | arena | result | pass | deck
   $("#gate").classList.toggle("on", v === "gate");
   $("#shell").classList.toggle("on", v === "menu");
-  ["search","arena","result"].forEach(id => $("#"+id).classList.toggle("on", id === v));
+  ["search","arena","result","pass","deck"].forEach(id =>
+    $("#"+id).classList.toggle("on", id === v));
 }
 function showTab(id){
   $$(".tab").forEach(t => t.classList.toggle("on", t.id === id));
@@ -1249,34 +1631,75 @@ let uid = 0;
 function rankBadge(tierIdx, div){
   const t = TIERS[clamp(tierIdx,0,TIERS.length-1)];
   const u = "b" + (++uid);
-  const chevrons = [0,1,2].map(i =>
-    `<path d="M${34+i*16} 100 l6 -7 6 7 -6 4 z" fill="${i<=div ? t.gem : "rgba(255,255,255,.16)"}" ${i<=div?`filter="url(#g${u})"`:""}/>`).join("");
+  const hi = tierIdx >= 5;                       // couronne à partir de Champion
+  const top = tierIdx === TIERS.length - 1;      // aura pour le dernier palier
+  // Chevrons de division sur un bandeau, façon galons
+  const chev = [0,1,2].map(i =>
+    `<path d="M${36+i*14} 103 l5.5 -6.5 5.5 6.5 -5.5 4 z"
+       fill="${i<=div ? t.gem : "rgba(255,255,255,.18)"}" stroke="#0B1329" stroke-width="1.4"
+       stroke-linejoin="round" ${i<=div ? `filter="url(#g${u})"` : ""}/>`).join("");
+
   return `
-<svg viewBox="0 0 100 116" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+<svg viewBox="-5 -8 110 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
   <defs>
-    <linearGradient id="m${u}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#E9F1FA"/><stop offset=".22" stop-color="${t.metal}"/>
-      <stop offset=".55" stop-color="${t.dark}"/><stop offset="1" stop-color="#0B1020"/></linearGradient>
+    <linearGradient id="m${u}" x1=".2" y1="0" x2=".8" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/>
+      <stop offset=".18" stop-color="${t.metal}"/>
+      <stop offset=".52" stop-color="${t.dark}"/>
+      <stop offset=".78" stop-color="${t.metal}"/>
+      <stop offset="1" stop-color="#0B1329"/></linearGradient>
+    <linearGradient id="r${u}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF4D2"/><stop offset=".5" stop-color="${t.metal}"/>
+      <stop offset="1" stop-color="${t.dark}"/></linearGradient>
     <linearGradient id="w${u}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${t.metal}"/><stop offset="1" stop-color="${t.dark}"/></linearGradient>
-    <radialGradient id="j${u}" cx=".38" cy=".3" r=".78">
-      <stop offset="0" stop-color="#FFFFFF"/><stop offset=".35" stop-color="${t.gem}"/>
+    <radialGradient id="j${u}" cx=".36" cy=".28" r=".8">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset=".3" stop-color="${t.gem}"/>
       <stop offset="1" stop-color="${t.dark}"/></radialGradient>
-    <filter id="g${u}" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="g${u}" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="2.6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
   </defs>
-  <path d="M22 34 L2 44 L10 50 L2 58 L22 66 Z" fill="url(#w${u})" opacity=".95"/>
-  <path d="M78 34 L98 44 L90 50 L98 58 L78 66 Z" fill="url(#w${u})" opacity=".95"/>
-  <path d="M50 3 L88 21 L88 60 L50 92 L12 60 L12 21 Z" fill="url(#m${u})"/>
-  <path d="M50 3 L88 21 L88 60 L50 92 L12 60 L12 21 Z" fill="none" stroke="#EAF3FF" stroke-opacity=".55" stroke-width="1.6"/>
-  <path d="M50 10 L81 25 L81 57 L50 84 L19 57 L19 25 Z" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="1.2"/>
-  <path d="M50 4 L86 21 L50 38 L14 21 Z" fill="#FFFFFF" opacity=".14"/>
-  <path d="M50 26 L69 40 L61 66 L39 66 L31 40 Z" fill="url(#j${u})" filter="url(#g${u})"/>
-  <path d="M50 26 L69 40 L50 46 L31 40 Z" fill="#FFFFFF" opacity=".28"/>
-  <path d="M50 46 L61 66 L39 66 Z" fill="#000" opacity=".18"/>
-  ${tierIdx>=5 ? `<path d="M50 0 l5 9 h-10 z" fill="${t.gem}" filter="url(#g${u})"/>` : ""}
-  ${tierIdx===7 ? `<circle cx="50" cy="46" r="21" fill="none" stroke="${t.gem}" stroke-opacity=".7" stroke-width="1.2"/>` : ""}
-  ${chevrons}
+
+  ${top ? `<g opacity=".55" filter="url(#g${u})">
+    ${[0,45,90,135,180,225,270,315].map(a =>
+      `<path d="M50 50 L${(50+Math.cos(a*Math.PI/180)*46).toFixed(1)} ${(50+Math.sin(a*Math.PI/180)*46).toFixed(1)}"
+         stroke="${t.gem}" stroke-width="3" stroke-linecap="round"/>`).join("")}
+  </g>` : ""}
+
+  <!-- ailes : trois plumes empilées de chaque côté -->
+  <g stroke="#0B1329" stroke-width="2.6" stroke-linejoin="round">
+    <path d="M24 36 L3 44 L13 50 L3 57 L24 64 Z" fill="url(#w${u})"/>
+    <path d="M24 42 L9 48 L16 52 L9 57 L24 61 Z" fill="${t.gem}" fill-opacity=".38" stroke="none"/>
+    <path d="M76 36 L97 44 L87 50 L97 57 L76 64 Z" fill="url(#w${u})"/>
+    <path d="M76 42 L91 48 L84 52 L91 57 L76 61 Z" fill="${t.gem}" fill-opacity=".38" stroke="none"/>
+  </g>
+
+  <!-- écusson : liseré métal puis corps biseauté -->
+  <path d="M50 2 L90 20 L90 62 L50 96 L10 62 L10 20 Z" fill="url(#r${u})"
+        stroke="#0B1329" stroke-width="3.4" stroke-linejoin="round"/>
+  <path d="M50 9 L83 24 L83 59 L50 87 L17 59 L17 24 Z" fill="url(#m${u})"
+        stroke="#0B1329" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M50 10 L81 25 L50 41 L19 25 Z" fill="#FFFFFF" opacity=".18"/>
+  <path d="M50 15 L76 27 L76 56 L50 79 L24 56 L24 27 Z" fill="none"
+        stroke="${t.gem}" stroke-opacity=".45" stroke-width="1.6"/>
+
+  <!-- gemme taillée -->
+  <path d="M50 27 L68 40 L61 63 L39 63 L32 40 Z" fill="url(#j${u})" filter="url(#g${u})"
+        stroke="#0B1329" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M50 27 L68 40 L50 46 L32 40 Z" fill="#FFFFFF" opacity=".32"/>
+  <path d="M50 46 L61 63 L39 63 Z" fill="#000000" opacity=".22"/>
+  <path d="M43 33 L50 30 L57 33" fill="none" stroke="#FFFFFF" stroke-opacity=".6" stroke-width="1.6"/>
+
+  ${hi ? `<g stroke="#0B1329" stroke-width="2.2" stroke-linejoin="round">
+    <path d="M34 6 L40 13 L50 -1 L60 13 L66 6 L64 17 L36 17 Z" fill="url(#r${u})"/>
+    <circle cx="50" cy="4" r="2.6" fill="${t.gem}"/></g>` : ""}
+
+  <!-- bandeau de division -->
+  <path d="M22 94 H78 L72 110 H28 Z" fill="url(#w${u})" stroke="#0B1329"
+        stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M24 96 H76 L74 100 H26 Z" fill="#FFFFFF" opacity=".16"/>
+  ${chev}
 </svg>`;
 }
 
@@ -1400,7 +1823,7 @@ const Gate = {
     };
     await Store.set("account", account);
     await Session.open(account.mail);
-    profile = { elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:"user", history:[], xp:0, coins:0, gems:0, crowns:0, tier:0, daily:{ d:"", reps:0, done:false } };
+    profile = freshProfile();
     await Store.set("profile", profile);
     paintAll(); showView("menu"); showTab("tab-duel");
     toast(`Bienvenue, ${account.name}`);
@@ -1466,14 +1889,27 @@ function grantRewards(reps, won, ranked){
   g.levels = levelOf(profile.xp).lvl - before;
 
   profile.crowns += g.crowns;
-  const target = Math.floor(profile.crowns / CROWNS_PER_TIER);
+  const target = Math.min(PASS_TIERS, Math.floor(profile.crowns / CROWNS_PER_TIER));
+  g.unlocked = [];
   while(profile.tier < target){
     profile.tier++; g.tiers++;
-    const r = tierReward(profile.tier);
-    g.coins += r.coins; g.gems += r.gems;
+    const r = passReward(profile.tier);           // récompense de la piste
+    if(r.k === "coin") g.coins += r.v;
+    else if(r.k === "gem") g.gems += r.v;
+    else if(r.k === "xp")  profile.xp += r.v;
+    else if(r.k === "stk" && !profile.stickers.includes(r.id)){
+      profile.stickers.push(r.id); g.unlocked.push(r.id);
+    }
   }
   profile.coins += g.coins;
   profile.gems  += g.gems;
+
+  // Série quotidienne et journal d'activité
+  g.flame = bumpFlame();
+  const dk = todayKey();
+  profile.days[dk] = (profile.days[dk] || 0) + reps;
+  const keys = Object.keys(profile.days).sort();
+  while(keys.length > 60) delete profile.days[keys.shift()];   // deux mois d'historique
   return g;
 }
 
@@ -1508,12 +1944,14 @@ function paintAll(){
   $("#passTier").textContent = profile.tier + 1;
   $("#passFill").style.width = (inTier / CROWNS_PER_TIER * 100).toFixed(0) + "%";
   $("#passVal").textContent  = `${inTier}/${CROWNS_PER_TIER}`;
-  paintTiers();
+  paintFlame();
+  paintChart();
+  applyNameStyle();
 
   $("#pfAvatar").innerHTML = avatarHTML(account?.avatar);
   $("#pfName").textContent = account?.name || "JOUEUR";
   $("#pfMail").textContent = account?.mail || "—";
-  $("#pseudo").value = account?.name || "";
+  paintDeck();
 
   $("#heroBadge").innerHTML = rankBadge(r.idx, r.div);
   $("#heroTier").textContent = r.tier.n;
@@ -1570,6 +2008,210 @@ function paintHistory(){
       <div class="sc mono">${x.me}<span style="color:var(--dim)">–</span>${x.opS<0?"—":x.opS}</div>
       <div class="dl ${dcl} mono">${x.d>0?"+":""}${x.d||0}</div></div>`;
   }).join("") : `<div class="empty">Aucun duel enregistré.<br>Lance ta première recherche depuis l'onglet Duel.</div>`;
+}
+
+/* =====================================================================
+   6 bis. PASSE DE COMBAT, STICKERS, FLAMME, GRAPHIQUE
+   ===================================================================== */
+
+/* ---------- Passe : piste verticale, palier courant au centre ---------- */
+function rewardLabel(r){
+  if(r.k === "coin") return { ico:"🪙", t:`${r.v} pièces`,  s:"Monnaie de jeu" };
+  if(r.k === "gem")  return { ico:"💎", t:`${r.v} gemme${r.v>1?"s":""}`, s:"Monnaie premium" };
+  if(r.k === "xp")   return { ico:"⚡", t:`${r.v} XP`,      s:"Progression de niveau" };
+  const st = STK[r.id];
+  return { ico:st.e, t:st.n, s:"Sticker " + RARITY[st.r].n.toLowerCase(), r:st.r };
+}
+function openPass(){
+  Sfx.play("nav");
+  const cur = profile.tier, inTier = profile.crowns % CROWNS_PER_TIER;
+  $("#phTier").textContent   = cur + 1;
+  $("#phCrowns").textContent = profile.crowns;
+  $("#pfFill").style.width   = (inTier / CROWNS_PER_TIER * 100).toFixed(0) + "%";
+  $("#pfVal").textContent    = `${inTier}/${CROWNS_PER_TIER}`;
+
+  let html = "";
+  for(let t = 1; t <= PASS_TIERS; t++){
+    const r = rewardLabel(passReward(t));
+    const got = cur >= t, next = (cur + 1) === t;
+    html += `<div class="prow ${got?"got":next?"next":"lock"}">
+      <div class="pnum">${t}</div>
+      <div class="pcard">
+        <div class="pico" ${r.r?`data-r="${r.r}" style="box-shadow:inset 0 0 0 3px ${RARITY[r.r].c}"`:""}>${r.ico}</div>
+        <div class="ptxt"><div class="pt">${r.t}</div><div class="ps">${r.s}</div></div>
+        ${got ? `<span class="pchk">OBTENU</span>`
+              : `<span class="ps">${t*CROWNS_PER_TIER} 👑</span>`}
+      </div></div>`;
+  }
+  // La piste se lit de bas en haut : le palier 1 en bas, comme une ascension
+  $("#passScroll").innerHTML = html;
+  showView("pass");
+  // On amène le palier en cours dans le champ de vision
+  requestAnimationFrame(() => {
+    const el = $("#passScroll").querySelectorAll(".prow")[Math.max(0, cur - 1)];
+    if(el) el.scrollIntoView({ block:"center" });
+  });
+}
+
+/* ---------- Deck : six emplacements, collection complète ---------- */
+function stickerHTML(id, owned, equipped){
+  const st = STK[id];
+  return `<button class="stk ${owned?"":"off"} ${equipped?"eq":""}" data-r="${st.r}" data-id="${id}"
+    title="${st.n} · ${RARITY[st.r].n}">${owned ? st.e : "🔒"}
+    <span class="rlab" style="color:${RARITY[st.r].c}">${RARITY[st.r].n}</span></button>`;
+}
+function paintDeck(){
+  const slots = [];
+  for(let i = 0; i < 6; i++){
+    const id = profile.deck[i];
+    slots.push(id
+      ? `<button class="slot full" data-slot="${i}">${STK[id].e}</button>`
+      : `<button class="slot" data-slot="${i}">+</button>`);
+  }
+  $("#deckSlots").innerHTML = slots.join("");
+  $("#invCount").textContent = profile.stickers.length;
+  $("#deckInv").innerHTML = STICKERS.map(st =>
+    stickerHTML(st.id, profile.stickers.includes(st.id), profile.deck.includes(st.id))).join("");
+
+  $("#deckSlots").querySelectorAll("[data-slot]").forEach(b => b.onclick = async () => {
+    const i = +b.dataset.slot;
+    if(profile.deck[i]){ profile.deck.splice(i,1); await Store.set("profile", profile); paintDeck(); }
+    else toast("Choisis un sticker dans la collection");
+  });
+  $("#deckInv").querySelectorAll("[data-id]").forEach(b => b.onclick = async () => {
+    const id = b.dataset.id;
+    if(!profile.stickers.includes(id)){
+      toast(`${STK[id].n} se débloque dans la passe de combat`); return;
+    }
+    const at = profile.deck.indexOf(id);
+    if(at >= 0) profile.deck.splice(at, 1);
+    else if(profile.deck.length >= 6) { toast("Deck complet : retire d'abord un sticker"); return; }
+    else profile.deck.push(id);
+    Sfx.play("click");
+    await Store.set("profile", profile); paintDeck();
+  });
+}
+
+/* ---------- Stickers en duel : envoi par le canal pair-à-pair ---------- */
+function paintStkBar(){
+  $("#stkBar").innerHTML = profile.deck.map(id =>
+    `<button class="stk" data-r="${STK[id].r}" data-send="${id}">${STK[id].e}</button>`).join("")
+    || `<div style="color:#BFD6F5;font-size:13px;grid-column:1/-1;text-align:center">Deck vide</div>`;
+  $("#stkBar").querySelectorAll("[data-send]").forEach(b => b.onclick = () => {
+    flySticker(b.dataset.send, true);
+    Net.send({ t:"stk", id:b.dataset.send });
+    $("#stkBar").classList.remove("on");
+  });
+}
+function flySticker(id, mine){
+  const st = STK[id]; if(!st) return;
+  const el = document.createElement("div");
+  el.className = "fly"; el.textContent = st.e;
+  el.style.left = mine ? "14%" : "auto";
+  el.style.right = mine ? "auto" : "14%";
+  el.style.bottom = "34%";
+  $("#stkFly").appendChild(el);
+  Sfx.play("click");
+  setTimeout(() => el.remove(), 2000);
+}
+
+/* ---------- Flamme : un jour joué, un point, une fois par jour ---------- */
+function bumpFlame(){
+  const t = todayKey(), f = profile.flame;
+  if(f.last === t) return 0;                       // déjà compté aujourd'hui
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const yk = `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,"0")}-${String(y.getDate()).padStart(2,"0")}`;
+  f.cur = (f.last === yk) ? f.cur + 1 : 1;         // rupture si un jour est sauté
+  f.last = t;
+  if(f.cur > f.best) f.best = f.cur;
+  return f.cur;
+}
+function paintFlame(){
+  const f = profile.flame, alive = f.last === todayKey();
+  $("#flameNum").textContent = f.cur;
+  $("#flameChip").classList.toggle("cold", f.cur === 0 || !alive);
+  $("#stFlame").textContent = f.cur;
+  $("#stFlameBest").textContent = f.best;
+  $("#stToday").textContent = profile.days[todayKey()] || 0;
+}
+
+/* ---------- Graphique d'activité : quatorze derniers jours ---------- */
+function paintChart(){
+  const days = [];
+  for(let i = 13; i >= 0; i--){
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    days.push({ k, v:profile.days[k] || 0, lab:String(d.getDate()) });
+  }
+  const max = Math.max(10, ...days.map(d => d.v));
+  const W = 320, H = 132, base = H - 18, bw = W / days.length;
+  let g = `<line class="base" x1="0" y1="${base}" x2="${W}" y2="${base}"/>`;
+  days.forEach((d, i) => {
+    const h = d.v === 0 ? 0 : Math.max(4, (d.v / max) * (base - 20));
+    const x = i * bw + bw*.18, w = bw*.64;
+    if(h > 0) g += `<rect class="bar ${d.v === max ? "top" : ""}" x="${x.toFixed(1)}" y="${(base-h).toFixed(1)}"
+        width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3"/>`;
+    if(d.v > 0) g += `<text class="val" x="${(x+w/2).toFixed(1)}" y="${(base-h-4).toFixed(1)}" text-anchor="middle">${d.v}</text>`;
+    g += `<text class="lab" x="${(x+w/2).toFixed(1)}" y="${H-5}" text-anchor="middle">${d.lab}</text>`;
+  });
+  $("#chart").innerHTML = g;
+}
+
+/* ---------- Apparence du pseudo ---------- */
+const NAME_FONTS  = [["baloo","Baloo"],["fredoka","Fredoka"],["lucky","Cartoon"],["mono","Console"]];
+const NAME_COLORS = [["blanc","#FFFFFF"],["or","#F5B71E"],["lime","#7DD321"],
+                     ["cyan","#5FE0FF"],["rose","#FF7BC0"],["feu","linear-gradient(180deg,#FFE066,#FF6B1A)"]];
+function nameClass(){
+  const st = profile.nameStyle || { font:"baloo", color:"blanc" };
+  return `nf-${st.font} nm-${st.color}`;
+}
+function applyNameStyle(){
+  const cls = nameClass();
+  ["#nameShow","#pcName","#namePrev"].forEach(sel => {
+    const el = $(sel); if(!el) return;
+    el.className = el.id === "pcName" ? "pc-name " + cls
+                 : (el.id === "namePrev" ? "nameprev " + cls : "nameprev " + cls);
+    el.textContent = account?.name || "JOUEUR";
+  });
+}
+function openNameStyle(){
+  $("#fontPick").innerHTML = NAME_FONTS.map(([k,l]) =>
+    `<button class="pick nf-${k} ${profile.nameStyle.font===k?"on":""}" data-font="${k}">${l}</button>`).join("");
+  $("#colorPick").innerHTML = NAME_COLORS.map(([k,c]) =>
+    `<button class="pick swatch ${profile.nameStyle.color===k?"on":""}" data-color="${k}"
+      style="background:${c}"></button>`).join("");
+  $("#fontPick").querySelectorAll("[data-font]").forEach(b => b.onclick = async () => {
+    profile.nameStyle.font = b.dataset.font; await Store.set("profile", profile);
+    applyNameStyle(); openNameStyle();
+  });
+  $("#colorPick").querySelectorAll("[data-color]").forEach(b => b.onclick = async () => {
+    profile.nameStyle.color = b.dataset.color; await Store.set("profile", profile);
+    applyNameStyle(); openNameStyle();
+  });
+  applyNameStyle();
+  $("#sheetName").classList.add("on");
+}
+
+/* ---------- Sauvegarde : export et import de la progression ---------- */
+async function exportSave(){
+  const blob = new Blob([JSON.stringify({ v:SCHEMA, account, profile, at:Date.now() }, null, 2)],
+                        { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `pushup-rivals-${todayKey()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("Sauvegarde exportée");
+}
+async function importSave(file){
+  try{
+    const data = JSON.parse(await file.text());
+    if(!data.profile) throw new Error("format");
+    profile = migrateProfile(data.profile);
+    if(data.account) { account = data.account; await Store.set("account", account); }
+    await Store.set("profile", profile);
+    paintAll(); Sfx.play("reward"); toast("Sauvegarde restaurée");
+  }catch{ toast("Fichier de sauvegarde illisible"); }
 }
 
 /* =====================================================================
@@ -2117,6 +2759,8 @@ const Game = {
     $("#nameOp").textContent = solo ? "OBJECTIF" : (Net.opponent.name || "ADVERSAIRE").toUpperCase();
     $("#scoreMe").textContent = "0"; $("#scoreOp").textContent = "0";
     $("#tug").style.width = "50%";
+    $("#stkBar").classList.remove("on");
+    $("#stkFly").innerHTML = "";
     $("#clock").textContent = this.fmt(MATCH_SECONDS);
     $("#clock").classList.remove("low");
     $("#repBig").textContent = "0";
@@ -2159,6 +2803,7 @@ const Game = {
         el.textContent = n > 0 ? String(n) : "GO";
         el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
         if(navigator.vibrate) navigator.vibrate(n > 0 ? 18 : 60);
+        Sfx.play(n > 0 ? "click" : "start");
         if(n < 0){ clearInterval(calTick); box.classList.remove("on"); resolve(); return; }
         n--; setTimeout(tick, 1000);
       };
@@ -2199,6 +2844,7 @@ const Game = {
     f.style.background = ev === "valid" ? "var(--blue)" : "var(--red)";
     f.style.animation = "none"; void f.offsetWidth; f.style.animation = "fl .45s ease-out";
     if(navigator.vibrate) navigator.vibrate(ev === "valid" ? 30 : [20,40,20]);
+    Sfx.play(ev === "valid" ? "rep" : "fail");
     if(ev !== "valid") return;
     this.splash();
     this.myScore = reps;
@@ -2291,8 +2937,13 @@ const Game = {
     // Annonces différées, une par seconde, pour qu'elles ne se marchent pas dessus
     const news = [];
     if(gain.levels) news.push(`Niveau ${levelOf(profile.xp).lvl} atteint`);
-    if(gain.tiers)  news.push(`Palier de saison ${profile.tier}`);
+    if(gain.tiers)  news.push(`Palier de passe ${profile.tier}`);
+    (gain.unlocked || []).forEach(id => news.push(`Sticker débloqué · ${STK[id].e} ${STK[id].n}`));
     if(gain.daily)  news.push("Objectif du jour rempli · +60 pièces");
+    if(gain.flame === 1) news.push("Série lancée · reviens demain");
+    else if(gain.flame > 1) news.push(`Série de ${gain.flame} jours`);
+    if(gain.levels || gain.tiers || (gain.unlocked||[]).length) Sfx.play("unlock");
+    else Sfx.play("reward");
     news.forEach((m,i) => setTimeout(() => toast(m), 700 + i*1900));
   },
 
@@ -2317,6 +2968,7 @@ const Game = {
 
 Net.onData = d => {
   if(!d) return;
+  if(d.t === "stk"){ flySticker(d.id, false); return; }
   if(d.t === "score") Game.setOpScore(d.v);
   else if(d.t === "final"){ Game.opFinal = d.v; Game.setOpScore(d.v); }
   else if(d.t === "quit"){ if(Game.running) Game.finish(true); }
@@ -2381,10 +3033,7 @@ $("#btnForget").onclick = async () => {
 $$(".navbtn").forEach(b => b.onclick = () => { showTab(b.dataset.tab); if(navigator.vibrate) navigator.vibrate(8); });
 $$("[data-close]").forEach(b => b.onclick = () => b.closest(".sheet").classList.remove("on"));
 
-$("#pseudo").onchange = async e => {
-  const v = e.target.value.trim().toUpperCase().slice(0,12) || account.name;
-  account.name = v; await Store.set("account", account); paintAll(); toast("Pseudonyme enregistré");
-};
+// Le pseudo se change via la feuille dédiée : premier changement offert, puis 100 gemmes
 $("#btnChangePhoto").onclick = () => $("#filePhoto2").click();
 $("#filePhoto2").onchange = async e => {
   const f = e.target.files?.[0]; if(!f) return;
@@ -2395,8 +3044,7 @@ $("#btnCamFront").onclick = async () => { profile.facing = "user"; await Store.s
 $("#btnCamBack").onclick  = async () => { profile.facing = "environment"; await Store.set("profile", profile); toast("Caméra arrière"); };
 $("#btnLogout").onclick = async () => { await Session.close(); toast("Déconnecté"); Gate.open("login"); };
 $("#btnReset").onclick = async () => {
-  profile = { elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:profile.facing,
-              history:[], xp:0, coins:0, gems:0, crowns:0, tier:0, daily:{ d:"", reps:0, done:false } };
+  profile = freshProfile({ facing:profile.facing });
   await Store.set("profile", profile); paintAll(); toast("Progression remise à zéro");
 };
 
@@ -2406,7 +3054,7 @@ const _solo = $("#btnSolo"); if(_solo) _solo.onclick = () => Game.enter("solo");
 $("#btnSolo2").onclick  = () => Game.enter("solo");
 $$("[data-bot]").forEach(b => b.onclick = () => Game.enter("bot", { level:b.dataset.bot }));
 $("#btnPrivate").onclick = () => $("#sheetPrivate").classList.add("on");
-$("#btnPass").onclick    = () => { paintTiers(); $("#sheetPass").classList.add("on"); };
+$("#btnPass").onclick    = () => openPass();
 $("#btnDaily").onclick   = () => toast(profile.daily.done
   ? "Objectif du jour déjà rempli. Reviens demain."
   : `Encore ${DAILY_TARGET - profile.daily.reps} pompes aujourd'hui pour 60 pièces.`);
@@ -2428,6 +3076,50 @@ $("#btnJoin").onclick = async () => {
   if(conn){ $("#sheetPrivate").classList.remove("on"); Game.enter("private"); }
   else $("#privateInfo").textContent = "Aucun salon actif avec ce code.";
 };
+
+/* ---- Passe, deck, apparence, renommage, sauvegarde, sons ---- */
+$("#passBack").onclick = () => { showView("menu"); Sfx.play("back"); };
+$("#deckBack").onclick = () => { showView("menu"); Sfx.play("back"); };
+$("#btnDeck").onclick  = () => { paintDeck(); showView("deck"); Sfx.play("nav"); };
+$("#btnNameStyle").onclick = () => openNameStyle();
+
+const RENAME_COST = 100;
+$("#btnRename").onclick = () => {
+  const free = !profile.renamed;
+  $("#renameInfo").className = "hint";
+  $("#renameInfo").textContent = free ? "Premier changement offert."
+    : `Coût : ${RENAME_COST} gemmes. Tu en as ${profile.gems}.`;
+  $("#newName").value = account.name;
+  $("#sheetRename").classList.add("on");
+};
+$("#btnRenameGo").onclick = async () => {
+  const v = ($("#newName").value || "").trim().toUpperCase().slice(0,12);
+  if(!/^[A-Z0-9ÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ._-]{3,12}$/.test(v)){
+    $("#renameInfo").className = "hint err";
+    $("#renameInfo").textContent = "3 à 12 caractères, sans espace."; Sfx.play("fail"); return;
+  }
+  const free = !profile.renamed;
+  if(!free && profile.gems < RENAME_COST){
+    $("#renameInfo").className = "hint err";
+    $("#renameInfo").textContent = `Il te manque ${RENAME_COST - profile.gems} gemmes.`;
+    Sfx.play("fail"); return;
+  }
+  if(!free) profile.gems -= RENAME_COST;
+  profile.renamed = true; account.name = v;
+  await Store.set("account", account); await Store.set("profile", profile);
+  $("#sheetRename").classList.remove("on");
+  paintAll(); Sfx.play("reward");
+  toast(free ? "Pseudo changé" : `Pseudo changé · -${RENAME_COST} gemmes`);
+};
+
+$("#btnExport").onclick = () => exportSave();
+$("#btnImport").onclick = () => $("#fileSave").click();
+$("#fileSave").onchange = e => { const f = e.target.files?.[0]; if(f) importSave(f); e.target.value = ""; };
+$("#btnSfxOn").onclick  = async () => { Sfx.on = true;  profile.sfx = true;  await Store.set("profile", profile); Sfx.play("click"); toast("Sons activés"); };
+$("#btnSfxOff").onclick = async () => { Sfx.on = false; profile.sfx = false; await Store.set("profile", profile); toast("Sons coupés"); };
+
+/* ---- Stickers pendant le duel ---- */
+$("#btnStk").onclick = () => { paintStkBar(); $("#stkBar").classList.toggle("on"); };
 
 $("#btnSwitchCam").onclick = () => Vision.switchCamera();
 $("#btnQuit").onclick = () => Game.quit();
@@ -2454,8 +3146,8 @@ setTimeout(hideSplash, 4500);        // filet : jamais d'écran de lancement blo
 
 (async function boot(){
   account = await Store.get("account", null);
-  profile = Object.assign({ elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0, facing:"user", history:[], xp:0, coins:0, gems:0, crowns:0, tier:0, daily:{ d:"", reps:0, done:false } },
-                          await Store.get("profile", {}));
+  profile = migrateProfile(await Store.get("profile", null));
+  Sfx.on = profile.sfx !== false;
   // L'écran de lancement tient au moins 1,2 s : le temps de lire le logo
   setTimeout(hideSplash, Math.max(0, 1200 - performance.now()));
   document.getElementById("splash")?.addEventListener("click", hideSplash);
