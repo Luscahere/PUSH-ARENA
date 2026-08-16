@@ -852,10 +852,136 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 .nf-lucky{font-family:'Luckiest Guy',system-ui,sans-serif;font-weight:400;letter-spacing:.03em}
 .nf-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:800}
 
+
+/* ============================================================
+   TUTORIEL — halo découpé et boîte de dialogue
+   ============================================================ */
+#tuto{position:fixed;inset:0;z-index:40;display:none}
+#tuto.on{display:block;animation:tab-in .3s cubic-bezier(.2,1.3,.4,1)}
+#tutoSpot{position:absolute;display:none;border-radius:20px;pointer-events:none;
+  border:3px solid var(--gold-hi);
+  box-shadow:0 0 0 9999px rgba(6,14,34,.80),0 0 26px 6px rgba(255,223,128,.75),
+             inset 0 0 20px rgba(255,223,128,.35);
+  transition:all .38s cubic-bezier(.2,1.2,.4,1);animation:spot 2s ease-in-out infinite}
+@keyframes spot{0%,100%{box-shadow:0 0 0 9999px rgba(6,14,34,.80),0 0 22px 4px rgba(255,223,128,.65),inset 0 0 20px rgba(255,223,128,.3)}
+                50%{box-shadow:0 0 0 9999px rgba(6,14,34,.80),0 0 34px 10px rgba(255,223,128,.9),inset 0 0 26px rgba(255,223,128,.45)}}
+
+#tutoBox{position:absolute;left:12px;right:12px;bottom:calc(var(--safe-b) + 14px);
+  display:flex;align-items:flex-end;gap:10px}
+#tutoFace{width:96px;flex:0 0 96px;border:4px solid var(--ink);border-radius:20px;
+  box-shadow:0 6px 0 var(--royal-dk),0 0 30px rgba(120,205,255,.5);
+  animation:bob 2.6s ease-in-out infinite}
+.tb-body{flex:1;min-width:0;border:4px solid var(--ink);border-radius:22px;padding:11px 13px 12px;
+  background:linear-gradient(180deg,#FFFDF6,var(--cream));
+  box-shadow:0 7px 0 var(--cream-dk),0 16px 26px -12px rgba(6,14,34,.8)}
+.tb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.tb-name{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:16px;color:var(--royal)}
+.tb-step{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;color:#9A8659}
+.tb-body p{margin:0 0 10px;font-size:15px;line-height:1.4;color:var(--ink);font-weight:500;min-height:62px}
+.tb-act{display:flex;gap:8px}
+.tb-act .btn{flex:1}
+.tb-act .btn:first-child{flex:0 0 92px}
+
+/* ============================================================ */
+/* ============================================================
+   PASSE VISUELLE — matière, lumière, profondeur
+   ============================================================ */
+
+/* ---------- Boutons : vernis, grain et lueur au repos ---------- */
+.btn{position:relative;overflow:hidden;isolation:isolate}
+/* reflet vitré sur la moitié haute, comme un bouton moulé */
+.btn::before{content:'';position:absolute;left:3%;right:3%;top:4%;height:42%;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));
+  pointer-events:none;z-index:-1}
+/* balayage lumineux lent sur les boutons d'action principaux */
+.btn.gold::after,.btn.danger::after{content:'';position:absolute;top:-60%;left:-30%;width:26%;height:220%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:rotate(18deg);animation:sheen 4.5s ease-in-out infinite;pointer-events:none;z-index:-1}
+@keyframes sheen{0%{left:-30%}55%{left:120%}100%{left:120%}}
+.btn.gold{box-shadow:inset 0 4px 0 rgba(255,255,255,.55),inset 0 -6px 0 rgba(120,75,0,.28),
+  0 6px 0 var(--gold-dk),0 12px 16px -8px rgba(165,106,4,.6),0 0 26px -6px rgba(255,199,74,.75)}
+.btn:not(.steel){text-shadow:0 2px 0 rgba(20,34,76,.55),0 0 12px rgba(255,255,255,.25)}
+
+/* ---------- Plaques : grain fin et liseré lumineux ---------- */
+.plate{overflow:hidden}
+.plate::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.30;
+  background-image:radial-gradient(rgba(255,255,255,.16) 1px, transparent 1px);
+  background-size:5px 5px}
+.plate.cream::after{opacity:.22;
+  background-image:radial-gradient(rgba(120,90,30,.14) 1px, transparent 1px)}
+.plate>*{position:relative;z-index:1}
+
+/* ---------- Emblèmes : halo coloré et vernis animé ---------- */
+.crest,.pc-badge,#curBadge,#resBadge,#topMini{position:relative}
+.crest::after{content:'';position:absolute;inset:6% 12%;border-radius:50%;z-index:-1;
+  background:radial-gradient(closest-side,rgba(180,225,255,.55),transparent 72%);
+  filter:blur(10px);animation:breathe 3.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.95;transform:scale(1.12)}}
+.rung .b{filter:drop-shadow(0 3px 0 rgba(9,18,42,.5))}
+.rung.cur .b{filter:drop-shadow(0 3px 0 rgba(9,18,42,.5)) drop-shadow(0 0 12px rgba(255,240,190,.95))}
+
+/* ---------- Barres de progression : reflet et pulsation ---------- */
+.progress .fill,.pass-track i,.pf-bar i,.xp i,.daily .mini i{position:relative;overflow:hidden}
+.progress .fill::after,.pass-track i::after,.pf-bar i::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);
+  animation:flow 2.6s linear infinite}
+@keyframes flow{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* ---------- Ressources : éclat sur la pastille de niveau ---------- */
+.lvlbadge{position:relative;overflow:hidden}
+.lvlbadge::after{content:'';position:absolute;top:-40%;left:-60%;width:40%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);
+  transform:rotate(20deg);animation:sheen 5.5s ease-in-out infinite}
+.res{position:relative}
+.chip,.res svg{filter:drop-shadow(0 2px 0 rgba(9,18,42,.55))}
+
+/* ---------- Navigation : lueur sous l'onglet actif ---------- */
+.navbtn.on::after{content:'';position:absolute;bottom:2px;left:26%;right:26%;height:4px;border-radius:3px;
+  background:var(--gold-hi);box-shadow:0 0 12px 2px rgba(255,223,128,.85)}
+.navbtn.main.on::after{display:none}
+.navbtn.main .disc{position:relative;overflow:hidden}
+.navbtn.main .disc::after{content:'';position:absolute;top:-40%;left:-60%;width:38%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);
+  transform:rotate(20deg);animation:sheen 4s ease-in-out infinite}
+
+/* ---------- Scène : sol lumineux sous le podium ---------- */
+.stage .halo{background:
+  radial-gradient(closest-side,rgba(190,235,255,.55),rgba(120,190,255,.18) 55%,transparent 74%)}
+.stage::after{content:'';position:absolute;bottom:14px;left:22%;right:22%;height:16px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(150,220,255,.55),transparent 72%);
+  filter:blur(5px);pointer-events:none}
+
+/* ---------- Arrière-plan : brume, rayons, bokeh ---------- */
+#bg{background:
+  radial-gradient(52vw 30vh at 50% 16%, rgba(190,240,255,.42), transparent 68%),
+  radial-gradient(70vw 20vh at 10% 60%, #1A5687 0 99%, transparent 100%),
+  radial-gradient(82vw 24vh at 90% 64%, #14446F 0 99%, transparent 100%),
+  radial-gradient(46vw 14vh at 50% 57%, rgba(190,240,255,.20), transparent 72%),
+  radial-gradient(120vw 44vh at 50% 112%, rgba(5,14,36,.96), transparent 74%),
+  linear-gradient(180deg,#2071B8 0%,#1A5C9C 26%,#123A6E 58%,#08183A 100%)}
+/* bokeh flottant, deux tailles */
+#fog{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#fog i{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(210,245,255,.55),transparent);
+  animation:rise linear infinite}
+@keyframes rise{
+  0%{transform:translateY(0) scale(.9);opacity:0}
+  15%{opacity:.85}
+  85%{opacity:.5}
+  100%{transform:translateY(-70vh) scale(1.25);opacity:0}}
+/* brume basse au-dessus du sol */
+#fog::after{content:'';position:absolute;left:-20%;right:-20%;bottom:-6%;height:34%;
+  background:radial-gradient(60% 100% at 50% 100%, rgba(200,240,255,.28), transparent 72%);
+  filter:blur(14px)}
+
+/* ---------- Halo du tutoriel : sans :has(), pilotage par classe ---------- */
+#tuto.nospot::before{content:'';position:absolute;inset:0;background:rgba(6,14,34,.80)}
+#tuto:not(.nospot)::before{display:none}
+
 </style>
 </head>
 <body>
 <div id="bg"></div>
+<div id="fog"></div>
 
 <!-- ================= LANCEMENT ================= -->
 <div id="splash">
@@ -970,6 +1096,7 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
         </div>
       </div>
       <button class="btn gold" id="btnDeck">Deck de stickers</button>
+      <button class="btn steel sm" id="btnTuto">Revoir le tutoriel</button>
       <div class="grid3">
         <div class="kpi"><div class="v mono" id="stW">0</div><div class="k">Victoires</div></div>
         <div class="kpi"><div class="v mono" id="stL">0</div><div class="k">Défaites</div></div>
@@ -994,8 +1121,9 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
       </div>
       <div class="plate">
         <div class="eyebrow">Sauvegarde</div>
-        <p style="font-size:13px;color:#D5E4FF;line-height:1.45;margin:8px 0 10px">
-          Ta progression est écrite en double sur l'appareil. Exporte-la avant de changer de téléphone.</p>
+        <p style="font-size:13px;color:#D5E4FF;line-height:1.45;margin:8px 0 6px">
+          Support actif : <b id="saveBackend">…</b>. Exporte ta progression avant de changer d'appareil.</p>
+        <div style="font-size:12px;color:#9FB8DE;margin-bottom:10px" id="saveWhen">—</div>
         <div class="quick">
           <button class="btn steel sm" id="btnExport">Exporter</button>
           <button class="btn steel sm" id="btnImport">Importer</button>
@@ -1016,7 +1144,7 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
           <button class="btn steel sm" id="btnCamBack">Arrière</button>
         </div>
       </div>
-      <button class="btn steel sm" id="btnLogout">Se déconnecter</button>
+      <button class="btn steel sm" id="btnLogout">Changer de compte</button>
       <button class="btn steel sm" id="btnReset">Réinitialiser la progression</button>
     </section>
 
@@ -1350,6 +1478,22 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
   <button class="btn steel sm" data-close>Fermer</button>
 </div></div>
 
+<!-- ================= TUTORIEL ================= -->
+<div id="tuto">
+  <div id="tutoSpot"></div>
+  <div id="tutoBox">
+    <img id="tutoFace" src="data:image/webp;base64,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" alt="" />
+    <div class="tb-body">
+      <div class="tb-head"><span class="tb-name">RIVAL</span><span class="tb-step" id="tutoStep">1 / 11</span></div>
+      <p id="tutoText"></p>
+      <div class="tb-act">
+        <button class="btn steel sm" id="tutoSkip">Passer</button>
+        <button class="btn gold sm" id="tutoNext">Suivant</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
@@ -1402,41 +1546,132 @@ const TIERS = [
 const ROMAN = ["I","II","III"];
 
 /* =====================================================================
-   2. STOCKAGE PERSISTANT
-   Trois garanties contre la perte de données lors d'une mise à jour :
-   1. les clés ne changent JAMAIS de nom d'une version à l'autre ;
-   2. écriture en double (stockage applicatif + localStorage), lecture sur
-      celui qui répond, de sorte qu'un backend indisponible ne perd rien ;
-   3. migration de schéma : les champs ajoutés par une nouvelle version
-      sont complétés avec leur valeur par défaut au lieu de casser la
-      sauvegarde existante.
+   2. SAUVEGARDE LOCALE
+   La progression était perdue au rechargement parce qu'un seul support
+   était réellement tenté : dans une page isolée (bac à sable, fichier
+   ouvert en local, navigation privée), localStorage lève une exception
+   et tout retombait en mémoire vive, effacée à la fermeture.
+
+   Désormais : UNE seule sauvegarde, écrite sur TOUS les supports
+   disponibles, relue sur le premier qui répond.
+     localStorage  →  stockage applicatif  →  IndexedDB  →  mémoire
+   L'écriture est immédiate et groupée, plus un filet à la fermeture
+   de l'onglet. Le support réellement actif est affiché dans le profil,
+   pour que l'absence de persistance ne soit jamais silencieuse.
    ===================================================================== */
-const SCHEMA = 4;                       // à incrémenter à chaque ajout de champs
-const Store = (() => {
-  const mem = {};
-  const hasW = typeof window.storage?.get === "function";
-  const hasL = (() => { try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; }catch{ return false; } })();
-  return {
-    async get(k, d){
-      let out = null;
-      if(hasW){ try{ const r = await window.storage.get(k); if(r?.value) out = r.value; }catch{} }
-      if(out === null && hasL){ try{ out = localStorage.getItem(k); }catch{} }
-      if(out === null) return (k in mem) ? mem[k] : d;
-      try{ return JSON.parse(out); }catch{ return d; }
-    },
-    async set(k, v){
-      const s = JSON.stringify(v);
-      mem[k] = v;                                   // filet mémoire immédiat
-      if(hasL){ try{ localStorage.setItem(k, s); }catch{} }
-      if(hasW){ try{ await window.storage.set(k, s); }catch{} }
-    },
-    async del(k){
-      delete mem[k];
-      if(hasL){ try{ localStorage.removeItem(k); }catch{} }
-      if(hasW){ try{ await window.storage.delete(k); }catch{} }
+const SCHEMA = 5;
+const SAVE_KEY = "pushup_rivals_save";      // ne change jamais de nom
+
+/* --- IndexedDB réduit à un couple clé/valeur --- */
+const Idb = {
+  db:null,
+  open(){
+    if(this.db) return Promise.resolve(this.db);
+    return new Promise(res => {
+      try{
+        const rq = indexedDB.open("pushup_rivals", 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore("kv");
+        rq.onsuccess = () => { this.db = rq.result; res(this.db); };
+        rq.onerror = () => res(null);
+        setTimeout(() => res(this.db), 1500);
+      }catch{ res(null); }
+    });
+  },
+  async get(k){
+    const db = await this.open(); if(!db) return null;
+    return new Promise(res => {
+      try{
+        const rq = db.transaction("kv").objectStore("kv").get(k);
+        rq.onsuccess = () => res(rq.result ?? null);
+        rq.onerror = () => res(null);
+      }catch{ res(null); }
+    });
+  },
+  async set(k, v){
+    const db = await this.open(); if(!db) return;
+    try{ db.transaction("kv","readwrite").objectStore("kv").put(v, k); }catch{}
+  },
+  async del(k){
+    const db = await this.open(); if(!db) return;
+    try{ db.transaction("kv","readwrite").objectStore("kv").delete(k); }catch{}
+  }
+};
+
+const Save = {
+  data:{ account:null, profile:null, session:null },
+  backends:[], label:"mémoire seule", ready:null, dirty:false, timer:null,
+
+  probe(){
+    const ok = [];
+    try{ localStorage.setItem("__probe","1"); localStorage.removeItem("__probe"); ok.push("local"); }catch{}
+    if(typeof window.storage?.set === "function") ok.push("app");
+    if(typeof indexedDB !== "undefined") ok.push("idb");
+    this.backends = ok;
+    this.label = ok.includes("local") ? "localStorage"
+               : ok.includes("app")   ? "stockage applicatif"
+               : ok.includes("idb")   ? "IndexedDB"
+               : "mémoire seule";
+    return ok;
+  },
+
+  async load(){
+    this.probe();
+    let raw = null;
+    if(this.backends.includes("local")){ try{ raw = localStorage.getItem(SAVE_KEY); }catch{} }
+    if(!raw && this.backends.includes("app")){
+      try{ const r = await window.storage.get(SAVE_KEY); raw = r?.value || null; }catch{}
     }
-  };
-})();
+    if(!raw && this.backends.includes("idb")){ raw = await Idb.get(SAVE_KEY); }
+
+    // Reprise des sauvegardes éclatées des versions précédentes
+    if(!raw){
+      const old = {};
+      for(const k of ["account","profile","session"]){
+        try{ const v = localStorage.getItem(k); if(v) old[k] = JSON.parse(v); }catch{}
+        if(!old[k] && typeof window.storage?.get === "function"){
+          try{ const r = await window.storage.get(k); if(r?.value) old[k] = JSON.parse(r.value); }catch{}
+        }
+      }
+      if(old.account || old.profile){ this.data = Object.assign(this.data, old); this.flush(true); return; }
+    }
+    if(raw){ try{ this.data = Object.assign(this.data, JSON.parse(raw)); }catch{} }
+  },
+
+  /* Écriture groupée : appelée à chaque modification, réellement écrite
+     au plus tard 250 ms après, et systématiquement à la fermeture. */
+  flush(now = false){
+    this.dirty = true;
+    clearTimeout(this.timer);
+    if(now) return this.write();
+    this.timer = setTimeout(() => this.write(), 250);
+  },
+  write(){
+    if(!this.dirty) return;
+    this.dirty = false;
+    const raw = JSON.stringify(this.data);
+    if(this.backends.includes("local")){ try{ localStorage.setItem(SAVE_KEY, raw); }catch{} }
+    if(this.backends.includes("app")){ try{ window.storage.set(SAVE_KEY, raw); }catch{} }
+    if(this.backends.includes("idb")){ Idb.set(SAVE_KEY, raw); }
+  },
+  async wipe(){
+    this.data = { account:null, profile:null, session:null };
+    try{ localStorage.removeItem(SAVE_KEY); }catch{}
+    try{ await window.storage?.delete(SAVE_KEY); }catch{}
+    await Idb.del(SAVE_KEY);
+  }
+};
+Save.ready = Save.load();
+// Filets de sécurité : rien ne doit être perdu à la fermeture
+addEventListener("pagehide", () => Save.write());
+addEventListener("beforeunload", () => Save.write());
+document.addEventListener("visibilitychange", () => { if(document.hidden) Save.write(); });
+
+/* API conservée à l'identique pour le reste du code */
+const Store = {
+  async get(k, d){ await Save.ready; return Save.data[k] ?? d; },
+  async set(k, v){ await Save.ready; Save.data[k] = v; Save.flush(); },
+  async del(k){    await Save.ready; Save.data[k] = null; Save.flush(); }
+};
 
 /* Valeurs par défaut : source unique de vérité pour la migration. */
 function freshProfile(keep = {}){
@@ -1449,7 +1684,9 @@ function freshProfile(keep = {}){
     stickers:["s01","s02","s03"],          // inventaire
     deck:["s01","s02","s03"],              // six emplacements maximum
     nameStyle:{ font:"baloo", color:"blanc" },
-    renamed:false, sfx:true
+    renamed:false, sfx:true,
+    placement:{ done:0, wins:0, active:true },   // dix parties de classement
+    tutoDone:false
   }, keep);
 }
 /* Complète une sauvegarde ancienne sans jamais écraser ce qui existe. */
@@ -1628,6 +1865,26 @@ function randHex(n=8){
    4. EMBLÈMES DE RANG ET AVATARS
    ===================================================================== */
 let uid = 0;
+/* Emblème gris tant que le joueur n'a pas terminé son placement */
+function unrankedBadge(){
+  const u = "u" + (++uid);
+  return `
+<svg viewBox="-5 -8 110 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
+  <defs><linearGradient id="${u}" x1=".2" y1="0" x2=".8" y2="1">
+    <stop offset="0" stop-color="#C9D6EA"/><stop offset=".35" stop-color="#7E8FAE"/>
+    <stop offset=".7" stop-color="#3E4C6B"/><stop offset="1" stop-color="#0B1329"/></linearGradient></defs>
+  <path d="M50 2 L90 20 L90 62 L50 96 L10 62 L10 20 Z" fill="url(#${u})"
+        stroke="#0B1329" stroke-width="3.4" stroke-linejoin="round"/>
+  <path d="M50 9 L83 24 L83 59 L50 87 L17 59 L17 24 Z" fill="none"
+        stroke="#0B1329" stroke-width="2" stroke-opacity=".5"/>
+  <text x="50" y="60" text-anchor="middle" font-family="Baloo 2,system-ui" font-size="42"
+        font-weight="800" fill="#E8F0FF" stroke="#0B1329" stroke-width="2"
+        paint-order="stroke" opacity=".92">?</text>
+  <path d="M22 94 H78 L72 110 H28 Z" fill="#3E4C6B" stroke="#0B1329"
+        stroke-width="2.6" stroke-linejoin="round"/>
+</svg>`;
+}
+
 function rankBadge(tierIdx, div){
   const t = TIERS[clamp(tierIdx,0,TIERS.length-1)];
   const u = "b" + (++uid);
@@ -1659,6 +1916,11 @@ function rankBadge(tierIdx, div){
     <filter id="g${u}" x="-70%" y="-70%" width="240%" height="240%">
       <feGaussianBlur stdDeviation="2.6" result="b"/>
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="glow${u}" x="-45%" y="-45%" width="190%" height="190%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4.5" flood-color="${t.gem}" flood-opacity=".85"/></filter>
+    <pattern id="tx${u}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+      <rect width="6" height="6" fill="none"/>
+      <path d="M0 0 V6" stroke="#FFFFFF" stroke-opacity=".10" stroke-width="1.6"/></pattern>
   </defs>
 
   ${top ? `<g opacity=".55" filter="url(#g${u})">
@@ -1677,10 +1939,12 @@ function rankBadge(tierIdx, div){
 
   <!-- écusson : liseré métal puis corps biseauté -->
   <path d="M50 2 L90 20 L90 62 L50 96 L10 62 L10 20 Z" fill="url(#r${u})"
-        stroke="#0B1329" stroke-width="3.4" stroke-linejoin="round"/>
+        stroke="#0B1329" stroke-width="3.4" stroke-linejoin="round" filter="url(#glow${u})"/>
   <path d="M50 9 L83 24 L83 59 L50 87 L17 59 L17 24 Z" fill="url(#m${u})"
         stroke="#0B1329" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M50 10 L81 25 L50 41 L19 25 Z" fill="#FFFFFF" opacity=".18"/>
+  <path d="M50 9 L83 24 L83 59 L50 87 L17 59 L17 24 Z" fill="url(#tx${u})"/>
+  <path d="M50 10 L81 25 L50 41 L19 25 Z" fill="#FFFFFF" opacity=".20"/>
+  <path d="M17 30 L83 52 L83 58 L17 36 Z" fill="#FFFFFF" opacity=".13"/>
   <path d="M50 15 L76 27 L76 56 L50 79 L24 56 L24 27 Z" fill="none"
         stroke="${t.gem}" stroke-opacity=".45" stroke-width="1.6"/>
 
@@ -1928,11 +2192,12 @@ function paintAll(){
   $("#gemVal").textContent  = profile.gems;
 
   // Emplacement du profil
+  const plc = inPlacement(), pDone = profile.placement.done;
   $("#pcAvatar").innerHTML = avatarHTML(account?.avatar);
-  $("#pcBadge").innerHTML  = rankBadge(r.idx, r.div);
+  $("#pcBadge").innerHTML  = plc ? unrankedBadge() : rankBadge(r.idx, r.div);
   $("#pcName").textContent = account?.name || "JOUEUR";
-  $("#pcRank").textContent = `${r.tier.n} ${ROMAN[r.div]}`;
-  $("#pcElo").textContent  = Math.round(profile.elo);
+  $("#pcRank").textContent = plc ? `Non classé · ${pDone}/${PLACEMENT_GAMES}` : `${r.tier.n} ${ROMAN[r.div]}`;
+  $("#pcElo").textContent  = plc ? "—" : Math.round(profile.elo);
 
   // Objectif du jour
   $("#dailyFill").style.width = (clamp(profile.daily.reps / DAILY_TARGET, 0, 1)*100).toFixed(0) + "%";
@@ -1944,6 +2209,10 @@ function paintAll(){
   $("#passTier").textContent = profile.tier + 1;
   $("#passFill").style.width = (inTier / CROWNS_PER_TIER * 100).toFixed(0) + "%";
   $("#passVal").textContent  = `${inTier}/${CROWNS_PER_TIER}`;
+  $("#saveBackend").textContent = Save.label;
+  $("#saveWhen").textContent = Save.backends.length
+    ? "Progression enregistrée automatiquement après chaque duel."
+    : "Aucun support disponible : la progression sera perdue à la fermeture.";
   paintFlame();
   paintChart();
   applyNameStyle();
@@ -1953,14 +2222,25 @@ function paintAll(){
   $("#pfMail").textContent = account?.mail || "—";
   paintDeck();
 
-  $("#heroBadge").innerHTML = rankBadge(r.idx, r.div);
-  $("#heroTier").textContent = r.tier.n;
-  $("#heroDiv").textContent  = "Division " + ROMAN[r.div];
-  $("#heroFill").style.width = (r.prog*100).toFixed(1) + "%";
-  $("#heroFrom").textContent = r.tier.min;
-  $("#heroTo").textContent   = r.next ? `${r.next.n} · ${r.next.min}` : "Sommet atteint";
+  if(plc){
+    $("#heroBadge").innerHTML  = unrankedBadge();
+    $("#heroTier").textContent = "NON CLASSÉ";
+    $("#heroDiv").textContent  = `${PLACEMENT_GAMES - pDone} duel${PLACEMENT_GAMES-pDone>1?"s":""} pour être classé`;
+    $("#heroFill").style.width = (pDone / PLACEMENT_GAMES * 100).toFixed(0) + "%";
+    $("#heroFrom").textContent = `${pDone}/${PLACEMENT_GAMES} joués`;
+    $("#heroTo").textContent   = `${profile.placement.wins} victoire${profile.placement.wins>1?"s":""}`;
+    $("#btnRanked").innerHTML  = `Placement<small>${pDone}/${PLACEMENT_GAMES} · 60 s</small>`;
+  }else{
+    $("#heroBadge").innerHTML = rankBadge(r.idx, r.div);
+    $("#heroTier").textContent = r.tier.n;
+    $("#heroDiv").textContent  = "Division " + ROMAN[r.div];
+    $("#heroFill").style.width = (r.prog*100).toFixed(1) + "%";
+    $("#heroFrom").textContent = r.tier.min;
+    $("#heroTo").textContent   = r.next ? `${r.next.n} · ${r.next.min}` : "Sommet atteint";
+    $("#btnRanked").innerHTML  = `Duel<small>Classé · 60 s</small>`;
+  }
 
-  $("#curBadge").innerHTML = rankBadge(r.idx, r.div);
+  $("#curBadge").innerHTML = plc ? unrankedBadge() : rankBadge(r.idx, r.div);
   $("#curTier").textContent = r.tier.n;
   $("#curDiv").textContent  = "Division " + ROMAN[r.div];
   $("#curDivRow").innerHTML = [0,1,2].map(i => `<i class="${i<=r.div?"on":""}"></i>`).join("");
@@ -2008,6 +2288,34 @@ function paintHistory(){
       <div class="sc mono">${x.me}<span style="color:var(--dim)">–</span>${x.opS<0?"—":x.opS}</div>
       <div class="dl ${dcl} mono">${x.d>0?"+":""}${x.d||0}</div></div>`;
   }).join("") : `<div class="empty">Aucun duel enregistré.<br>Lance ta première recherche depuis l'onglet Duel.</div>`;
+}
+
+/* =====================================================================
+   5 ter. PARTIES DE PLACEMENT
+   Dix duels obligatoires avant d'obtenir un rang. L'adversaire durcit
+   à chaque victoire, jamais après une défaite : la difficulté suit le
+   niveau démontré, et dix victoires ouvrent directement le Diamant.
+   ===================================================================== */
+const PLACEMENT_GAMES = 10;
+function inPlacement(){ return profile.placement && profile.placement.active; }
+
+/* Elo de départ : 780 à zéro victoire (Bronze), 1400 à dix (Diamant) */
+function placementElo(wins){ return clamp(780 + wins * 62, 700, 1500); }
+
+/* Cible de l'adversaire pendant le placement : palier par victoire */
+function placementTarget(){
+  const w = profile.placement.wins;
+  let base = 8 + w * 2.4;                       // 8 répétitions au départ, 30 à la dixième
+  if(profile.best > 0) base = base * .7 + profile.best * .3;
+  return clamp(Math.round(base * (.94 + Math.random() * .12)), 4, 70);
+}
+/* Clôture du placement et attribution du rang */
+function finishPlacement(){
+  const w = profile.placement.wins;
+  profile.elo = placementElo(w);
+  profile.placement.active = false;
+  const r = rankOf(profile.elo);
+  return { wins:w, tier:r.tier.n, div:ROMAN[r.div] };
 }
 
 /* =====================================================================
@@ -2213,6 +2521,115 @@ async function importSave(file){
     paintAll(); Sfx.play("reward"); toast("Sauvegarde restaurée");
   }catch{ toast("Fichier de sauvegarde illisible"); }
 }
+
+/* =====================================================================
+   6 ter. TUTORIEL — le champion sert d'instructeur
+   Chaque étape peut désigner un élément de l'écran : un halo découpe
+   l'interface autour de lui pendant que le personnage parle. Le texte
+   s'écrit lettre par lettre, et une frappe sur la boîte le termine
+   immédiatement plutôt que d'imposer l'attente.
+   ===================================================================== */
+const Tuto = {
+  step:0, typing:null, steps:[],
+
+  build(){
+    this.steps = [
+      { t:"Salut, moi c'est Rival. Je vais te montrer l'arène en trente secondes.",
+        tab:"tab-duel" },
+      { t:"Ici, ton emblème. Tu démarres NON CLASSÉ : dix duels de placement décident de ton rang.",
+        el:"#heroBadge", tab:"tab-duel" },
+      { t:"Chaque victoire durcit l'adversaire suivant. Les dix gagner, et tu entres direct en Diamant.",
+        el:"#btnRanked", tab:"tab-duel" },
+      { t:"Ta carte de joueur : avatar, rang, et le trophée qui affiche ton Elo une fois classé.",
+        el:".profcard", tab:"tab-duel" },
+      { t:"La flamme monte d'un cran par jour où tu joues. Un jour sauté, elle repart à zéro.",
+        el:"#flameChip", tab:"tab-duel" },
+      { t:"À gauche, l'objectif du jour. À droite, la passe : chaque duel donne une couronne.",
+        el:".passrow", tab:"tab-duel" },
+      { t:"Pièces, gemmes et niveau s'accumulent en haut à chaque séance.",
+        el:"#topbar", tab:"tab-duel" },
+      { t:"Pose le téléphone au sol, de profil ou face à toi, tout le corps dans le cadre.",
+        tab:"tab-drill" },
+      { t:"Une pompe compte dès que tu descends au tiers de ta course. Le corps doit rester aligné.",
+        tab:"tab-drill" },
+      { t:"Dans le profil, tu règles ton pseudo, ton deck de stickers et ta sauvegarde.",
+        tab:"tab-profil" },
+      { t:"C'est tout. Mets-toi en position, on se retrouve dans l'arène.",
+        tab:"tab-duel" }
+    ];
+  },
+
+  start(force){
+    if(profile.tutoDone && !force) return;
+    this.build(); this.step = 0;
+    $("#tuto").classList.add("on");
+    Sfx.play("nav");
+    this.render();
+  },
+
+  render(){
+    const s = this.steps[this.step];
+    if(!s) return this.end();
+    if(s.tab) showTab(s.tab);
+
+    // Halo : on découpe l'écran autour de l'élément désigné
+    const spot = $("#tutoSpot");
+    const el = s.el ? document.querySelector(s.el) : null;
+    $("#tuto").classList.toggle("nospot", !el);
+    if(el){
+      const r = el.getBoundingClientRect();
+      const pad = 10;
+      spot.style.display = "block";
+      spot.style.left   = (r.left - pad) + "px";
+      spot.style.top    = (r.top - pad) + "px";
+      spot.style.width  = (r.width + pad*2) + "px";
+      spot.style.height = (r.height + pad*2) + "px";
+    }else spot.style.display = "none";
+
+    $("#tutoStep").textContent = `${this.step + 1} / ${this.steps.length}`;
+    $("#tutoNext").textContent = this.step === this.steps.length - 1 ? "C'est parti" : "Suivant";
+    this.type(s.t);
+  },
+
+  /* Machine à écrire, interruptible d'une frappe */
+  type(txt){
+    clearInterval(this.typing);
+    const el = $("#tutoText");
+    el.textContent = ""; let i = 0;
+    this.typing = setInterval(() => {
+      el.textContent = txt.slice(0, ++i);
+      if(i % 3 === 0) Sfx.play("rep");
+      if(i >= txt.length) clearInterval(this.typing);
+    }, 18);
+    this.full = txt;
+  },
+  skipType(){
+    if(!this.full) return false;
+    if($("#tutoText").textContent.length < this.full.length){
+      clearInterval(this.typing);
+      $("#tutoText").textContent = this.full;
+      return true;
+    }
+    return false;
+  },
+
+  next(){
+    if(this.skipType()) return;          // première frappe : afficher tout
+    this.step++;
+    if(this.step >= this.steps.length) return this.end();
+    Sfx.play("click");
+    this.render();
+  },
+
+  async end(){
+    clearInterval(this.typing);
+    $("#tuto").classList.remove("on");
+    profile.tutoDone = true;
+    await Store.set("profile", profile);
+    showTab("tab-duel");
+    Sfx.play("reward");
+  }
+};
 
 /* =====================================================================
    7. VISION — détection profil ET face
@@ -2558,6 +2975,15 @@ const TAGS = ["","","","","_","77","06","93","xx","21","99","07","2b","_off","13
 const Bot = {
   active:false, score:0, target:0, timers:[], elo:1000, name:"", avatar:{t:"p", i:4},
   configure(level="auto"){
+    if(level === "placement"){
+      this.target = placementTarget();
+      this.elo = placementElo(profile.placement.wins);
+      const h = HANDLES[Math.floor(Math.random()*HANDLES.length)];
+      this.name = (h + TAGS[Math.floor(Math.random()*TAGS.length)]).slice(0,12);
+      this.avatar = { t:"p", i:Math.floor(Math.random()*AV.length) };
+      this.score = 0;
+      return this;
+    }
     /* Courbe volontairement douce : 7 répétitions à 800 d'Elo, 11 en Argent
        (1000), 15 en Or, 21 en Diamant. L'ancienne courbe démarrait à 17 en
        Argent, hors de portée d'un débutant. */
@@ -2748,6 +3174,7 @@ const Game = {
   async enter(mode, opts={}){
     this.mode = mode; this.botLevel = opts.level || "auto";
     this.botRanked = opts.ranked === true;
+    this.placement = opts.placement === true; this.placedAs = null;
     this.myScore = 0; this.opScore = 0; this.opFinal = null; this.running = false;
     Vision.reset(); Bot.stop();
     const solo = mode === "solo";
@@ -2882,18 +3309,26 @@ const Game = {
     const me = this.myScore;
     const op = forfeit ? -1 : (this.mode === "bot" ? Bot.score : (this.opFinal ?? this.opScore));
     let delta = 0, outcome = "draw";
-    const scored = this.mode === "ranked" || (this.mode === "bot" && this.botRanked);
+    const scored = (this.mode === "ranked" || (this.mode === "bot" && this.botRanked)) && !this.placement;
 
     if(this.mode === "solo"){
       $("#resMode").textContent = "Entraînement";
       $("#verdict").textContent = "SÉANCE TERMINÉE";
     }else{
       outcome = forfeit ? "win" : me > op ? "win" : me < op ? "loss" : "draw";
-      $("#resMode").textContent = (this.mode === "ranked" || (this.mode === "bot" && this.botRanked))
+      $("#resMode").textContent = this.placement
+        ? `Placement ${Math.min(profile.placement.done, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}`
+        : (this.mode === "ranked" || (this.mode === "bot" && this.botRanked))
         ? "Duel classé" : this.mode === "bot" ? "Entraînement" : "Duel privé";
       $("#verdict").textContent = forfeit ? "VICTOIRE PAR FORFAIT"
         : outcome === "win" ? "VICTOIRE" : outcome === "loss" ? "DÉFAITE" : "ÉGALITÉ";
-      if(scored){
+      if(this.placement){
+        // Aucun Elo en jeu : on compte les victoires, le rang tombe à la fin
+        profile.placement.done++;
+        if(outcome === "win") profile.placement.wins++;
+        if(outcome === "win") profile.wins++; else if(outcome === "loss") profile.losses++;
+        if(profile.placement.done >= PLACEMENT_GAMES) this.placedAs = finishPlacement();
+      }else if(scored){
         const S = outcome === "win" ? 1 : outcome === "loss" ? 0 : .5;
         const E = 1/(1 + Math.pow(10, (Net.opponent.elo - profile.elo)/400));
         delta = Math.round(K_RANKED * (S - E));
@@ -2936,6 +3371,8 @@ const Game = {
 
     // Annonces différées, une par seconde, pour qu'elles ne se marchent pas dessus
     const news = [];
+    if(this.placedAs) news.push(`Placement terminé · ${this.placedAs.wins}/10 victoires → ${this.placedAs.tier} ${this.placedAs.div}`);
+    else if(this.placement) news.push(`Placement ${profile.placement.done}/${PLACEMENT_GAMES}`);
     if(gain.levels) news.push(`Niveau ${levelOf(profile.xp).lvl} atteint`);
     if(gain.tiers)  news.push(`Palier de passe ${profile.tier}`);
     (gain.unlocked || []).forEach(id => news.push(`Sticker débloqué · ${STK[id].e} ${STK[id].n}`));
@@ -2991,6 +3428,14 @@ function startQueueUI(){
   }, 100);
 }
 async function launchRanked(){
+  // Tant que le placement n'est pas terminé, l'adversaire est calibré par
+  // la série en cours : pas de file, pas d'aléa, une progression lisible.
+  if(inPlacement()){
+    Bot.configure("placement");
+    toast(`Placement ${profile.placement.done + 1}/${PLACEMENT_GAMES} — ${Bot.name}`);
+    Game.enter("bot", { level:"placement", ranked:true, placement:true });
+    return;
+  }
   if(!window.Peer){ toast("PeerJS n'a pas pu être chargé"); return; }
   showView("search"); startQueueUI();
   const log = (a,b) => { $("#qRange").textContent = a; $("#searchLog").textContent = b; };
@@ -3042,7 +3487,11 @@ $("#filePhoto2").onchange = async e => {
 };
 $("#btnCamFront").onclick = async () => { profile.facing = "user"; await Store.set("profile", profile); toast("Caméra avant"); };
 $("#btnCamBack").onclick  = async () => { profile.facing = "environment"; await Store.set("profile", profile); toast("Caméra arrière"); };
-$("#btnLogout").onclick = async () => { await Session.close(); toast("Déconnecté"); Gate.open("login"); };
+$("#btnLogout").onclick = async () => {
+  if(!confirm("Changer de compte effacera la progression enregistrée sur cet appareil. Exporte-la d'abord si tu veux la garder.")) return;
+  await Save.wipe(); account = null; profile = freshProfile();
+  toast("Compte effacé"); Gate.open("signup");
+};
 $("#btnReset").onclick = async () => {
   profile = freshProfile({ facing:profile.facing });
   await Store.set("profile", profile); paintAll(); toast("Progression remise à zéro");
@@ -3082,6 +3531,10 @@ $("#passBack").onclick = () => { showView("menu"); Sfx.play("back"); };
 $("#deckBack").onclick = () => { showView("menu"); Sfx.play("back"); };
 $("#btnDeck").onclick  = () => { paintDeck(); showView("deck"); Sfx.play("nav"); };
 $("#btnNameStyle").onclick = () => openNameStyle();
+$("#tutoNext").onclick = () => Tuto.next();
+$("#tutoSkip").onclick = () => Tuto.end();
+$("#tutoText").onclick = () => Tuto.next();
+$("#btnTuto").onclick  = () => Tuto.start(true);
 
 const RENAME_COST = 100;
 $("#btnRename").onclick = () => {
@@ -3135,6 +3588,21 @@ document.addEventListener("visibilitychange", () => { if(document.hidden && !Gam
 /* =====================================================================
    13. DÉMARRAGE — compte, session, puis menu
    ===================================================================== */
+/* Bokeh : quelques particules qui montent, générées une fois */
+(function fog(){
+  const box = document.getElementById("fog");
+  if(!box) return;
+  let h = "";
+  for(let i = 0; i < 14; i++){
+    const sz = 6 + Math.random()*22;
+    h += `<i style="left:${(Math.random()*100).toFixed(1)}%;bottom:-${sz}px;
+      width:${sz.toFixed(0)}px;height:${sz.toFixed(0)}px;
+      animation-duration:${(14 + Math.random()*16).toFixed(1)}s;
+      animation-delay:-${(Math.random()*22).toFixed(1)}s"></i>`;
+  }
+  box.innerHTML = h;
+})();
+
 function hideSplash(){
   const sp = document.getElementById("splash");
   if(!sp || sp.classList.contains("off")) return;
@@ -3152,13 +3620,14 @@ setTimeout(hideSplash, 4500);        // filet : jamais d'écran de lancement blo
   setTimeout(hideSplash, Math.max(0, 1200 - performance.now()));
   document.getElementById("splash")?.addEventListener("click", hideSplash);
 
-  if(!account){ Gate.open("signup"); return; }               // première ouverture
-  const s = await Session.read();
-  if(s && s.mail === account.mail){                          // session retrouvée
-    paintAll(); showView("menu"); showTab("tab-duel");
-  }else{
-    Gate.open("login");                                      // compte connu, session fermée
-  }
+  if(!account){ Gate.open("signup"); return; }        // première ouverture seulement
+  // Le compte est purement local : redemander un mot de passe à chaque
+  // lancement n'apporte aucune sécurité, seulement de la friction.
+  if(!(await Session.read())) await Session.open(account.mail);
+  paintAll(); showView("menu"); showTab("tab-duel");
+  if(!profile.tutoDone) setTimeout(() => Tuto.start(), 900);
+  if(Save.backends.length === 0)
+    setTimeout(() => toast("Sauvegarde impossible sur ce navigateur : pense à exporter", 6000), 2500);
 })();
 </script>
 </body>
