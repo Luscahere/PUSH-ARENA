@@ -977,6 +977,20 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
 #tuto.nospot::before{content:'';position:absolute;inset:0;background:rgba(6,14,34,.80)}
 #tuto:not(.nospot)::before{display:none}
 
+
+/* ---------- Bandeau d'alerte de sauvegarde ---------- */
+#saveWarn{position:fixed;left:10px;right:10px;top:calc(var(--safe-t) + 8px);z-index:45;
+  display:none;align-items:center;gap:10px;padding:10px 12px;border:3px solid var(--ink);
+  border-radius:18px;background:linear-gradient(180deg,#FFE9A8,#FFC24A);
+  box-shadow:0 6px 0 var(--gold-dk),0 14px 22px -10px rgba(6,14,34,.8)}
+#saveWarn.on{display:flex;animation:tab-in .3s cubic-bezier(.2,1.3,.4,1)}
+#saveWarn .sw-ico{font-size:24px;flex:0 0 auto}
+#saveWarn .sw-txt{flex:1;min-width:0;line-height:1.25}
+#saveWarn .sw-txt b{display:block;font-family:'Baloo 2',system-ui,sans-serif;font-size:15px;color:var(--ink)}
+#saveWarn .sw-txt span{font-size:12px;color:#6B5620}
+#saveWarn .btn{flex:0 0 auto;width:auto;padding:8px 12px 10px;font-size:14px}
+#saveWarn .sw-x{flex:0 0 26px;height:26px;border:2px solid var(--ink);border-radius:50%;
+  background:rgba(0,0,0,.12);color:var(--ink);cursor:pointer;font-size:12px;line-height:1}
 </style>
 </head>
 <body>
@@ -1494,6 +1508,16 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
   </div>
 </div>
 
+<div id="saveWarn">
+  <div class="sw-ico">⚠️</div>
+  <div class="sw-txt">
+    <b>Progression non sauvegardée</b>
+    <span id="swWhy">Ce navigateur bloque le stockage.</span>
+  </div>
+  <button class="btn gold sm" id="swExport">Sauvegarder</button>
+  <button class="sw-x" id="swClose">✕</button>
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
@@ -1589,7 +1613,15 @@ const Idb = {
   },
   async set(k, v){
     const db = await this.open(); if(!db) return;
-    try{ db.transaction("kv","readwrite").objectStore("kv").put(v, k); }catch{}
+    return new Promise(res => {
+      try{
+        const tx = db.transaction("kv","readwrite");
+        tx.objectStore("kv").put(v, k);
+        tx.oncomplete = () => res(true);
+        tx.onerror = tx.onabort = () => res(false);
+        setTimeout(() => res(false), 1200);
+      }catch{ res(false); }
+    });
   },
   async del(k){
     const db = await this.open(); if(!db) return;
@@ -1599,23 +1631,100 @@ const Idb = {
 
 const Save = {
   data:{ account:null, profile:null, session:null },
-  backends:[], label:"mémoire seule", ready:null, dirty:false, timer:null,
+  backends:[], label:"aucun", ready:null, dirty:false, timer:null, diag:"",
 
-  probe(){
-    const ok = [];
-    try{ localStorage.setItem("__probe","1"); localStorage.removeItem("__probe"); ok.push("local"); }catch{}
-    if(typeof window.storage?.set === "function") ok.push("app");
-    if(typeof indexedDB !== "undefined") ok.push("idb");
+  /* Vérification par ALLER-RETOUR RÉEL.
+     L'ancienne version se contentait de tester l'existence des API :
+     sur Safari, indexedDB et localStorage EXISTENT en fichier local ou en
+     cadre isolé, mais toute écriture est rejetée. L'application croyait
+     donc sauvegarder. On écrit maintenant une valeur témoin, on la relit,
+     et le support n'est retenu que s'il la restitue. */
+  async verify(){
+    const ok = [], tag = "__pr_probe", val = "v" + Date.now();
+
+    try{
+      localStorage.setItem(tag, val);
+      if(localStorage.getItem(tag) === val) ok.push("local");
+      localStorage.removeItem(tag);
+    }catch{}
+
+    if(typeof window.storage?.set === "function"){
+      try{
+        await window.storage.set(tag, val);
+        const r = await window.storage.get(tag);
+        if(r?.value === val) ok.push("app");
+        await window.storage.delete(tag);
+      }catch{}
+    }
+
+    if(typeof indexedDB !== "undefined"){
+      try{
+        await Idb.set(tag, val);
+        if(await Idb.get(tag) === val) ok.push("idb");
+        await Idb.del(tag);
+      }catch{}
+    }
+
+    // Dernier recours : un cookie, qui survit là où le reste est bloqué.
+    // Capacité réduite, on n'y met donc que l'essentiel de la progression.
+    try{
+      document.cookie = `${tag}=${val};path=/;max-age=60;SameSite=Lax`;
+      if(document.cookie.includes(`${tag}=${val}`)) ok.push("cookie");
+      document.cookie = `${tag}=;path=/;max-age=0`;
+    }catch{}
+
     this.backends = ok;
     this.label = ok.includes("local") ? "localStorage"
                : ok.includes("app")   ? "stockage applicatif"
                : ok.includes("idb")   ? "IndexedDB"
-               : "mémoire seule";
+               : ok.includes("cookie")? "cookie (réduit)"
+               : "aucun";
+
+    // Diagnostic lisible : la cause la plus fréquente d'abord
+    const file = location.protocol === "file:";
+    const safari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
+    if(ok.length === 0){
+      this.diag = file
+        ? "Le fichier est ouvert directement depuis l'appareil (file://). Safari interdit toute sauvegarde dans ce mode."
+        : safari
+        ? "Safari bloque le stockage ici : navigation privée, ou page affichée dans un cadre isolé."
+        : "Aucun stockage autorisé par ce navigateur.";
+    }else if(safari && !file){
+      this.diag = "Safari efface les données d'un site non visité pendant 7 jours. Ajoute le jeu à l'écran d'accueil pour y échapper.";
+    }else this.diag = "";
     return ok;
   },
 
+  /* Version compacte pour le cookie : on sacrifie l'historique détaillé,
+     le journal des jours et la photo, on garde ce qui fait la progression. */
+  compact(){
+    const p = this.data.profile || {}, a = this.data.account || {};
+    return JSON.stringify({
+      c:1,
+      a:{ name:a.name, mail:a.mail, salt:a.salt, hash:a.hash,
+          avatar:(a.avatar && a.avatar.t === "p") ? a.avatar : { t:"p", i:0 } },
+      p:{ elo:p.elo, wins:p.wins, losses:p.losses, best:p.best, totalReps:p.totalReps,
+          xp:p.xp, coins:p.coins, gems:p.gems, crowns:p.crowns, tier:p.tier,
+          stickers:p.stickers, deck:p.deck, flame:p.flame, placement:p.placement,
+          tutoDone:p.tutoDone, renamed:p.renamed, nameStyle:p.nameStyle }
+    });
+  },
+  expand(raw){
+    try{
+      const o = JSON.parse(raw);
+      if(!o || o.c !== 1) return null;
+      return { account:o.a, profile:o.p, session:o.a?.mail ? { mail:o.a.mail } : null };
+    }catch{ return null; }
+  },
+  readCookie(){
+    try{
+      const m = document.cookie.match(/(?:^|;\s*)pr_save=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : null;
+    }catch{ return null; }
+  },
+
   async load(){
-    this.probe();
+    await this.verify();
     let raw = null;
     if(this.backends.includes("local")){ try{ raw = localStorage.getItem(SAVE_KEY); }catch{} }
     if(!raw && this.backends.includes("app")){
@@ -1623,22 +1732,26 @@ const Save = {
     }
     if(!raw && this.backends.includes("idb")){ raw = await Idb.get(SAVE_KEY); }
 
-    // Reprise des sauvegardes éclatées des versions précédentes
-    if(!raw){
-      const old = {};
-      for(const k of ["account","profile","session"]){
-        try{ const v = localStorage.getItem(k); if(v) old[k] = JSON.parse(v); }catch{}
-        if(!old[k] && typeof window.storage?.get === "function"){
-          try{ const r = await window.storage.get(k); if(r?.value) old[k] = JSON.parse(r.value); }catch{}
-        }
-      }
-      if(old.account || old.profile){ this.data = Object.assign(this.data, old); this.flush(true); return; }
+    if(raw){ try{ this.data = Object.assign(this.data, JSON.parse(raw)); return; }catch{} }
+
+    // Repli cookie
+    const ck = this.readCookie();
+    if(ck){
+      const ex = this.expand(ck);
+      if(ex){ this.data = Object.assign(this.data, ex); this.flush(true); return; }
     }
-    if(raw){ try{ this.data = Object.assign(this.data, JSON.parse(raw)); }catch{} }
+
+    // Reprise des sauvegardes éclatées des versions antérieures
+    const old = {};
+    for(const k of ["account","profile","session"]){
+      try{ const v = localStorage.getItem(k); if(v) old[k] = JSON.parse(v); }catch{}
+      if(!old[k] && typeof window.storage?.get === "function"){
+        try{ const r = await window.storage.get(k); if(r?.value) old[k] = JSON.parse(r.value); }catch{}
+      }
+    }
+    if(old.account || old.profile){ this.data = Object.assign(this.data, old); this.flush(true); }
   },
 
-  /* Écriture groupée : appelée à chaque modification, réellement écrite
-     au plus tard 250 ms après, et systématiquement à la fermeture. */
   flush(now = false){
     this.dirty = true;
     clearTimeout(this.timer);
@@ -1652,14 +1765,22 @@ const Save = {
     if(this.backends.includes("local")){ try{ localStorage.setItem(SAVE_KEY, raw); }catch{} }
     if(this.backends.includes("app")){ try{ window.storage.set(SAVE_KEY, raw); }catch{} }
     if(this.backends.includes("idb")){ Idb.set(SAVE_KEY, raw); }
+    if(this.backends.includes("cookie")){
+      try{
+        const c = encodeURIComponent(this.compact());
+        if(c.length < 3800) document.cookie = `pr_save=${c};path=/;max-age=31536000;SameSite=Lax`;
+      }catch{}
+    }
   },
   async wipe(){
     this.data = { account:null, profile:null, session:null };
     try{ localStorage.removeItem(SAVE_KEY); }catch{}
     try{ await window.storage?.delete(SAVE_KEY); }catch{}
+    try{ document.cookie = "pr_save=;path=/;max-age=0"; }catch{}
     await Idb.del(SAVE_KEY);
   }
 };
+
 Save.ready = Save.load();
 // Filets de sécurité : rien ne doit être perdu à la fermeture
 addEventListener("pagehide", () => Save.write());
@@ -2211,8 +2332,8 @@ function paintAll(){
   $("#passVal").textContent  = `${inTier}/${CROWNS_PER_TIER}`;
   $("#saveBackend").textContent = Save.label;
   $("#saveWhen").textContent = Save.backends.length
-    ? "Progression enregistrée automatiquement après chaque duel."
-    : "Aucun support disponible : la progression sera perdue à la fermeture.";
+    ? (Save.diag || "Progression enregistrée automatiquement après chaque duel.")
+    : (Save.diag || "Aucun support disponible : la progression sera perdue à la fermeture.");
   paintFlame();
   paintChart();
   applyNameStyle();
@@ -3371,6 +3492,7 @@ const Game = {
 
     // Annonces différées, une par seconde, pour qu'elles ne se marchent pas dessus
     const news = [];
+    if(!Save.backends.length) news.push("Sauvegarde impossible : exporte ta progression");
     if(this.placedAs) news.push(`Placement terminé · ${this.placedAs.wins}/10 victoires → ${this.placedAs.tier} ${this.placedAs.div}`);
     else if(this.placement) news.push(`Placement ${profile.placement.done}/${PLACEMENT_GAMES}`);
     if(gain.levels) news.push(`Niveau ${levelOf(profile.xp).lvl} atteint`);
@@ -3566,6 +3688,8 @@ $("#btnRenameGo").onclick = async () => {
 };
 
 $("#btnExport").onclick = () => exportSave();
+$("#swExport").onclick  = () => exportSave();
+$("#swClose").onclick   = () => $("#saveWarn").classList.remove("on");
 $("#btnImport").onclick = () => $("#fileSave").click();
 $("#fileSave").onchange = e => { const f = e.target.files?.[0]; if(f) importSave(f); e.target.value = ""; };
 $("#btnSfxOn").onclick  = async () => { Sfx.on = true;  profile.sfx = true;  await Store.set("profile", profile); Sfx.play("click"); toast("Sons activés"); };
@@ -3626,8 +3750,10 @@ setTimeout(hideSplash, 4500);        // filet : jamais d'écran de lancement blo
   if(!(await Session.read())) await Session.open(account.mail);
   paintAll(); showView("menu"); showTab("tab-duel");
   if(!profile.tutoDone) setTimeout(() => Tuto.start(), 900);
-  if(Save.backends.length === 0)
-    setTimeout(() => toast("Sauvegarde impossible sur ce navigateur : pense à exporter", 6000), 2500);
+  if(Save.backends.length === 0){
+    $("#swWhy").textContent = Save.diag;
+    setTimeout(() => $("#saveWarn").classList.add("on"), 1400);
+  }
 })();
 </script>
 </body>
