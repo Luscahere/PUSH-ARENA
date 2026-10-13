@@ -105,8 +105,11 @@
         .amt-input::placeholder { color: var(--text-secondary); }
 
         /* --- NOTIFICATIONS --- */
-        #toast { position: fixed; top: calc(var(--safe-t) + 20px); left: 50%; transform: translate(-50%, -150%); background: rgba(255,255,255,0.95); color: #000; padding: 14px 24px; border-radius: 99px; font-weight: 600; font-size: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 400; display: flex; align-items: center; gap: 8px; }
+        /* Z-INDEX à 9999 pour s'assurer qu'il passe au dessus de TOUT, même l'écran de connexion ! */
+        #toast { position: fixed; top: calc(var(--safe-t) + 20px); left: 50%; transform: translate(-50%, -150%); background: rgba(255,255,255,0.95); color: #000; padding: 14px 24px; border-radius: 99px; font-weight: 600; font-size: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 9999; display: flex; align-items: center; gap: 8px; }
         #toast.show { transform: translate(-50%, 0); }
+
+        #sso-overlay { z-index: 5000; }
     </style>
 </head>
 <body>
@@ -117,7 +120,7 @@
     </div>
 
     <!-- SSO HEYE OVERLAY -->
-    <div id="sso-overlay" class="sheet-overlay active" style="z-index: 500;">
+    <div id="sso-overlay" class="sheet-overlay active">
         <div class="sheet-content">
             <div style="width:60px; height:60px; border-radius:14px; background:linear-gradient(135deg, #1C1C1E, #000); display:flex; justify-content:center; align-items:center; font-size:32px; font-weight:800; margin: 0 auto 16px auto; border:1px solid var(--glass-border);">H</div>
             <h2 class="title" style="text-align: center; margin-bottom: 8px;">HeyePay</h2>
@@ -137,7 +140,6 @@
 
     <!-- APPLICATION PRINCIPALE -->
     <div id="app">
-        
         <!-- ONGLET ACCUEIL -->
         <div id="tab-home" class="tab-view content">
             <div class="header" style="padding-top: 70px;">
@@ -166,9 +168,7 @@
             </div>
 
             <div class="subtitle">Transactions récentes</div>
-            <div class="list-group" id="tx-list">
-                <!-- Transactions injectées en JS -->
-            </div>
+            <div class="list-group" id="tx-list"></div>
         </div>
 
         <!-- ONGLET CARTE -->
@@ -176,10 +176,7 @@
             <div class="header" style="padding-top: 70px;">
                 <div class="title" style="margin: 0;">Ma Carte</div>
             </div>
-
-            <div id="card-view">
-                <!-- Injecté en JS -->
-            </div>
+            <div id="card-view"></div>
         </div>
 
         <!-- ONGLET AMIS -->
@@ -188,11 +185,8 @@
                 <div class="title" style="margin: 0;">Amis Heye</div>
             </div>
             <p class="muted" style="margin-bottom: 16px;">Sélectionnez un contact de votre écosystème local pour lui envoyer des fonds instantanément.</p>
-            <div class="list-group" id="friends-list">
-                <!-- Amis injectés en JS -->
-            </div>
+            <div class="list-group" id="friends-list"></div>
         </div>
-
     </div>
 
     <!-- NAVIGATION BASSE -->
@@ -204,9 +198,7 @@
 
     <!-- BOTTOM SHEET DYNAMIQUE -->
     <div id="action-sheet" class="sheet-overlay" onclick="if(event.target===this) closeSheet()">
-        <div class="sheet-content" id="sheet-content">
-            <!-- Injecté en JS -->
-        </div>
+        <div class="sheet-content" id="sheet-content"></div>
     </div>
 
     <div id="toast">✅ Message</div>
@@ -216,7 +208,7 @@
         // VARIABLES GLOBALES & BASE DE DONNÉES
         // ==========================================
         const DB_KEY = 'heye_database';
-        let db = null;
+        let db = { users: {} };
         let myEmail = null;
         let me = null;
         let showCardDetails = false;
@@ -242,63 +234,64 @@
             if (window.parent !== window) {
                 try { window.parent.closeApp('heyepay-app'); } catch(e) {}
             } else {
-                toast("Ouvrez cette app depuis Heye OS.");
+                toast("Fermeture... (Lancez depuis Heye OS)");
             }
         }
 
         function saveDB() {
-            localStorage.setItem(DB_KEY, JSON.stringify(db));
+            try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) {}
         }
 
         // ==========================================
-        // CONNEXION SSO BLINDÉE (POSTMESSAGE + FALLBACKS)
+        // CONNEXION SSO HEYE
         // ==========================================
         
-        // 1. Écoute automatique de l'OS
         window.addEventListener('message', (event) => {
             if (event.data && event.data.type === 'HEYE_SSO') {
                 processSSO(event.data.user);
             }
         });
 
-        // Fonction centrale de connexion
         function processSSO(hUser) {
+            if(!hUser || !hUser.email) return;
             myEmail = hUser.email;
             
-            // Reconstruire la DB localement
-            let rawDb = localStorage.getItem(DB_KEY);
-            db = rawDb ? JSON.parse(rawDb) : { users: {} };
+            try {
+                let rawDb = localStorage.getItem(DB_KEY);
+                if(rawDb) db = JSON.parse(rawDb);
+            } catch(e) {}
             
-            db.users[myEmail] = hUser;
+            if(!db.users) db.users = {};
+            
+            if(db.users[myEmail]) {
+                db.users[myEmail] = { ...db.users[myEmail], ...hUser };
+            } else {
+                db.users[myEmail] = hUser;
+            }
             db.currentUser = myEmail;
             
-            // Créer le portefeuille si c'est la première fois
             if (!db.users[myEmail].heyepay) {
                 db.users[myEmail].heyepay = { balance: 0, tx: [], card: null };
             }
             me = db.users[myEmail];
-            saveDB(); // Synchronise instantanément
+            saveDB();
 
-            // Cache l'écran de lancement
             $('#sso-overlay').classList.remove('active');
             setTimeout(() => { $('#sso-overlay').style.display = 'none'; }, 300);
 
-            // Met à jour l'interface
-            $('#home-av').textContent = me.prenom.charAt(0).toUpperCase();
+            $('#home-av').textContent = (me.prenom ? me.prenom.charAt(0).toUpperCase() : "A");
             renderAll();
         }
 
-        // 2. Si le joueur clique sur le bouton "Continuer avec Heye"
         function initApp() {
-            // Tentative de forçage : lecture directe chez le parent (contourne les iframes bloquées en local)
+            // 1. Essai de lecture chez l'OS parent
             try {
                 if (window.parent && window.parent.db && window.parent.db.currentUser) {
-                    let hUser = window.parent.db.users[window.parent.db.currentUser];
-                    return processSSO(hUser);
+                    return processSSO(window.parent.db.users[window.parent.db.currentUser]);
                 }
             } catch(e) {}
 
-            // Tentative Classique via le LocalStorage local
+            // 2. Essai Classique via le Storage Local
             try {
                 let rawDb = localStorage.getItem(DB_KEY);
                 if (rawDb) {
@@ -309,11 +302,16 @@
                 }
             } catch(e) {}
 
-            // Si tout échoue, on prévient l'utilisateur
-            toast("Connexion à l'OS impossible. Lancez l'application depuis le Launcher Heye.");
+            // 3. FORCE LE PASSAGE si tout échoue (Pour qu'il ne reste jamais bloqué sur la page noire !)
+            toast("Connexion forcée (Mode autonome activé).");
+            processSSO({
+                prenom: "Utilisateur",
+                nom: "Heye",
+                email: "user@heye.us",
+                avatar: "U"
+            });
         }
 
-        // Au chargement de la page : on tente juste d'afficher les infos sur le carton
         window.onload = () => {
             if(window.parent === window) $('#heye-back-btn').style.display = 'none';
             
@@ -326,7 +324,7 @@
                         $('#sso-user-card').style.display = 'flex';
                         $('#sso-name').textContent = u.prenom + ' ' + u.nom;
                         $('#sso-mail').textContent = u.email.replace('@heye.us', '@Heye.us');
-                        $('#sso-av').textContent = u.prenom.charAt(0).toUpperCase(); } } } catch(e) {} };          // ========================================== // NAVIGATION // ========================================== function switchTab(tabId) { $$('.tab-view').forEach(el => el.classList.remove('active'));$$('.nav-item').forEach(el => el.classList.remove('active'));$(`#tab-${tabId}`).classList.add('active');
+                        $('#sso-av').textContent = (u.prenom ? u.prenom.charAt(0).toUpperCase() : 'A'); } } } catch(e) {} };          // ========================================== // NAVIGATION & UI // ========================================== function switchTab(tabId) { $$('.tab-view').forEach(el => el.classList.remove('active'));$$('.nav-item').forEach(el => el.classList.remove('active'));$(`#tab-${tabId}`).classList.add('active');
             $$('.nav-item').forEach(el => {
                 if (el.getAttribute('onclick').includes(tabId)) el.classList.add('active');
             });
@@ -340,15 +338,12 @@
                     <div style="width: 40px; height: 5px; background: var(--glass-border); border-radius: 3px; margin: 0 auto 20px auto;"></div>
                     <h2 class="title" style="margin-bottom: 8px;">Ajouter des fonds</h2>
                     <p class="muted">Approvisionnez votre portefeuille numérique HeyePay.</p>
-                    
                     <input type="text" class="amt-input" id="amt-input" inputmode="decimal" placeholder="0,00 H$" oninput="formatAmtInput(this)">
-                    
                     <div class="chips" style="justify-content: center;">
                         <button class="chip" onclick="setAmt(50)">50 H$</button>
                         <button class="chip" onclick="setAmt(100)">100 H$</button>
                         <button class="chip" onclick="setAmt(500)">500 H$</button>
                     </div>
-                    
                     <button class="btn" onclick="processMint()">Ajouter au solde</button>
                 `;
             } else if (type === 'send') {
@@ -364,82 +359,53 @@
                 content.innerHTML = `
                     <div style="width: 40px; height: 5px; background: var(--glass-border); border-radius: 3px; margin: 0 auto 20px auto;"></div>
                     <h2 class="title" style="margin-bottom: 8px;">Envoyer de l'argent</h2>
-                    
                     <div class="chips" id="friend-chips-container">${friendsHtml}</div>
-                    
                     <input type="text" class="amt-input" id="amt-input" inputmode="decimal" placeholder="0,00 H$" oninput="formatAmtInput(this)">
-                    
                     <input type="text" class="f" id="note-input" placeholder="Ajouter un message (facultatif)" style="background: var(--surface-color);">
-                    
                     <button class="btn" onclick="processSend()">Confirmer l'envoi</button>
                 `;
             }
             $('#action-sheet').classList.add('active');
         }
 
-        function closeSheet() {
-            $('#action-sheet').classList.remove('active');
-        }
-
-        function formatAmtInput(el) {
-            let val = el.value.replace(/[^0-9,]/g, '');
-            el.value = val;
-        }
-        function setAmt(val) {
-            $('#amt-input').value = val + ',00';
-        }
-        function getAmtValue() {
-            let val = $('#amt-input').value.replace(',', '.'); return Math.round(parseFloat(val \vert{}\vert{} 0) * 100); } function selectFriend(email) { currentSendTarget = email; $$('.chip').forEach(c => c.classList.remove('active'));
+        function closeSheet() { $('#action-sheet').classList.remove('active'); }
+        function formatAmtInput(el) { el.value = el.value.replace(/[^0-9,]/g, ''); }
+        function setAmt(val) { $('#amt-input').value = val + ',00'; }
+        function getAmtValue() { return Math.round(parseFloat($('#amt-input').value.replace(',', '.') \vert{}\vert{} 0) * 100); }  function selectFriend(email) { currentSendTarget = email; $$('.chip').forEach(c => c.classList.remove('active'));
             document.getElementById(`chip-${email}`).classList.add('active');
         }
 
-        // ==========================================
-        // LOGIQUE MÉTIER & RENDU
-        // ==========================================
         function getFriendsList() {
             let list = [];
             for (let k in db.users) {
-                if (k !== myEmail) {
-                    list.push({ email: k, name: db.users[k].prenom });
-                }
+                if (k !== myEmail) list.push({ email: k, name: db.users[k].prenom || "Ami" });
             }
             return list;
         }
 
         function renderAll() {
-            // Rendu HOME
             $('#bal-val').textContent = formatCurrency(me.heyepay.balance);
             
-            let txHtml = '';
             let sortedTx = [...me.heyepay.tx].sort((a,b) => b.date - a.date);
-            
-            if (sortedTx.length === 0) {
-                txHtml = `<p class="muted" style="padding: 20px 0; text-align:center;">Aucune transaction récente.</p>`;
-            } else {
-                txHtml = sortedTx.slice(0, 10).map(t => {
+            let txHtml = sortedTx.length === 0 ? `<p class="muted" style="padding: 20px 0; text-align:center;">Aucune transaction récente.</p>` 
+                : sortedTx.slice(0, 10).map(t => {
                     let isPos = t.amount > 0;
-                    let sign = isPos ? '+' : '';
-                    let colorClass = isPos ? 'pos' : '';
                     let title = t.type === 'mint' ? 'Recharge' : 
                                 t.type === 'buy' ? `Carte · ${t.note}` : 
                                 t.type === 'send' ? `À ${db.users[t.peer]?.prenom || 'Ami'}` : 
                                 `De ${db.users[t.peer]?.prenom || 'Ami'}`;
-                    
                     let dateStr = new Date(t.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'});
-
                     return `
                     <div class="list-item">
                         <div class="tx-info">
                             <div class="tx-title">${title}</div>
                             <div class="tx-date">${dateStr} ${t.note && t.type !== 'buy' ? '· ' + t.note : ''}</div>
                         </div>
-                        <div class="tx-amt ${colorClass}">${sign}${formatCurrency(t.amount)} H$</div>
+                        <div class="tx-amt ${isPos ? 'pos' : ''}">${isPos ? '+' : ''}${formatCurrency(t.amount)} H$</div>
                     </div>`;
                 }).join('');
-            }
             $('#tx-list').innerHTML = txHtml;
 
-            // Rendu FRIENDS
             let fHtml = getFriendsList().map(f => `
                 <div class="list-item">
                     <div class="friend-row">
@@ -452,7 +418,6 @@
             if(!fHtml) fHtml = `<p class="muted" style="padding: 20px 0; text-align:center;">Créez d'autres comptes dans le Launcher pour les voir apparaître ici.</p>`;
             $('#friends-list').innerHTML = fHtml;
 
-            // Rendu CARTE
             let cardView = $('#card-view');
             if (me.heyepay.card) {
                 let c = me.heyepay.card;
@@ -498,6 +463,9 @@
             }
         }
 
+        // ==========================================
+        // ACTIONS METIER
+        // ==========================================
         function processMint() {
             let amt = getAmtValue();
             if (amt <= 0) return toast("Montant invalide.");
@@ -507,9 +475,7 @@
             me.heyepay.tx.push({ id: Date.now(), type: 'mint', amount: amt, date: Date.now() });
             saveDB();
             
-            closeSheet();
-            renderAll();
-            toast(`✅ ${formatCurrency(amt)} H$ ajoutés.`);
+            closeSheet(); renderAll(); toast(`✅ ${formatCurrency(amt)} H$ ajoutés.`);
         }
 
         function processSend() {
@@ -519,51 +485,31 @@
             if (amt > me.heyepay.balance) return toast("Solde insuffisant.");
             
             let note = $('#note-input').value.trim();
-            let targetUser = db.users[currentSendTarget];
-
             me.heyepay.balance -= amt;
             me.heyepay.tx.push({ id: Date.now(), type: 'send', amount: -amt, date: Date.now(), peer: currentSendTarget, note: note });
             
+            if (!db.users[currentSendTarget]) db.users[currentSendTarget] = { prenom: "Ami", email: currentSendTarget };
+            let targetUser = db.users[currentSendTarget];
             if (!targetUser.heyepay) targetUser.heyepay = { balance: 0, tx: [], card: null };
+            
             targetUser.heyepay.balance += amt;
             targetUser.heyepay.tx.push({ id: Date.now()+1, type: 'receive', amount: amt, date: Date.now(), peer: myEmail, note: note });
             
-            saveDB();
-            closeSheet();
-            renderAll();
-            toast(`💸 ${formatCurrency(amt)} H$ envoyés à ${targetUser.prenom}.`);
+            saveDB(); closeSheet(); renderAll(); toast(`💸 ${formatCurrency(amt)} H$ envoyés à ${targetUser.prenom}.`);
         }
 
         function generateCard() {
             if (me.heyepay.card && !confirm("L'ancien numéro sera supprimé. Continuer ?")) return;
             let y = (new Date().getFullYear() + 4) % 100;
-            me.heyepay.card = {
-                num: '5412' + randDigits(12),
-                exp: String(1 + Math.floor(Math.random() * 12)).padStart(2, '0') + '/' + y,
-                cvv: randDigits(3),
-                frozen: false
-            };
-            saveDB();
-            showCardDetails = false;
-            renderAll();
-            toast("✅ Carte virtuelle prête.");
+            me.heyepay.card = { num: '5412' + randDigits(12), exp: String(1 + Math.floor(Math.random() * 12)).padStart(2, '0') + '/' + y, cvv: randDigits(3), frozen: false };
+            saveDB(); showCardDetails = false; renderAll(); toast("✅ Carte virtuelle prête.");
         }
 
-        function toggleCardDetails() {
-            showCardDetails = !showCardDetails;
-            renderAll();
-        }
-
-        function freezeCard(isFrozen) {
-            me.heyepay.card.frozen = isFrozen;
-            saveDB();
-            renderAll();
-            toast(isFrozen ? "❄️ Carte gelée." : "✅ Carte débloquée.");
-        }
+        function toggleCardDetails() { showCardDetails = !showCardDetails; renderAll(); }
+        function freezeCard(isFrozen) { me.heyepay.card.frozen = isFrozen; saveDB(); renderAll(); toast(isFrozen ? "❄️ Carte gelée." : "✅ Carte débloquée."); }
 
         function simulateBuy() {
-            let c = me.heyepay.card;
-            if (c.frozen) return toast("❌ Refusé : Carte gelée.");
+            if (me.heyepay.card.frozen) return toast("❌ Refusé : Carte gelée.");
             if (me.heyepay.balance < 500) return toast("❌ Refusé : Solde insuffisant.");
             
             const marchands = ['Apple Store', 'Boulangerie', 'Uber Eats', 'Netflix', 'Cinéma'];
@@ -571,9 +517,7 @@
 
             me.heyepay.balance -= 500;
             me.heyepay.tx.push({ id: Date.now(), type: 'buy', amount: -500, date: Date.now(), note: m });
-            saveDB();
-            renderAll();
-            toast(`🛒 Payé 5,00 H$ chez ${m}.`);
+            saveDB(); renderAll(); toast(`🛒 Payé 5,00 H$ chez ${m}.`);
         }
     </script>
 </body>
