@@ -111,7 +111,7 @@
 </head>
 <body>
 
-    <!-- BOUTON RETOUR HEYE OS (Affiché si dans une Iframe) -->
+    <!-- BOUTON RETOUR HEYE OS -->
     <div style="position: absolute; top: 15px; left: 15px; z-index: 200;" id="heye-back-btn">
         <button onclick="exitApp()" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 20px; color: white; font-weight: 600; font-size: 15px; border: 1px solid rgba(255,255,255,0.1);">‹ Quitter</button>
     </div>
@@ -239,60 +239,94 @@
         }
 
         function exitApp() {
-            // Uniquement si on est dans une Iframe (Heye OS)
             if (window.parent !== window) {
-                // On notifie Heye OS de fermer l'app (la fonction closeApp est gérée côté OS)
-                try {
-                    window.parent.closeApp('heyepay-app');
-                } catch(e) {}
+                try { window.parent.closeApp('heyepay-app'); } catch(e) {}
             } else {
                 toast("Ouvrez cette app depuis Heye OS.");
             }
         }
 
-        // ==========================================
-        // INITIALISATION (SSO HEYE)
-        // ==========================================
-        window.onload = () => {
-            // Cacher le bouton retour si on n'est pas dans une iframe
-            if(window.parent === window) $('#heye-back-btn').style.display = 'none';
+        function saveDB() {
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
+        }
 
-            let rawDb = localStorage.getItem(DB_KEY);
-            if (rawDb) {
-                db = JSON.parse(rawDb);
-                if (db.currentUser && db.users[db.currentUser]) {
-                    myEmail = db.currentUser;
-                    const u = db.users[myEmail];
-                    $('#sso-user-card').style.display = 'flex';
-                    $('#sso-name').textContent = u.prenom + ' ' + u.nom;
-                    $('#sso-mail').textContent = u.email.replace('@heye.us', '@Heye.us');
-                    $('#sso-av').textContent = u.prenom.charAt(0).toUpperCase();
-                } else {
-                    toast("Aucun utilisateur connecté dans Heye OS.");
-                }
-            } else {
-                toast("Base de données Heye introuvable. Ouvrez le Launcher d'abord.");
+        // ==========================================
+        // CONNEXION SSO BLINDÉE (POSTMESSAGE + FALLBACKS)
+        // ==========================================
+        
+        // 1. Écoute automatique de l'OS
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'HEYE_SSO') {
+                processSSO(event.data.user);
             }
-        };
+        });
 
-        function initApp() {
-            if (!myEmail) return toast("Connexion impossible.");
+        // Fonction centrale de connexion
+        function processSSO(hUser) {
+            myEmail = hUser.email;
             
-            // Initialiser le portefeuille HeyePay s'il n'existe pas
+            // Reconstruire la DB localement
+            let rawDb = localStorage.getItem(DB_KEY);
+            db = rawDb ? JSON.parse(rawDb) : { users: {} };
+            
+            db.users[myEmail] = hUser;
+            db.currentUser = myEmail;
+            
+            // Créer le portefeuille si c'est la première fois
             if (!db.users[myEmail].heyepay) {
-                db.users[myEmail].heyepay = {
-                    balance: 0,
-                    tx: [],
-                    card: null
-                };
-                saveDB();
+                db.users[myEmail].heyepay = { balance: 0, tx: [], card: null };
             }
             me = db.users[myEmail];
-            
+            saveDB(); // Synchronise instantanément
+
+            // Cache l'écran de lancement
             $('#sso-overlay').classList.remove('active');
             setTimeout(() => { $('#sso-overlay').style.display = 'none'; }, 300);
 
-            $('#home-av').textContent = me.prenom.charAt(0).toUpperCase(); renderAll(); }          function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }          // ========================================== // NAVIGATION // ========================================== function switchTab(tabId) { $$('.tab-view').forEach(el => el.classList.remove('active'));$$('.nav-item').forEach(el => el.classList.remove('active'));$(`#tab-${tabId}`).classList.add('active');
+            // Met à jour l'interface
+            $('#home-av').textContent = me.prenom.charAt(0).toUpperCase();
+            renderAll();
+        }
+
+        // 2. Si le joueur clique sur le bouton "Continuer avec Heye"
+        function initApp() {
+            // Tentative de forçage : lecture directe chez le parent (contourne les iframes bloquées en local)
+            try {
+                if (window.parent && window.parent.db && window.parent.db.currentUser) {
+                    let hUser = window.parent.db.users[window.parent.db.currentUser];
+                    return processSSO(hUser);
+                }
+            } catch(e) {}
+
+            // Tentative Classique via le LocalStorage local
+            try {
+                let rawDb = localStorage.getItem(DB_KEY);
+                if (rawDb) {
+                    let tempDb = JSON.parse(rawDb);
+                    if (tempDb.currentUser && tempDb.users[tempDb.currentUser]) {
+                        return processSSO(tempDb.users[tempDb.currentUser]);
+                    }
+                }
+            } catch(e) {}
+
+            // Si tout échoue, on prévient l'utilisateur
+            toast("Connexion à l'OS impossible. Lancez l'application depuis le Launcher Heye.");
+        }
+
+        // Au chargement de la page : on tente juste d'afficher les infos sur le carton
+        window.onload = () => {
+            if(window.parent === window) $('#heye-back-btn').style.display = 'none';
+            
+            try {
+                let rawDb = localStorage.getItem(DB_KEY);
+                if (rawDb) {
+                    let tempDb = JSON.parse(rawDb);
+                    if (tempDb.currentUser && tempDb.users[tempDb.currentUser]) {
+                        let u = tempDb.users[tempDb.currentUser];
+                        $('#sso-user-card').style.display = 'flex';
+                        $('#sso-name').textContent = u.prenom + ' ' + u.nom;
+                        $('#sso-mail').textContent = u.email.replace('@heye.us', '@Heye.us');
+                        $('#sso-av').textContent = u.prenom.charAt(0).toUpperCase(); } } } catch(e) {} };          // ========================================== // NAVIGATION // ========================================== function switchTab(tabId) { $$('.tab-view').forEach(el => el.classList.remove('active'));$$('.nav-item').forEach(el => el.classList.remove('active'));$(`#tab-${tabId}`).classList.add('active');
             $$('.nav-item').forEach(el => {
                 if (el.getAttribute('onclick').includes(tabId)) el.classList.add('active');
             });
@@ -318,7 +352,7 @@
                     <button class="btn" onclick="processMint()">Ajouter au solde</button>
                 `;
             } else if (type === 'send') {
-                currentSendTarget = arg; // Peut être null si on ouvre depuis l'accueil
+                currentSendTarget = arg;
                 let friendsHtml = getFriendsList().map(f => `
                     <button class="chip ${currentSendTarget === f.email ? 'active' : ''}" onclick="selectFriend('${f.email}')" id="chip-${f.email}">
                         ${f.name}
@@ -347,7 +381,6 @@
             $('#action-sheet').classList.remove('active');
         }
 
-        // Helpers pour les inputs de montant
         function formatAmtInput(el) {
             let val = el.value.replace(/[^0-9,]/g, '');
             el.value = val;
@@ -356,7 +389,7 @@
             $('#amt-input').value = val + ',00';
         }
         function getAmtValue() {
-            let val = $('#amt-input').value.replace(',', '.'); return Math.round(parseFloat(val \vert{}\vert{} 0) * 100); // en centimes } function selectFriend(email) { currentSendTarget = email; $$('.chip').forEach(c => c.classList.remove('active'));
+            let val = $('#amt-input').value.replace(',', '.'); return Math.round(parseFloat(val \vert{}\vert{} 0) * 100); } function selectFriend(email) { currentSendTarget = email; $$('.chip').forEach(c => c.classList.remove('active'));
             document.getElementById(`chip-${email}`).classList.add('active');
         }
 
@@ -465,9 +498,6 @@
             }
         }
 
-        // ==========================================
-        // ACTIONS METIER
-        // ==========================================
         function processMint() {
             let amt = getAmtValue();
             if (amt <= 0) return toast("Montant invalide.");
@@ -491,11 +521,9 @@
             let note = $('#note-input').value.trim();
             let targetUser = db.users[currentSendTarget];
 
-            // Retirer chez moi
             me.heyepay.balance -= amt;
             me.heyepay.tx.push({ id: Date.now(), type: 'send', amount: -amt, date: Date.now(), peer: currentSendTarget, note: note });
             
-            // Ajouter chez l'autre (si son wallet est initialisé, sinon on le crée)
             if (!targetUser.heyepay) targetUser.heyepay = { balance: 0, tx: [], card: null };
             targetUser.heyepay.balance += amt;
             targetUser.heyepay.tx.push({ id: Date.now()+1, type: 'receive', amount: amt, date: Date.now(), peer: myEmail, note: note });
