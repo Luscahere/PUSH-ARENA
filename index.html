@@ -237,7 +237,7 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- SSO HEYE -->
+    <!-- SSO HEYE OVERLAY POUR LES APPS -->
     <!-- ========================================== -->
     <div id="heye-sso-overlay" class="bottom-sheet-overlay">
         <div class="bottom-sheet">
@@ -295,6 +295,7 @@
             <h2 style="font-size:28px; margin-bottom:12px;">Espace <span class="dyn-prenom"></span></h2>
         </div>
         
+        <!-- Bulles de filtres type Pronote -->
         <div class="dn-chips-container">
             <div class="dn-chip active">✓ Emploi du temps</div>
             <div class="dn-chip">🎯 Objectifs</div>
@@ -302,7 +303,11 @@
         </div>
 
         <div style="flex:1; overflow-y:auto; padding-bottom:100px;">
+            
+            <!-- Dashboard Prochain Événement -->
             <div class="dn-dashboard" id="dn-dashboard"></div>
+
+            <!-- Titre Section -->
             <div class="dn-timeline">
                 <div class="dn-section-header">
                     <h3>EMPLOI DU TEMPS</h3>
@@ -352,12 +357,19 @@
     <!-- ========================================== -->
     <div id="pushuparena-app" class="fullscreen-app" style="background: #123A6B;">
         <div class="mail-topbar" style="position:absolute; top:0; left:0; width:100%; z-index:1000; background:transparent; border:none; pointer-events:none; padding-top: 15px;">
-            <button class="mail-topbar-btn" style="pointer-events:auto; background:rgba(0,0,0,0.6); padding:8px 16px; border-radius:20px; margin-top:20px; color: white;" onclick="closeApp('pushuparena-app')">‹ Quitter le Jeu</button>
+            <button class="mail-topbar-btn" style="pointer-events:auto; background:rgba(0,0,0,0.6); padding:8px 16px; border-radius:20px; margin-top:20px; color: white;" onclick="closeApp('pushuparena-app')">‹ Quitter</button>
         </div>
         <iframe id="pushup-frame" style="width:100%; height:100%; border:none; margin-top: 0;"></iframe>
     </div>
 
-    <!-- SCRIPT JS -->
+    <!-- ========================================== -->
+    <!-- APP: HEYEPAY (via Iframe) -->
+    <!-- ========================================== -->
+    <div id="heyepay-app" class="fullscreen-app" style="background: #000;">
+        <iframe id="heyepay-frame" style="width:100%; height:100%; border:none; margin-top: 0;"></iframe>
+    </div>
+
+    <!-- SCRIPT JS PRINCIPAL -->
     <script>
         // ==========================================
         // BASE DE DONNÉES LOCALE
@@ -391,16 +403,20 @@
 
         function saveDB() { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
 
-        // Ajout de Push Up Arena au catalogue
+        // Ajout de HeyePay au catalogue
         const APP_CATALOGUE = {
             'HeyeMail': { id: 'HeyeMail', name: 'HeyeMail', icon: '✉️', bg: 'linear-gradient(135deg, #0071E3, #004494)', type: 'system' },
             'DONENOTE': { id: 'DONENOTE', name: 'DONENOTE', icon: '✓', bg: 'linear-gradient(135deg, #05070D, #111722)', border: '1px solid rgba(255,255,255,0.1)' },
-            'PushUpArena': { id: 'PushUpArena', name: 'Push Up Arena', icon: '💪', bg: 'linear-gradient(135deg, #123A6B, #2FA8FF)', border: '1px solid rgba(255,255,255,0.1)' }
+            'PushUpArena': { id: 'PushUpArena', name: 'Push Up Arena', icon: '💪', bg: 'linear-gradient(135deg, #123A6B, #2FA8FF)', border: '1px solid rgba(255,255,255,0.1)' },
+            'HeyePay': { id: 'HeyePay', name: 'HeyePay', icon: '💳', bg: 'linear-gradient(135deg, #1C1C1E, #000000)', border: '1px solid rgba(255,255,255,0.2)' }
         };
 
         window.onload = () => {
             if (db.currentUser && db.users[db.currentUser]) { initUserSession(); } 
             else { document.getElementById('auth-container').style.display = 'flex'; }
+            
+            const options = { weekday: 'long', day: 'numeric', month: 'long' };
+            document.getElementById('dn-date-display').innerText = new Date().toLocaleDateString('fr-FR', options);
         };
 
         // ==========================================
@@ -487,7 +503,6 @@
             if(activeTab) { activeTab.classList.add('active'); activeTab.style.color = 'var(--accent-blue)'; }
         }
 
-        // --- PROFIL ÉDITION ---
         function openProfileEditor() {
             let user = db.users[db.currentUser];
             document.getElementById('edit-prenom').value = user.prenom;
@@ -520,11 +535,9 @@
                 let app = APP_CATALOGUE[appId];
                 if(app) {
                     let badgeHTML = (appId === 'HeyeMail' && unreadCount > 0) ? `<div class="badge">${unreadCount}</div>` : '';
-                    let bgStyle = app.bg;
-                    // Si c'est l'app PushUpArena, on met l'image de fond si souhaité
                     grid.innerHTML += `
                         <div class="extension-item" onclick="launchAppLogic('${appId}')">
-                            <div class="extension-icon" style="background: ${bgStyle}; ${app.border ? `border: ${app.border}` : ''}">${app.icon}</div>
+                            <div class="extension-icon" style="background: ${app.bg}; ${app.border ? `border: ${app.border}` : ''}">${app.icon}</div>
                             ${badgeHTML}
                             <div class="extension-name">${app.name}</div>
                         </div>`;
@@ -543,12 +556,16 @@
                 let btnTxt = isInstalled ? 'OUVRIR' : 'OBTENIR';
                 let btnStyle = isInstalled ? 'background:transparent; border:1px solid var(--glass-border); color:var(--text-secondary);' : 'background:rgba(255,255,255,0.1); color:var(--accent-blue);';
                 
+                let appDesc = 'Organisez votre journée.';
+                if(app.id === 'PushUpArena') appDesc = 'Affrontez vos amis.';
+                if(app.id === 'HeyePay') appDesc = 'Votre portefeuille numérique.';
+
                 container.innerHTML += `
                     <div style="background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:16px; padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:16px;">
                         <div class="extension-icon" style="background: ${app.bg}; width:48px; height:48px; font-size:20px; margin-bottom:0; ${app.border ? `border: ${app.border}` : ''}">${app.icon}</div>
                         <div style="flex:1;">
                             <h3 style="font-size:17px; margin-bottom:4px;">${app.name}</h3>
-                            <p style="font-size:13px; color:var(--text-secondary);">${app.id === 'PushUpArena' ? 'Affrontez vos amis.' : 'Organisez votre journée.'}</p>
+                            <p style="font-size:13px; color:var(--text-secondary);">${appDesc}</p>
                         </div>
                         <button style="border:none; padding:8px 16px; border-radius:20px; font-weight:700; cursor:pointer; min-width:80px; ${btnStyle}" onclick="installApp('${app.id}', this)">${btnTxt}</button>
                     </div>`;
@@ -612,8 +629,6 @@
                 document.getElementById('donenote-app').classList.remove('closing');
                 document.getElementById('donenote-app').classList.add('active');
             } else if (appId === 'PushUpArena') {
-                
-                // INJECTION SSO DANS LA BASE DE DONNÉES DU JEU !
                 let hUser = db.users[db.currentUser];
                 let pDb = JSON.parse(localStorage.getItem('pushup_rivals_save')) || { users:{}, currentUser: null };
                 if(!pDb.users[hUser.email]) {
@@ -626,14 +641,19 @@
                 localStorage.setItem('pushup_rivals_save', JSON.stringify(pDb));
                 localStorage.setItem('session', JSON.stringify({ mail: hUser.email, token: "sso", at: Date.now() }));
 
-                // Chargement de l'iframe vers ton fichier de jeu !
                 let frame = document.getElementById('pushup-frame');
-                if(!frame.src) {
-                    frame.src = "pushup.html"; // TON FICHIER JEU !
+                if(!frame.src || frame.src === window.location.href) {
+                    frame.src = "pushup.html"; 
                 }
-
                 document.getElementById('pushuparena-app').classList.remove('closing');
                 document.getElementById('pushuparena-app').classList.add('active');
+            } else if (appId === 'HeyePay') {
+                let frame = document.getElementById('heyepay-frame');
+                if(!frame.src || frame.src === window.location.href) {
+                    frame.src = "heyepay.html"; 
+                }
+                document.getElementById('heyepay-app').classList.remove('closing');
+                document.getElementById('heyepay-app').classList.add('active');
             }
         }
 
