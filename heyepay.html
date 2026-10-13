@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
     <title>HeyePay</title>
     <style>
-        /* --- VARIABLES APPLE & HEYE OS --- */
         :root {
             --bg-color: #000000;
             --surface-color: #1C1C1E;
@@ -27,31 +26,24 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-color); color: var(--text-primary); overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-        /* --- TYPOGRAPHIE & COMMUNS --- */
         button { border: none; background: none; color: inherit; cursor: pointer; font: inherit; }
         .title { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 20px; }
         .subtitle { font-size: 20px; font-weight: 600; margin: 24px 0 12px 0; color: var(--text-primary); }
         .muted { color: var(--text-secondary); font-size: 15px; }
 
-        /* --- BOUTONS ET INPUTS --- */
         .btn { display: flex; justify-content: center; align-items: center; width: 100%; padding: 16px; background-color: var(--accent-blue); color: #FFFFFF; border-radius: var(--radius-btn); font-size: 17px; font-weight: 600; transition: transform 0.1s, background-color 0.2s; margin-top: 12px; }
         .btn:active { transform: scale(0.97); background-color: #005BB5; }
         .btn.alt { background-color: var(--surface-elevated); color: var(--text-primary); }
-        .btn.alt:active { background-color: #3A3A3C; }
         .btn.red { background-color: rgba(255, 59, 48, 0.1); color: var(--accent-red); }
-        input.f { width: 100%; padding: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: var(--radius-btn); color: var(--text-primary); font-size: 17px; margin-bottom: 16px; outline: none; transition: 0.2s; }
-        input.f:focus { border-color: var(--accent-blue); }
+        input.f { width: 100%; padding: 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: var(--radius-btn); color: var(--text-primary); font-size: 17px; margin-bottom: 16px; outline: none; }
 
-        /* --- LAYOUT PRINCIPAL --- */
         #app { height: 100vh; display: flex; flex-direction: column; position: relative; }
         .header { padding: calc(var(--safe-t) + 20px) 20px 10px; display: flex; justify-content: space-between; align-items: center; }
         .content { flex: 1; overflow-y: auto; padding: 0 20px calc(var(--safe-b) + 100px); }
         
-        .tab-view { display: none; animation: fadeIn 0.3s ease-out forwards; }
+        .tab-view { display: none; }
         .tab-view.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- COMPOSANTS UI --- */
         .avatar { display: flex; justify-content: center; align-items: center; width: 44px; height: 44px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 18px; flex: none; background: linear-gradient(135deg, #0071E3, #004494); border: 1px solid var(--glass-border); }
         
         .balance-card { background: var(--surface-color); border: 1px solid var(--glass-border); border-radius: var(--radius-card); padding: 30px 24px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -59,8 +51,7 @@
         .balance-currency { font-size: 24px; font-weight: 600; color: var(--text-secondary); margin-left: 4px; }
 
         .quick-actions { display: flex; justify-content: space-between; margin: 24px 0; padding: 0 10px; }
-        .action-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-primary); transition: transform 0.1s; }
-        .action-btn:active { transform: scale(0.92); }
+        .action-btn { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text-primary); }
         .action-icon { display: flex; align-items: center; justify-content: center; width: 60px; height: 60px; border-radius: 50%; background: var(--surface-elevated); color: var(--accent-blue); font-size: 24px; border: 1px solid var(--glass-border); }
 
         .list-group { background: var(--surface-color); border-radius: 20px; padding: 0 16px; border: 1px solid var(--glass-border); }
@@ -73,75 +64,43 @@
         .tx-amt.pos { color: var(--accent-green); }
         
         .friend-row { display: flex; align-items: center; gap: 12px; }
-        .friend-row .avatar { width: 40px; height: 40px; font-size: 16px; }
 
-        /* --- CARTE VIRTUELLE (Apple Card Style) --- */
-        .cc-wrapper { perspective: 1000px; margin-bottom: 24px; }
-        .cc { aspect-ratio: 1.586; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(135deg, #2C2C2E, #000000); box-shadow: 0 20px 40px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.15); transition: filter 0.3s, opacity 0.3s, transform 0.2s; position: relative; overflow: hidden; }
-        .cc::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%); opacity: 0.5; pointer-events: none; }
+        .cc { aspect-ratio: 1.586; border-radius: 20px; padding: 24px; display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(135deg, #2C2C2E, #000000); box-shadow: 0 20px 40px rgba(0,0,0,0.8); border: 1px solid rgba(255,255,255,0.15); position: relative; overflow: hidden; }
         .cc.fz { filter: grayscale(1); opacity: 0.6; }
         .cc-logo { font-size: 20px; font-weight: 700; display: flex; justify-content: space-between; align-items: center;}
-        .cc-num { font-size: 22px; letter-spacing: 0.1em; font-variant-numeric: tabular-nums; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .cc-num { font-size: 22px; letter-spacing: 0.1em; font-variant-numeric: tabular-nums; font-weight: 600; }
         .cc-bot { display: flex; justify-content: space-between; font-size: 13px; color: #A1A1A6; }
         .cc-bot b { color: #FFF; font-size: 15px; }
 
-        /* --- NAVIGATION BASSE --- */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: calc(85px + var(--safe-b)); background: rgba(28, 28, 30, 0.85); backdrop-filter: blur(20px); border-top: 1px solid var(--glass-border); display: flex; justify-content: space-around; align-items: center; padding-bottom: var(--safe-b); z-index: 50; }
-        .nav-item { color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; cursor: pointer; transition: color 0.2s; }
+        .nav-item { color: var(--text-secondary); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; font-weight: 500; cursor: pointer; }
         .nav-item.active { color: var(--accent-blue); }
-        .nav-icon { font-size: 24px; margin-bottom: 2px; }
+        .nav-icon { font-size: 24px; }
 
-        /* --- BOTTOM SHEETS (Modals) --- */
-        .sheet-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; justify-content: center; backdrop-filter: blur(5px); transition: opacity 0.3s; opacity: 0; }
-        .sheet-overlay.active { display: flex; opacity: 1; }
-        .sheet-content { width: 100%; max-width: 500px; background: var(--surface-color); border-radius: 24px 24px 0 0; padding: 32px 24px calc(var(--safe-b) + 24px); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); border-top: 1px solid var(--glass-border); max-height: 90vh; overflow-y: auto; }
-        .sheet-overlay.active .sheet-content { transform: translateY(0); }
+        .sheet-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 300; align-items: flex-end; justify-content: center; backdrop-filter: blur(5px); }
+        .sheet-overlay.active { display: flex; }
+        .sheet-content { width: 100%; max-width: 500px; background: var(--surface-color); border-radius: 24px 24px 0 0; padding: 32px 24px calc(var(--safe-b) + 24px); border-top: 1px solid var(--glass-border); max-height: 90vh; overflow-y: auto; }
         
         .chips { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0; }
-        .chip { padding: 10px 20px; border-radius: 20px; background: var(--surface-elevated); font-size: 15px; font-weight: 600; border: 1px solid var(--glass-border); transition: 0.2s; }
+        .chip { padding: 10px 20px; border-radius: 20px; background: var(--surface-elevated); font-size: 15px; font-weight: 600; border: 1px solid var(--glass-border); }
         .chip.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
 
         .amt-input { font-size: 44px; font-weight: 700; text-align: center; background: transparent; border: none; color: white; width: 100%; outline: none; margin: 20px 0; font-variant-numeric: tabular-nums; }
-        .amt-input::placeholder { color: var(--text-secondary); }
-
-        /* --- NOTIFICATIONS --- */
-        /* Z-INDEX à 9999 pour s'assurer qu'il passe au dessus de TOUT, même l'écran de connexion ! */
-        #toast { position: fixed; top: calc(var(--safe-t) + 20px); left: 50%; transform: translate(-50%, -150%); background: rgba(255,255,255,0.95); color: #000; padding: 14px 24px; border-radius: 99px; font-weight: 600; font-size: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 9999; display: flex; align-items: center; gap: 8px; }
+        
+        #toast { position: fixed; top: calc(var(--safe-t) + 20px); left: 50%; transform: translate(-50%, -150%); background: rgba(255,255,255,0.95); color: #000; padding: 14px 24px; border-radius: 99px; font-weight: 600; font-size: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); z-index: 9999; }
         #toast.show { transform: translate(-50%, 0); }
-
-        #sso-overlay { z-index: 5000; }
     </style>
 </head>
 <body>
 
-    <!-- BOUTON RETOUR HEYE OS -->
     <div style="position: absolute; top: 15px; left: 15px; z-index: 200;" id="heye-back-btn">
         <button onclick="exitApp()" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 8px 16px; border-radius: 20px; color: white; font-weight: 600; font-size: 15px; border: 1px solid rgba(255,255,255,0.1);">‹ Quitter</button>
     </div>
 
-    <!-- SSO HEYE OVERLAY -->
-    <div id="sso-overlay" class="sheet-overlay active">
-        <div class="sheet-content">
-            <div style="width:60px; height:60px; border-radius:14px; background:linear-gradient(135deg, #1C1C1E, #000); display:flex; justify-content:center; align-items:center; font-size:32px; font-weight:800; margin: 0 auto 16px auto; border:1px solid var(--glass-border);">H</div>
-            <h2 class="title" style="text-align: center; margin-bottom: 8px;">HeyePay</h2>
-            <p style="color:var(--text-secondary); text-align:center; margin-bottom:32px; line-height:1.4;">Connectez votre compte Heye pour activer votre portefeuille numérique sécurisé.</p>
-            
-            <div id="sso-user-card" style="width:100%; background:rgba(255,255,255,0.05); border-radius:16px; padding:16px; display:flex; align-items:center; gap:16px; margin-bottom:32px; border:1px solid var(--glass-border); display: none;">
-                <div class="avatar" id="sso-av">A</div>
-                <div style="flex:1;">
-                    <div style="font-weight:600; font-size:16px;" id="sso-name">Alex</div>
-                    <div style="color:var(--text-secondary); font-size:14px;" id="sso-mail">alex@heye.us</div>
-                </div>
-            </div>
-
-            <button class="btn" style="background:white; color:black;" onclick="initApp()"> Continuer avec Heye</button>
-        </div>
-    </div>
-
     <!-- APPLICATION PRINCIPALE -->
     <div id="app">
-        <!-- ONGLET ACCUEIL -->
-        <div id="tab-home" class="tab-view content">
+        <!-- ACCUEIL -->
+        <div id="tab-home" class="tab-view active content">
             <div class="header" style="padding-top: 70px;">
                 <div class="title" style="margin: 0;">HeyePay</div>
                 <div class="avatar" id="home-av">A</div>
@@ -153,50 +112,35 @@
             </div>
 
             <div class="quick-actions">
-                <button class="action-btn" onclick="openSheet('send')">
-                    <div class="action-icon">↗</div>
-                    Envoyer
-                </button>
-                <button class="action-btn" onclick="openSheet('mint')">
-                    <div class="action-icon">↓</div>
-                    Ajouter
-                </button>
-                <button class="action-btn" onclick="switchTab('card')">
-                    <div class="action-icon">💳</div>
-                    Carte
-                </button>
+                <button class="action-btn" onclick="openSheet('send')"><div class="action-icon">↗</div>Envoyer</button>
+                <button class="action-btn" onclick="openSheet('mint')"><div class="action-icon">↓</div>Ajouter</button>
+                <button class="action-btn" onclick="switchTab('card')"><div class="action-icon">💳</div>Carte</button>
             </div>
 
             <div class="subtitle">Transactions récentes</div>
             <div class="list-group" id="tx-list"></div>
         </div>
 
-        <!-- ONGLET CARTE -->
+        <!-- CARTE -->
         <div id="tab-card" class="tab-view content">
-            <div class="header" style="padding-top: 70px;">
-                <div class="title" style="margin: 0;">Ma Carte</div>
-            </div>
+            <div class="header" style="padding-top: 70px;"><div class="title" style="margin: 0;">Ma Carte</div></div>
             <div id="card-view"></div>
         </div>
 
-        <!-- ONGLET AMIS -->
+        <!-- AMIS -->
         <div id="tab-friends" class="tab-view content">
-            <div class="header" style="padding-top: 70px;">
-                <div class="title" style="margin: 0;">Amis Heye</div>
-            </div>
-            <p class="muted" style="margin-bottom: 16px;">Sélectionnez un contact de votre écosystème local pour lui envoyer des fonds instantanément.</p>
+            <div class="header" style="padding-top: 70px;"><div class="title" style="margin: 0;">Amis Heye</div></div>
+            <p class="muted" style="margin-bottom: 16px;">Sélectionnez un contact pour lui envoyer des fonds.</p>
             <div class="list-group" id="friends-list"></div>
         </div>
     </div>
 
-    <!-- NAVIGATION BASSE -->
     <nav class="bottom-nav">
         <div class="nav-item active" onclick="switchTab('home')"><div class="nav-icon">⌂</div>Accueil</div>
         <div class="nav-item" onclick="switchTab('card')"><div class="nav-icon">💳</div>Carte</div>
         <div class="nav-item" onclick="switchTab('friends')"><div class="nav-icon">👥</div>Amis</div>
     </nav>
 
-    <!-- BOTTOM SHEET DYNAMIQUE -->
     <div id="action-sheet" class="sheet-overlay" onclick="if(event.target===this) closeSheet()">
         <div class="sheet-content" id="sheet-content"></div>
     </div>
@@ -204,9 +148,6 @@
     <div id="toast">✅ Message</div>
 
     <script>
-        // ==========================================
-        // VARIABLES GLOBALES & BASE DE DONNÉES
-        // ==========================================
         const DB_KEY = 'heye_database';
         let db = { users: {} };
         let myEmail = null;
@@ -227,14 +168,11 @@
             t.classList.add('show');
             clearTimeout(toastTimeout);
             toastTimeout = setTimeout(() => t.classList.remove('show'), 2600);
-            if(navigator.vibrate) navigator.vibrate(50);
         }
 
         function exitApp() {
             if (window.parent !== window) {
                 try { window.parent.closeApp('heyepay-app'); } catch(e) {}
-            } else {
-                toast("Fermeture... (Lancez depuis Heye OS)");
             }
         }
 
@@ -242,57 +180,17 @@
             try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch(e) {}
         }
 
-        // ==========================================
-        // CONNEXION SSO HEYE
-        // ==========================================
-        
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'HEYE_SSO') {
-                processSSO(event.data.user);
-            }
-        });
-
-        function processSSO(hUser) {
-            if(!hUser || !hUser.email) return;
-            myEmail = hUser.email;
-            
+        // --- CONNEXION INSTANTANÉE AUTOMATIQUE ---
+        function autoConnect() {
             try {
-                let rawDb = localStorage.getItem(DB_KEY);
-                if(rawDb) db = JSON.parse(rawDb);
-            } catch(e) {}
-            
-            if(!db.users) db.users = {};
-            
-            if(db.users[myEmail]) {
-                db.users[myEmail] = { ...db.users[myEmail], ...hUser };
-            } else {
-                db.users[myEmail] = hUser;
-            }
-            db.currentUser = myEmail;
-            
-            if (!db.users[myEmail].heyepay) {
-                db.users[myEmail].heyepay = { balance: 0, tx: [], card: null };
-            }
-            me = db.users[myEmail];
-            saveDB();
-
-            $('#sso-overlay').classList.remove('active');
-            setTimeout(() => { $('#sso-overlay').style.display = 'none'; }, 300);
-
-            $('#home-av').textContent = (me.prenom ? me.prenom.charAt(0).toUpperCase() : "A");
-            renderAll();
-        }
-
-        function initApp() {
-            // 1. Essai de lecture chez l'OS parent
-            try {
+                // 1. Essai direct parent OS
                 if (window.parent && window.parent.db && window.parent.db.currentUser) {
                     return processSSO(window.parent.db.users[window.parent.db.currentUser]);
                 }
             } catch(e) {}
 
-            // 2. Essai Classique via le Storage Local
             try {
+                // 2. Essai LocalStorage
                 let rawDb = localStorage.getItem(DB_KEY);
                 if (rawDb) {
                     let tempDb = JSON.parse(rawDb);
@@ -302,29 +200,39 @@
                 }
             } catch(e) {}
 
-            // 3. FORCE LE PASSAGE si tout échoue (Pour qu'il ne reste jamais bloqué sur la page noire !)
-            toast("Connexion forcée (Mode autonome activé).");
-            processSSO({
-                prenom: "Utilisateur",
-                nom: "Heye",
-                email: "user@heye.us",
-                avatar: "U"
-            });
+            // 3. Fallback de secours absolu (zéro blocage)
+            processSSO({ prenom: "Alex", nom: "Heye", email: "alex@heye.us" });
         }
 
-        window.onload = () => {
-            if(window.parent === window) $('#heye-back-btn').style.display = 'none';
-            
+        function processSSO(hUser) {
+            myEmail = hUser.email;
             try {
                 let rawDb = localStorage.getItem(DB_KEY);
-                if (rawDb) {
-                    let tempDb = JSON.parse(rawDb);
-                    if (tempDb.currentUser && tempDb.users[tempDb.currentUser]) {
-                        let u = tempDb.users[tempDb.currentUser];
-                        $('#sso-user-card').style.display = 'flex';
-                        $('#sso-name').textContent = u.prenom + ' ' + u.nom;
-                        $('#sso-mail').textContent = u.email.replace('@heye.us', '@Heye.us');
-                        $('#sso-av').textContent = (u.prenom ? u.prenom.charAt(0).toUpperCase() : 'A'); } } } catch(e) {} };          // ========================================== // NAVIGATION & UI // ========================================== function switchTab(tabId) { $$('.tab-view').forEach(el => el.classList.remove('active'));$$('.nav-item').forEach(el => el.classList.remove('active'));$(`#tab-${tabId}`).classList.add('active');
+                if(rawDb) db = JSON.parse(rawDb);
+            } catch(e) {}
+            
+            if(!db.users) db.users = {};
+            db.users[myEmail] = { ...(db.users[myEmail] || {}), ...hUser };
+            db.currentUser = myEmail;
+            
+            if (!db.users[myEmail].heyepay) {
+                db.users[myEmail].heyepay = { balance: 0, tx: [], card: null };
+            }
+            me = db.users[myEmail];
+            saveDB();
+
+            $('#home-av').textContent = (me.prenom ? me.prenom.charAt(0).toUpperCase() : "A");
+            renderAll();
+        }
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'HEYE_SSO') {
+                processSSO(event.data.user);
+            }
+        });
+
+        window.onload = () => {
+            if(window.parent === window) $('#heye-back-btn').style.display = 'none'; autoConnect(); // Connexion immédiate dès l'ouverture ! };          // UI & ACTIONS function switchTab(tabId) { $$('.tab-view').forEach(el => el.classList.remove('active'));$$('.nav-item').forEach(el => el.classList.remove('active'));$(`#tab-${tabId}`).classList.add('active');
             $$('.nav-item').forEach(el => {
                 if (el.getAttribute('onclick').includes(tabId)) el.classList.add('active');
             });
@@ -335,10 +243,8 @@
             const content = $('#sheet-content');
             if (type === 'mint') {
                 content.innerHTML = `
-                    <div style="width: 40px; height: 5px; background: var(--glass-border); border-radius: 3px; margin: 0 auto 20px auto;"></div>
                     <h2 class="title" style="margin-bottom: 8px;">Ajouter des fonds</h2>
-                    <p class="muted">Approvisionnez votre portefeuille numérique HeyePay.</p>
-                    <input type="text" class="amt-input" id="amt-input" inputmode="decimal" placeholder="0,00 H$" oninput="formatAmtInput(this)">
+                    <input type="text" class="amt-input" id="amt-input" inputmode="decimal" placeholder="0,00 H$" oninput="this.value = this.value.replace(/[^0-9,]/g, '')">
                     <div class="chips" style="justify-content: center;">
                         <button class="chip" onclick="setAmt(50)">50 H$</button>
                         <button class="chip" onclick="setAmt(100)">100 H$</button>
@@ -349,19 +255,14 @@
             } else if (type === 'send') {
                 currentSendTarget = arg;
                 let friendsHtml = getFriendsList().map(f => `
-                    <button class="chip ${currentSendTarget === f.email ? 'active' : ''}" onclick="selectFriend('${f.email}')" id="chip-${f.email}">
-                        ${f.name}
-                    </button>
-                `).join('');
-
-                if(getFriendsList().length === 0) friendsHtml = `<p class="muted">Aucun ami trouvé sur cet appareil.</p>`;
+                    <button class="chip ${currentSendTarget === f.email ? 'active' : ''}" onclick="selectFriend('${f.email}')" id="chip-${f.email}">${f.name}</button>
+                `).join('') || `<p class="muted">Aucun ami trouvé.</p>`;
 
                 content.innerHTML = `
-                    <div style="width: 40px; height: 5px; background: var(--glass-border); border-radius: 3px; margin: 0 auto 20px auto;"></div>
                     <h2 class="title" style="margin-bottom: 8px;">Envoyer de l'argent</h2>
-                    <div class="chips" id="friend-chips-container">${friendsHtml}</div>
-                    <input type="text" class="amt-input" id="amt-input" inputmode="decimal" placeholder="0,00 H$" oninput="formatAmtInput(this)">
-                    <input type="text" class="f" id="note-input" placeholder="Ajouter un message (facultatif)" style="background: var(--surface-color);">
+                    <div class="chips">${friendsHtml}</div>
+                    <input type="text" class="amt-input" id="amt-input" inputmode="decimal" placeholder="0,00 H$" oninput="this.value = this.value.replace(/[^0-9,]/g, '')">
+                    <input type="text" class="f" id="note-input" placeholder="Message (facultatif)" style="background: var(--surface-color);">
                     <button class="btn" onclick="processSend()">Confirmer l'envoi</button>
                 `;
             }
@@ -369,10 +270,10 @@
         }
 
         function closeSheet() { $('#action-sheet').classList.remove('active'); }
-        function formatAmtInput(el) { el.value = el.value.replace(/[^0-9,]/g, ''); }
         function setAmt(val) { $('#amt-input').value = val + ',00'; }
         function getAmtValue() { return Math.round(parseFloat($('#amt-input').value.replace(',', '.') \vert{}\vert{} 0) * 100); }  function selectFriend(email) { currentSendTarget = email; $$('.chip').forEach(c => c.classList.remove('active'));
-            document.getElementById(`chip-${email}`).classList.add('active');
+            const targetEl = document.getElementById(`chip-${email}`);
+            if(targetEl) targetEl.classList.add('active');
         }
 
         function getFriendsList() {
@@ -390,17 +291,11 @@
             let txHtml = sortedTx.length === 0 ? `<p class="muted" style="padding: 20px 0; text-align:center;">Aucune transaction récente.</p>` 
                 : sortedTx.slice(0, 10).map(t => {
                     let isPos = t.amount > 0;
-                    let title = t.type === 'mint' ? 'Recharge' : 
-                                t.type === 'buy' ? `Carte · ${t.note}` : 
-                                t.type === 'send' ? `À ${db.users[t.peer]?.prenom || 'Ami'}` : 
-                                `De ${db.users[t.peer]?.prenom || 'Ami'}`;
+                    let title = t.type === 'mint' ? 'Recharge' : t.type === 'buy' ? `Carte · ${t.note}` : t.type === 'send' ? `À ${db.users[t.peer]?.prenom || 'Ami'}` : `De ${db.users[t.peer]?.prenom || 'Ami'}`;
                     let dateStr = new Date(t.date).toLocaleDateString('fr-FR', {day: 'numeric', month: 'short'});
                     return `
                     <div class="list-item">
-                        <div class="tx-info">
-                            <div class="tx-title">${title}</div>
-                            <div class="tx-date">${dateStr} ${t.note && t.type !== 'buy' ? '· ' + t.note : ''}</div>
-                        </div>
+                        <div class="tx-info"><div class="tx-title">${title}</div><div class="tx-date">${dateStr}</div></div>
                         <div class="tx-amt ${isPos ? 'pos' : ''}">${isPos ? '+' : ''}${formatCurrency(t.amount)} H$</div>
                     </div>`;
                 }).join('');
@@ -408,116 +303,75 @@
 
             let fHtml = getFriendsList().map(f => `
                 <div class="list-item">
-                    <div class="friend-row">
-                        <div class="avatar">${f.name.charAt(0).toUpperCase()}</div>
-                        <div class="tx-title">${f.name}</div>
-                    </div>
+                    <div class="friend-row"><div class="avatar">${f.name.charAt(0).toUpperCase()}</div><div class="tx-title">${f.name}</div></div>
                     <button class="btn alt" style="width: auto; margin:0; padding: 8px 16px; border-radius: 20px;" onclick="openSheet('send', '${f.email}')">Envoyer</button>
                 </div>
-            `).join('');
-            if(!fHtml) fHtml = `<p class="muted" style="padding: 20px 0; text-align:center;">Créez d'autres comptes dans le Launcher pour les voir apparaître ici.</p>`;
+            `).join('') || `<p class="muted" style="padding: 20px 0; text-align:center;">Aucun autre ami dans le Launcher.</p>`;
             $('#friends-list').innerHTML = fHtml;
 
             let cardView = $('#card-view');
             if (me.heyepay.card) {
                 let c = me.heyepay.card;
-                let numDisplay = showCardDetails ? formatCardNum(c.num) : '•••• •••• •••• ' + c.num.slice(-4);
-                let expDisplay = showCardDetails ? c.exp : '••/••';
-                let cvvDisplay = showCardDetails ? c.cvv : '•••';
-
                 cardView.innerHTML = `
-                    <div class="cc-wrapper">
-                        <div class="cc ${c.frozen ? 'fz' : ''}">
-                            <div class="cc-logo"><span>HeyePay</span> <span>💳</span></div>
-                            <div class="cc-num">${numDisplay}</div>
-                            <div class="cc-bot">
-                                <div>EXPIRATION<br><b>${expDisplay}</b></div>
-                                <div>CVV<br><b>${cvvDisplay}</b></div>
-                            </div>
-                        </div>
+                    <div class="cc ${c.frozen ? 'fz' : ''}">
+                        <div class="cc-logo"><span>HeyePay</span> <span>💳</span></div>
+                        <div class="cc-num">${showCardDetails ? formatCardNum(c.num) : '•••• •••• •••• ' + c.num.slice(-4)}</div>
+                        <div class="cc-bot"><div>EXP<br><b>${showCardDetails ? c.exp : '••/••'}</b></div><div>CVV<br><b>${showCardDetails ? c.cvv : '•••'}</b></div></div>
                     </div>
-                    <button class="btn alt" onclick="toggleCardDetails()">${showCardDetails ? 'Masquer les numéros' : 'Afficher les numéros'}</button>
-                    
-                    <div class="list-group" style="margin-top:24px;">
-                        <div class="list-item" style="padding: 12px 0;">
-                            <div>
-                                <div class="tx-title">Geler la carte</div>
-                                <div class="tx-date">Bloque tous les paiements</div>
-                            </div>
-                            <input type="checkbox" style="width: 50px; height: 30px; accent-color: var(--accent-blue);" ${c.frozen ? 'checked' : ''} onchange="freezeCard(this.checked)">
-                        </div>
-                    </div>
-
-                    <button class="btn" onclick="simulateBuy()" style="margin-top:24px;">Simuler un achat (5 H$)</button>
-                    <button class="btn red" onclick="generateCard()">Générer un nouveau numéro</button>
+                    <button class="btn alt" onclick="showCardDetails = !showCardDetails; renderAll()">${showCardDetails ? 'Masquer' : 'Afficher les numéros'}</button>
+                    <div class="list-group" style="margin-top:20px;"><div class="list-item"><div><b>Geler la carte</b></div><input type="checkbox" style="width:30px;height:30px;accent-color:var(--accent-blue);" ${c.frozen ? 'checked' : ''} onchange="me.heyepay.card.frozen = this.checked; saveDB(); renderAll();"></div></div>
+                    <button class="btn" onclick="simulateBuy()" style="margin-top:20px;">Simuler un achat (5 H$)</button>
+                    <button class="btn red" onclick="generateCard()">Nouveau numéro</button>
                 `;
             } else {
                 cardView.innerHTML = `
                     <div class="balance-card" style="margin-top:20px;">
-                        <div style="font-size: 60px; margin-bottom: 10px;">💳</div>
+                        <div style="font-size: 50px; margin-bottom: 10px;">💳</div>
                         <div class="tx-title" style="margin-bottom: 8px;">Pas encore de carte</div>
-                        <p class="muted" style="margin-bottom: 24px;">Créez une carte virtuelle HeyePay pour payer en ligne en toute sécurité.</p>
                         <button class="btn" onclick="generateCard()">Générer ma carte</button>
                     </div>
                 `;
             }
         }
 
-        // ==========================================
-        // ACTIONS METIER
-        // ==========================================
         function processMint() {
             let amt = getAmtValue();
             if (amt <= 0) return toast("Montant invalide.");
-            if (amt > 10000000) return toast("Maximum 100 000 H$ à la fois.");
-
             me.heyepay.balance += amt;
             me.heyepay.tx.push({ id: Date.now(), type: 'mint', amount: amt, date: Date.now() });
-            saveDB();
-            
-            closeSheet(); renderAll(); toast(`✅ ${formatCurrency(amt)} H$ ajoutés.`);
+            saveDB(); closeSheet(); renderAll(); toast(`✅ ${formatCurrency(amt)} H$ ajoutés.`);
         }
 
         function processSend() {
             if (!currentSendTarget) return toast("Sélectionnez un contact.");
             let amt = getAmtValue();
-            if (amt <= 0) return toast("Montant invalide.");
-            if (amt > me.heyepay.balance) return toast("Solde insuffisant.");
+            if (amt <= 0 || amt > me.heyepay.balance) return toast("Montant invalide ou solde insuffisant.");
             
             let note = $('#note-input').value.trim();
             me.heyepay.balance -= amt;
-            me.heyepay.tx.push({ id: Date.now(), type: 'send', amount: -amt, date: Date.now(), peer: currentSendTarget, note: note });
+            me.heyepay.tx.push({ id: Date.now(), type: 'send', amount: -amt, date: Date.now(), peer: currentSendTarget, note });
             
             if (!db.users[currentSendTarget]) db.users[currentSendTarget] = { prenom: "Ami", email: currentSendTarget };
             let targetUser = db.users[currentSendTarget];
             if (!targetUser.heyepay) targetUser.heyepay = { balance: 0, tx: [], card: null };
             
             targetUser.heyepay.balance += amt;
-            targetUser.heyepay.tx.push({ id: Date.now()+1, type: 'receive', amount: amt, date: Date.now(), peer: myEmail, note: note });
+            targetUser.heyepay.tx.push({ id: Date.now()+1, type: 'receive', amount: amt, date: Date.now(), peer: myEmail, note });
             
-            saveDB(); closeSheet(); renderAll(); toast(`💸 ${formatCurrency(amt)} H$ envoyés à ${targetUser.prenom}.`);
+            saveDB(); closeSheet(); renderAll(); toast(`💸 ${formatCurrency(amt)} H$ envoyés.`);
         }
 
         function generateCard() {
-            if (me.heyepay.card && !confirm("L'ancien numéro sera supprimé. Continuer ?")) return;
             let y = (new Date().getFullYear() + 4) % 100;
             me.heyepay.card = { num: '5412' + randDigits(12), exp: String(1 + Math.floor(Math.random() * 12)).padStart(2, '0') + '/' + y, cvv: randDigits(3), frozen: false };
-            saveDB(); showCardDetails = false; renderAll(); toast("✅ Carte virtuelle prête.");
+            saveDB(); showCardDetails = false; renderAll(); toast("✅ Carte prête.");
         }
 
-        function toggleCardDetails() { showCardDetails = !showCardDetails; renderAll(); }
-        function freezeCard(isFrozen) { me.heyepay.card.frozen = isFrozen; saveDB(); renderAll(); toast(isFrozen ? "❄️ Carte gelée." : "✅ Carte débloquée."); }
-
         function simulateBuy() {
-            if (me.heyepay.card.frozen) return toast("❌ Refusé : Carte gelée.");
-            if (me.heyepay.balance < 500) return toast("❌ Refusé : Solde insuffisant.");
-            
-            const marchands = ['Apple Store', 'Boulangerie', 'Uber Eats', 'Netflix', 'Cinéma'];
-            let m = marchands[Math.floor(Math.random() * marchands.length)];
-
+            if (me.heyepay.card.frozen || me.heyepay.balance < 500) return toast("❌ Refusé (Gelée ou solde bas).");
             me.heyepay.balance -= 500;
-            me.heyepay.tx.push({ id: Date.now(), type: 'buy', amount: -500, date: Date.now(), note: m });
-            saveDB(); renderAll(); toast(`🛒 Payé 5,00 H$ chez ${m}.`);
+            me.heyepay.tx.push({ id: Date.now(), type: 'buy', amount: -500, date: Date.now(), note: 'Achat Simulé' });
+            saveDB(); renderAll(); toast(`🛒 Achat validé de 5,00 H$.`);
         }
     </script>
 </body>
