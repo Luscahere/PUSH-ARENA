@@ -482,2662 +482,487 @@ h1,h2,h3,.disp{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;margin
   .logo-art{width:min(52vw,210px)}
 }
 
+
+/* ============================================================ */
 /* ============================================================
-   BOUTON DE CONNEXION AVEC HEYE (STYLE APPLE OFFICIEL)
+   FAÇADE DE MENU — architecture inspirée des grands jeux mobiles :
+   ressources en haut, carte de profil, piste de saison, scène
+   centrale, deux boutons de lancement, navigation basse.
+   Tous les visuels sont dessinés dans l'univers du logo.
    ============================================================ */
-.btn-heye-sso {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  border: 3px solid var(--ink);
-  border-radius: 18px;
-  cursor: pointer;
-  padding: 13px 16px 15px;
-  font-family: 'Baloo 2', system-ui, sans-serif;
-  font-weight: 800;
-  font-size: 19px;
-  letter-spacing: .01em;
-  text-transform: uppercase;
-  color: #fff;
-  background: linear-gradient(180deg, #1D1D1F, #000000);
-  box-shadow: inset 0 3px 0 rgba(255,255,255,.25), 0 6px 0 #05070D, 0 12px 14px -8px rgba(0,0,0,.6);
-  transition: transform .09s, box-shadow .09s;
-  margin-bottom: 8px;
-}
-.btn-heye-sso:active {
-  transform: translateY(6px);
-  box-shadow: inset 0 2px 0 rgba(255,255,255,.2), 0 0 0 #05070D;
-}
-.heye-badge-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #0071E3, #004494);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 800;
-  border: 1px solid rgba(255,255,255,0.2);
-}
 
-</style>
-</head>
-<body>
-<div id="bg"></div>
-<div id="fog"></div>
-
-<!-- ================= LANCEMENT ================= -->
-<div id="splash">
-  <div class="sp-wrap">
-    <div class="sp-logo" role="img" aria-label="Push Up Rivals"></div>
-    <div class="sp-hero"></div>
-    <div class="load">Chauffe les bras…</div>
-  </div>
-</div>
-
-<!-- ================= PORTAIL : INSCRIPTION / CONNEXION ================= -->
-<section id="gate">
-  <div class="gate-head">
-    <div class="logo-art" role="img" aria-label="Push Up Rivals"></div>
-    <div class="eyebrow" id="gateSub">Création du compte</div>
-    <div class="dots" id="gateDots"><i class="on"></i><i></i><i></i><i></i></div>
-  </div>
-
-  <!-- Étape 1 — pseudo -->
-  <div class="step on" id="step1">
-    
-    <!-- BOUTON CONNEXION HEYE (Intégration directe dans le portail) -->
-    <button class="btn-heye-sso" id="btnHeyeAuth">
-      <span class="heye-badge-icon">H</span>
-      <span>Connexion avec Heye</span>
-    </button>
-    <div style="display:flex; align-items:center; gap:10px; margin: 4px 0 10px 0;">
-      <div style="flex:1; height:1px; background:rgba(255,255,255,0.2);"></div>
-      <span style="font-size:12px; color:rgba(255,255,255,0.6); font-weight:600;">OU COMPTE CLASSIQUE</span>
-      <div style="flex:1; height:1px; background:rgba(255,255,255,0.2);"></div>
-    </div>
-
-    <h2>Ton nom de combattant</h2>
-    <p class="sub">Il apparaît dans l'arène et dans les classements. 3 à 12 caractères.</p>
-    <input id="inName" class="field up" maxlength="12" autocomplete="nickname" placeholder="PSEUDO" />
-    <div class="hint" id="errName">Lettres, chiffres, tirets et points.</div>
-  </div>
-
-  <!-- Étape 2 — photo -->
-  <div class="step" id="step2">
-    <h2>Ta photo de profil</h2>
-    <p class="sub">Prends une photo ou choisis un emblème. Elle reste sur ton appareil.</p>
-    <div class="avbig" id="avPreview"></div>
-    <button class="btn steel sm" id="btnPhoto">Prendre ou importer une photo</button>
-    <input type="file" id="filePhoto" accept="image/*" hidden />
-    <div class="eyebrow" style="margin-top:2px">Emblèmes</div>
-    <div class="avgrid" id="avGrid"></div>
-    <div class="hint" id="errPhoto"></div>
-  </div>
-
-  <!-- Étape 3 — e-mail -->
-  <div class="step" id="step3">
-    <h2>Ton adresse e-mail</h2>
-    <p class="sub">Elle sert d'identifiant de connexion sur cet appareil.</p>
-    <input id="inMail" class="field low" type="email" inputmode="email" autocomplete="email" placeholder="toi@exemple.com" />
-    <div class="hint" id="errMail">Format attendu : nom@domaine.fr</div>
-  </div>
-
-  <!-- Étape 4 — mot de passe -->
-  <div class="step" id="step4">
-    <h2>Ton mot de passe</h2>
-    <p class="sub">6 caractères minimum. Il est haché avant d'être stocké, jamais conservé en clair.</p>
-    <input id="inPass" class="field low" type="password" autocomplete="new-password" placeholder="Mot de passe" />
-    <input id="inPass2" class="field low" type="password" autocomplete="new-password" placeholder="Confirmation" />
-    <div class="hint" id="errPass"></div>
-    <div class="plate" style="margin-top:4px">
-      <div class="eyebrow">Compte local</div>
-      <p style="font-size:13px;line-height:1.5;color:#4A5678;margin-top:6px">
-        Tout est enregistré sur cet appareil : aucun serveur ne reçoit ton e-mail ni ton mot de passe.
-        Tu resteras connecté automatiquement au prochain lancement.</p>
-    </div>
-  </div>
-
-  <!-- Connexion (session expirée ou déconnexion) -->
-  <div class="step" id="stepLogin">
-    <h2>Content de te revoir</h2>
-    <p class="sub" id="loginWho">Connecte-toi pour reprendre ta progression.</p>
-    <input id="inLogMail" class="field low" type="email" inputmode="email" autocomplete="email" placeholder="E-mail" />
-    <input id="inLogPass" class="field low" type="password" autocomplete="current-password" placeholder="Mot de passe" />
-    <div class="hint" id="errLogin"></div>
-    <button class="btn steel sm" id="btnForget" style="margin-top:6px">Supprimer ce compte et recommencer</button>
-  </div>
-
-  <div class="gate-foot">
-    <button class="btn steel back" id="btnBack">Retour</button>
-    <button class="btn gold" id="btnNext">Continuer</button>
-  </div>
-</section>
-
-<!-- ================= COQUE À ONGLETS ================= -->
-<div id="shell">
-  <header id="topbar">
-    <div class="res grow">
-      <div class="lvlbadge" id="lvlNum">1</div>
-      <div class="xp"><i id="xpFill"></i></div>
-    </div>
-    <div class="res">
-      <svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#F5B71E" stroke="#14224C" stroke-width="3"/><circle cx="16" cy="16" r="8" fill="none" stroke="#A56A04" stroke-width="2"/><path d="M11 13h3v6h-3zM18 13h3v6h-3zM13 15h6v2h-6z" fill="#A56A04"/></svg>
-      <span class="v" id="coinVal">0</span>
-    </div>
-    <div class="res">
-      <svg viewBox="0 0 32 32"><path d="M16 4 27 13 16 28 5 13Z" fill="#7DE3C8" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/><path d="M16 4 21 13 16 28 11 13Z" fill="#B6F6E6"/><path d="M5 13h22" stroke="#14224C" stroke-width="2"/></svg>
-      <span class="v" id="gemVal">0</span>
-    </div>
-  </header>
-
-  <main id="tabs">
-    <!-- PROFIL -->
-    <section class="tab" id="tab-profil">
-      <div class="plate idrow">
-        <div class="pic" id="pfAvatar"></div>
-        <div style="flex:1;min-width:0">
-          <div class="disp" style="font-size:19px" id="pfName">JOUEUR</div>
-          <div style="font-size:12px;color:#CFE0FF;word-break:break-all" id="pfMail">—</div>
-          <button class="btn steel sm" id="btnChangePhoto" style="margin-top:8px">Changer la photo</button>
-        </div>
-      </div>
-      <input type="file" id="filePhoto2" accept="image/*" hidden />
-      <div class="plate">
-        <div class="eyebrow">Pseudonyme</div>
-        <div class="nameprev" id="nameShow" style="margin-top:9px">JOUEUR</div>
-        <div class="quick" style="margin-top:10px">
-          <button class="btn steel sm" id="btnRename">Changer · 100 💎</button>
-          <button class="btn steel sm" id="btnNameStyle">Apparence</button>
-        </div>
-      </div>
-      <button class="btn gold" id="btnDeck">Deck de stickers</button>
-      <button class="btn steel sm" id="btnTuto">Revoir le tutoriel</button>
-      <div class="grid3">
-        <div class="kpi"><div class="v mono" id="stW">0</div><div class="k">Victoires</div></div>
-        <div class="kpi"><div class="v mono" id="stL">0</div><div class="k">Défaites</div></div>
-        <div class="kpi"><div class="v mono" id="stR">—</div><div class="k">Ratio</div></div>
-      </div>
-      <div class="grid3">
-        <div class="kpi"><div class="v mono" id="stB">0</div><div class="k">Record</div></div>
-        <div class="kpi"><div class="v mono" id="stT">0</div><div class="k">Pompes</div></div>
-        <div class="kpi"><div class="v mono" id="stX">0</div><div class="k">Série</div></div>
-      </div>
-      <div class="plate">
-        <div class="eyebrow">Série quotidienne</div>
-        <div class="grid3" style="margin-top:9px">
-          <div class="kpi"><div class="v" id="stFlame">0</div><div class="k">Série</div></div>
-          <div class="kpi"><div class="v" id="stFlameBest">0</div><div class="k">Record</div></div>
-          <div class="kpi"><div class="v" id="stToday">0</div><div class="k">Aujourd'hui</div></div>
-        </div>
-      </div>
-      <div class="plate cream">
-        <div class="eyebrow">Pompes des 14 derniers jours</div>
-        <svg class="chart" id="chart" viewBox="0 0 320 132" preserveAspectRatio="none"></svg>
-      </div>
-      <div class="plate">
-        <div class="eyebrow">Sauvegarde</div>
-        <p style="font-size:13px;color:#D5E4FF;line-height:1.45;margin:8px 0 6px">
-          Support actif : <b id="saveBackend">…</b>. Exporte ta progression avant de changer d'appareil.</p>
-        <div style="font-size:12px;color:#9FB8DE;margin-bottom:10px" id="saveWhen">—</div>
-        <div class="quick">
-          <button class="btn steel sm" id="btnExport">Exporter</button>
-          <button class="btn steel sm" id="btnImport">Importer</button>
-        </div>
-        <input type="file" id="fileSave" accept="application/json,.json" hidden />
-      </div>
-      <div class="plate">
-        <div class="eyebrow">Sons</div>
-        <div class="quick" style="margin-top:10px">
-          <button class="btn steel sm" id="btnSfxOn">Activés</button>
-          <button class="btn steel sm" id="btnSfxOff">Coupés</button>
-        </div>
-      </div>
-      <div class="plate">
-        <div class="eyebrow">Caméra par défaut</div>
-        <div class="quick" style="margin-top:10px">
-          <button class="btn steel sm" id="btnCamFront">Avant</button>
-          <button class="btn steel sm" id="btnCamBack">Arrière</button>
-        </div>
-      </div>
-      <button class="btn steel sm" id="btnLogout">Changer de compte</button>
-      <button class="btn steel sm" id="btnReset">Réinitialiser la progression</button>
-    </section>
-
-    <!-- RANGS -->
-    <section class="tab" id="tab-rangs">
-      <div class="plate" style="display:flex;gap:14px;align-items:center">
-        <div id="curBadge" style="width:64px;height:74px;flex:0 0 64px"></div>
-        <div style="flex:1">
-          <div class="disp" style="font-size:20px" id="curTier">ARGENT</div>
-          <div class="eyebrow" id="curDiv">Division II</div>
-          <div class="divrow" id="curDivRow"></div>
-        </div>
-      </div>
-      <div class="eyebrow" style="margin-top:4px">Échelle compétitive</div>
-      <div class="ladder" id="ladder"></div>
-      <p class="empty" style="padding:8px 4px">Chaque palier compte trois divisions. Un duel classé rapporte ou coûte jusqu'à 32 points selon l'écart d'Elo.</p>
-    </section>
-
-    <!-- DUEL -->
-    <section class="tab on" id="tab-duel">
-      <!-- Emplacement du profil -->
-      <div class="plate profcard">
-        <div class="pc-av" id="pcAvatar"></div>
-        <div class="pc-txt">
-          <div class="pc-name" id="pcName">JOUEUR</div>
-          <div class="pc-rank" id="pcRank">Argent II</div>
-        </div>
-        <div class="pc-badge" id="pcBadge"></div>
-        <div class="pc-elo">
-          <svg viewBox="0 0 24 24"><path d="M6 3h12v3h3v3a4 4 0 0 1-4 4h-.6A5 5 0 0 1 13 15.9V18h3v3H8v-3h3v-2.1A5 5 0 0 1 7.6 13H7a4 4 0 0 1-4-4V6h3Zm0 5H5v1a2 2 0 0 0 1 1.7Zm12 0v2.7A2 2 0 0 0 19 9V8Z" fill="#F5B71E" stroke="#14224C" stroke-width="1.4" stroke-linejoin="round"/></svg>
-          <span id="pcElo">1000</span>
-        </div>
-      </div>
-
-      <!-- Objectif du jour + piste de saison -->
-      <div class="passrow">
-        <button class="daily" id="btnDaily">
-          <svg viewBox="0 0 32 32"><rect x="4" y="12" width="24" height="8" rx="4" fill="#FFDF80" stroke="#14224C" stroke-width="3"/><rect x="1" y="9" width="6" height="14" rx="3" fill="#F5B71E" stroke="#14224C" stroke-width="3"/><rect x="25" y="9" width="6" height="14" rx="3" fill="#F5B71E" stroke="#14224C" stroke-width="3"/></svg>
-          <span class="lab" id="dailyLab">0/50</span>
-          <span class="mini"><i id="dailyFill"></i></span>
-        </button>
-        <div class="passbar">
-          <div class="pass-tier" id="passTier">1</div>
-          <div class="pass-left">
-            <div class="pass-ttl">Saison · couronnes</div>
-            <div class="pass-track"><i id="passFill"></i><b id="passVal">0/10</b></div>
-          </div>
-          <button class="pass-cta" id="btnPass">Voir la piste</button>
-        </div>
-      </div>
-
-      <!-- Scène : le blason de rang sur son podium -->
-      <div class="stage">
-        <div class="halo"></div>
-        <svg class="podium" viewBox="0 0 340 150" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="pdTop" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#5E86E8"/><stop offset="1" stop-color="#3355B4"/></linearGradient>
-            <linearGradient id="pdSide" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#2A458F"/><stop offset="1" stop-color="#16265C"/></linearGradient>
-          </defs>
-          <!-- rochers en suspension -->
-          <path d="M18 60 34 52 44 66 28 76Z" fill="#2A458F" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M300 44 318 38 326 54 306 60Z" fill="#2A458F" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M286 92 300 88 306 100 292 104Z" fill="#22397C" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/>
-          <!-- mâts et fanions -->
-          <path d="M74 22v72M266 22v72" stroke="#14224C" stroke-width="6" stroke-linecap="round"/>
-          <path d="M74 24h52l-12 13 12 13H74Z" fill="#2FA8FF" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M266 24h-52l12 13-12 13h52Z" fill="#FF8A1F" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/>
-          <!-- plateforme -->
-          <path d="M170 62 322 100 170 138 18 100Z" fill="url(#pdTop)" stroke="#14224C" stroke-width="4" stroke-linejoin="round"/>
-          <path d="M18 100v16l152 38 152-38v-16l-152 38Z" fill="url(#pdSide)" stroke="#14224C" stroke-width="4" stroke-linejoin="round"/>
-          <path d="M170 76 268 100 170 124 72 100Z" fill="none" stroke="#8FB6FF" stroke-width="3" stroke-opacity=".55"/>
-        </svg>
-        <div class="crest" id="heroBadge"></div>
-        <div class="caption">
-          <div class="flame" id="flameChip">
-            <svg viewBox="0 0 24 24"><path d="M12 2c1.5 4-3 5.5-3 9a3 3 0 0 0 6 0c0-1 .4-1.9 1-2.6.9 1.4 2 3.2 2 5.6a6 6 0 0 1-12 0C6 9 12 8 12 2Z" fill="#FFE066" stroke="#14224C" stroke-width="1.8" stroke-linejoin="round"/></svg>
-            <span id="flameNum">0</span>
-          </div>
-          <div class="t" id="heroTier">ARGENT</div>
-          <div class="d" id="heroDiv">Division II</div>
-        </div>
-      </div>
-
-      <!-- Progression vers le palier suivant -->
-      <div class="progress">
-        <div class="rail"><div class="fill" id="heroFill"></div></div>
-        <div class="lbl"><span id="heroFrom">900</span><span id="heroTo">Or · 1050</span></div>
-      </div>
-
-      <!-- Boutons de lancement -->
-      <div class="launch">
-        <button class="btn gold" id="btnRanked">Duel<small>Classé · 60 s</small></button>
-        <button class="btn" id="btnPrivate">Privé<small>Entre amis</small></button>
-      </div>
-    </section>
-
-    <!-- DRILLS -->
-    <section class="tab" id="tab-drill">
-      <button class="btn" id="btnSolo2">Séance libre · 60 s</button>
-      <div class="plate cream">
-        <div class="eyebrow">Partenaire d'entraînement</div>
-        <p style="font-size:13px;color:#4A5678;line-height:1.5;margin:8px 0 12px">Règle toi-même l'intensité de l'opposition. Sans effet sur l'Elo.</p>
-        <div class="quick" style="grid-template-columns:repeat(3,1fr)">
-          <button class="btn steel sm" data-bot="easy">Souple</button>
-          <button class="btn steel sm" data-bot="fair">Égal</button>
-          <button class="btn steel sm" data-bot="hard">Féroce</button>
-        </div>
-      </div>
-      <div class="plate cream">
-        <div class="eyebrow">Ce qui valide une répétition</div>
-        <div style="margin-top:10px">
-          <div class="rule"><div class="num">01</div><p><b>Descente.</b> La moitié de la trajectoire suffit : dès que la jauge franchit le repère vert, à mi-hauteur, la répétition est acquise. Inutile de coller la poitrine au sol.</p></div>
-          <div class="rule"><div class="num">02</div><p><b>Amplitude.</b> L'écart entre ton point haut et ton point bas doit être réel. Une oscillation autour du repère ne compte pas.</p></div>
-          <div class="rule"><div class="num">03</div><p><b>Remontée.</b> Bras tendus, retour à la position de départ mesurée pendant le décompte.</p></div>
-          <div class="rule"><div class="num">04</div><p><b>Alignement.</b> Épaules, hanches et genoux tenus. Le squelette passe au rouge dès que le corps casse.</p></div>
-          <div class="rule"><div class="num">05</div><p><b>Tempo.</b> Une répétition bouclée en moins de 0,45 s est ignorée.</p></div>
-        </div>
-      </div>
-      <div class="plate cream">
-        <div class="eyebrow">Placement du téléphone</div>
-        <p style="font-size:13px;color:#4A5678;line-height:1.55;margin-top:8px">
-          <b>De profil</b> à 1,5–2 m : lecture la plus précise.<br>
-          <b>De face</b>, posé au sol devant toi : désormais géré. Reste immobile bras tendus pendant le décompte,
-          c'est ce moment qui sert de référence pour mesurer ta descente.</p>
-        <div class="eyebrow" style="margin-top:12px">Visage indifférent</div>
-        <p style="font-size:13px;color:#4A5678;line-height:1.55;margin-top:6px">
-          Le comptage n'utilise que les articulations : épaules, coudes, poignets, bassin, genoux.
-          Casquette, capuche, tête baissée ou regard au sol ne changent rien — aucun point du visage
-          n'est mesuré, et le squelette affiché s'arrête volontairement au cou.</p>
-      </div>
-    </section>
-
-    <!-- HISTORIQUE -->
-    <section class="tab" id="tab-histo">
-      <div class="grid3">
-        <div class="kpi"><div class="v mono" id="hvP">0</div><div class="k">Duels</div></div>
-        <div class="kpi"><div class="v mono" id="hvA">0</div><div class="k">Moy. pompes</div></div>
-        <div class="kpi"><div class="v mono" id="hvE">0</div><div class="k">Elo 7 j</div></div>
-      </div>
-      <div class="plate cream"><div id="histList"></div></div>
-    </section>
-  </main>
-
-  <nav id="navbar">
-    <button class="navbtn" data-tab="tab-profil">
-      <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4 0-8 2-8 5v3h16v-3c0-3-4-5-8-5Z"/></svg><span>Profil</span></button>
-    <button class="navbtn" data-tab="tab-rangs">
-      <svg viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5 3.8 8.9 9 10 5.2-1.1 9-5 9-10V6Zm0 4 1.6 3.4 3.6.5-2.6 2.6.6 3.7L12 14.4 8.8 16.2l.6-3.7-2.6-2.6 3.6-.5Z"/></svg><span>Rangs</span></button>
-    <button class="navbtn main on" data-tab="tab-duel">
-      <span class="disc"><svg viewBox="0 0 24 24"><path d="m6.5 2 3 3-1.6 1.6L4.8 3.5 6.5 2ZM3 6.4l2-2 13.6 13.6 2-2 1.4 1.4-3.4 3.4-1.4-1.4 1-1L4.6 5 3.6 6ZM17.5 2l1.7 1.5-3.1 3.1L14.5 5Z"/></svg></span><span>Duel</span></button>
-    <button class="navbtn" data-tab="tab-drill">
-      <svg viewBox="0 0 24 24"><path d="M20.6 5.5 18.5 3.4 16.4 5.5l1 1-9.9 9.9-1-1L4.4 17.5l2.1 2.1 2.1-2.1-1-1 9.9-9.9 1 1ZM2 20l2-2 2 2-2 2Zm16-16 2-2 2 2-2 2Z"/></svg><span>Drills</span></button>
-    <button class="navbtn" data-tab="tab-histo">
-      <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v4l5-5-5-5Zm-1 5v5l4 2 .8-1.6-3.3-1.7V8Z"/></svg><span>Historique</span></button>
-  </nav>
-</div>
-
-<!-- ================= RECHERCHE ================= -->
-<section id="search" class="view">
-  <div id="searchMascot"></div>
-  <div class="scan">
-    <i></i><i></i><i></i>
-    <svg class="ring" viewBox="0 0 240 240"><circle class="track" cx="120" cy="120" r="112"></circle>
-      <circle class="arc" id="qArc" cx="120" cy="120" r="112" stroke-dasharray="703.7" stroke-dashoffset="0"></circle></svg>
-    <div class="core">
-      <div class="t" id="qRange">ELO ±50</div>
-      <div class="c mono" id="qTime">40</div>
-      <div class="s">élargissement de la file</div>
-    </div>
-  </div>
-  <div id="searchLog">Ouverture du canal pair-à-pair…</div>
-  <div style="width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px">
-    <button class="btn gold sm" id="btnBotNow">Lancer sans attendre</button>
-    <button class="btn steel sm" id="btnCancel">Annuler</button>
-  </div>
-</section>
-
-<!-- ================= ARÈNE ================= -->
-<section id="arena" class="view">
-  <div id="stage">
-    <video id="cam" playsinline muted autoplay></video>
-    <canvas id="overlay"></canvas>
-    <div id="flash"></div>
-    <div id="drops"></div>
-    <!-- Bandeau de duel : les deux combattants, le chrono au centre -->
-    <div class="hud">
-      <div class="hud-row">
-        <div class="fighter">
-          <div class="fav me" id="avMe"></div>
-          <div class="fname" id="nameMe">TOI</div>
-        </div>
-        <div class="fsc me" id="scoreMe">0</div>
-        <div class="htime">
-          <div class="tl">Temps</div>
-          <div class="tv" id="clock">60S</div>
-        </div>
-        <div class="fsc op" id="scoreOp">0</div>
-        <div class="fighter">
-          <div class="fav op" id="avOp"></div>
-          <div class="fname" id="nameOp">ADVERSAIRE</div>
-        </div>
-      </div>
-      <div class="hud-bar"><span id="tug"></span></div>
-    </div>
-
-    <!-- Compteur géant : lisible depuis le sol, d'un seul coup d'oeil -->
-    <div class="counter">
-      <div class="clab">Reps</div>
-      <div class="cnum" id="repBig">0</div>
-      <div class="formmsg" id="formMsg">Mets-toi en position</div>
-    </div>
-
-    <div class="depth" id="depthGauge"><span id="depthFill"></span></div>
-    <div class="viewtag" id="viewTag">Analyse de la position…</div>
-    <div class="stkbar" id="stkBar"></div>
-    <div id="stkFly"></div>
-    <div class="arena-actions">
-      <button class="icon-btn" id="btnStk" title="Stickers">😀</button>
-      <button class="icon-btn" id="btnSwitchCam" title="Changer de caméra">⟲</button>
-      <button class="btn danger giveup" id="btnQuit">
-        <svg viewBox="0 0 24 24"><path d="M5 3v18M5 4h13l-3 4 3 4H5" fill="#fff" stroke="#14224C" stroke-width="2" stroke-linejoin="round"/></svg>
-        Abandonner
-      </button>
-    </div>
-    <div id="countdown"><div>
-      <div id="cdNum" class="mono">5</div>
-      <div id="cdHint">Cale le téléphone et cadre tout ton corps.</div>
-      <div id="cdCal">Calibration…</div>
-    </div></div>
-  </div>
-</section>
-
-<!-- ================= RÉSULTAT ================= -->
-<section id="result" class="view">
-  <div class="eyebrow" id="resMode">Duel classé</div>
-  <div class="verdict" id="verdict">VICTOIRE</div>
-  <div class="scoreline"><span class="s1 mono" id="resMe">0</span><span style="font-size:26px;color:var(--ink)">—</span><span class="s2 mono" id="resOp">0</span></div>
-  <div class="plate" style="width:100%;max-width:360px;display:flex;gap:14px;align-items:center">
-    <div id="resBadge" style="flex:0 0 96px;width:96px;height:110px"></div>
-    <div style="flex:1;text-align:left">
-      <div class="eyebrow">Nouveau total</div>
-      <div style="display:flex;align-items:baseline;gap:12px;margin-top:2px">
-        <span class="mono" style="font-size:30px;font-weight:800" id="resElo">1000</span>
-        <span class="delta" id="resDelta">+16</span>
-      </div>
-      <div class="eyebrow" id="resTier" style="margin-top:6px">Argent II</div>
-      <div style="font-size:12px;color:#CFE0FF;margin-top:8px" id="resRefused">0 répétition refusée</div>
-    </div>
-  </div>
-  <div class="gains" id="resGains"></div>
-  <div style="width:100%;max-width:360px;display:flex;flex-direction:column;gap:10px">
-    <button class="btn gold" id="btnAgain">Rejouer</button>
-    <button class="btn steel sm" id="btnHome">Menu principal</button>
-  </div>
-</section>
-
-<!-- ================= FEUILLE DUEL PRIVÉ ================= -->
-<!-- ================= PASSE DE COMBAT ================= -->
-<section id="pass" class="view">
-  <div class="pass-head">
-    <button class="icon-btn" id="passBack">←</button>
-    <div class="ph-txt">
-      <div class="ph-t">Passe de combat</div>
-      <div class="ph-s">Saison 1 · <span id="phCrowns">0</span> couronnes</div>
-    </div>
-    <div class="ph-tier"><span id="phTier">1</span></div>
-  </div>
-  <div class="pass-scroll" id="passScroll"></div>
-  <div class="pass-foot">
-    <div class="pf-bar"><i id="pfFill"></i><b id="pfVal">0/10</b></div>
-    <div class="pf-lab">Prochain palier</div>
-  </div>
-</section>
-
-<!-- ================= DECK DE STICKERS ================= -->
-<section id="deck" class="view">
-  <div class="pass-head">
-    <button class="icon-btn" id="deckBack">←</button>
-    <div class="ph-txt">
-      <div class="ph-t">Deck de stickers</div>
-      <div class="ph-s">Six emplacements pour le combat</div>
-    </div>
-  </div>
-  <div class="plate" style="flex:0 0 auto">
-    <div class="eyebrow">Équipés</div>
-    <div class="slots" id="deckSlots"></div>
-  </div>
-  <div class="eyebrow" style="margin:10px 0 6px">Collection · <span id="invCount">0</span>/24</div>
-  <div class="invgrid" id="deckInv"></div>
-</section>
-
-<!-- ================= FEUILLE : STYLE DU PSEUDO ================= -->
-<div class="sheet" id="sheetName"><div class="inner">
-  <h3>Affichage du pseudo</h3>
-  <div class="nameprev" id="namePrev">JOUEUR</div>
-  <div class="eyebrow">Police</div>
-  <div class="pickrow" id="fontPick"></div>
-  <div class="eyebrow">Couleur</div>
-  <div class="pickrow" id="colorPick"></div>
-  <button class="btn steel sm" data-close>Fermer</button>
-</div></div>
-
-<!-- ================= FEUILLE : CHANGER DE PSEUDO ================= -->
-<div class="sheet" id="sheetRename"><div class="inner">
-  <h3>Changer de pseudo</h3>
-  <p>Le premier changement est offert. Ensuite chaque modification coûte 100 gemmes.</p>
-  <input id="newName" class="field up" maxlength="12" placeholder="NOUVEAU PSEUDO" />
-  <div class="hint" id="renameInfo"></div>
-  <button class="btn gold" id="btnRenameGo">Confirmer</button>
-  <button class="btn steel sm" data-close>Annuler</button>
-</div></div>
-
-<div class="sheet" id="sheetPass"><div class="inner">
-  <h3>Piste de la saison</h3>
-  <p>Chaque duel rapporte une couronne, une victoire en rapporte trois. Dix couronnes font monter d'un palier, et la récompense tombe automatiquement.</p>
-  <div class="tierlist" id="tierList"></div>
-  <button class="btn steel sm" data-close>Fermer</button>
-</div></div>
-
-<div class="sheet" id="sheetPrivate"><div class="inner">
-  <h3>Duel privé</h3>
-  <p>Un joueur crée le salon, l'autre saisit le code. Aucun Elo en jeu.</p>
-  <button class="btn" id="btnHost">Créer un salon</button>
-  <div style="display:flex;gap:10px">
-    <input id="joinCode" class="field up" maxlength="6" placeholder="CODE" style="flex:1" />
-    <button class="btn sm" id="btnJoin" style="flex:0 0 130px">Rejoindre</button>
-  </div>
-  <div class="eyebrow" id="privateInfo"></div>
-  <button class="btn steel sm" data-close>Fermer</button>
-</div></div>
-
-<!-- ================= TUTORIEL ================= -->
-<div id="tuto">
-  <div id="tutoSpot"></div>
-  <div id="tutoBox">
-    <div id="tutoFace"></div>
-    <div class="tb-body">
-      <div class="tb-head"><span class="tb-name">RIVAL</span><span class="tb-step" id="tutoStep">1 / 11</span></div>
-      <p id="tutoText"></p>
-      <div class="tb-act">
-        <button class="btn steel sm" id="tutoSkip">Passer</button>
-        <button class="btn gold sm" id="tutoNext">Suivant</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="saveWarn">
-  <div class="sw-ico">⚠️</div>
-  <div class="sw-txt">
-    <b>Progression non sauvegardée</b>
-    <span id="swWhy">Ce navigateur bloque le stockage.</span>
-  </div>
-  <button class="btn gold sm" id="swExport">Sauvegarder</button>
-  <button class="sw-x" id="swClose">✕</button>
-</div>
-
-<div id="toast"></div>
-
-<script type="module">
-import { FilesetResolver, PoseLandmarker } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
-
-/* =====================================================================
-   1. RÉGLAGES
-   ===================================================================== */
-const NS = "pushduel-v3", SLOTS = 6, BUCKET = 100;
-const PROBE_MS = 2000, HOST_WAIT_MS = 5000, QUEUE_MS = 40000;
-const MATCH_SECONDS = 60, K_RANKED = 32;
-
-const DROP_F     = .32;
-const ARM_F      = .16;
-const MIN_DROP   = .09;
-const EXT_DOWN   = .70;
-const RANGE_INIT = .45;
-const MIN_GAP_MS = 380;
-const ANGLE_BODY = 150;
-const MIN_VIS    = .25;
-const TRUST_VIS  = .55;
-
-const TIERS = [
-  { n:"BRONZE",               min:0,    gem:"#D98A45", dark:"#5E2F0E", metal:"#8A5A34" },
-  { n:"ARGENT",               min:900,  gem:"#D6E2EE", dark:"#5A6675", metal:"#96A6B8" },
-  { n:"OR",                   min:1050, gem:"#FFD16A", dark:"#8A5A00", metal:"#C9962B" },
-  { n:"PLATINE",              min:1200, gem:"#7DF0E4", dark:"#0E5C58", metal:"#3FA79E" },
-  { n:"DIAMANT",              min:1350, gem:"#8CA3FF", dark:"#1B2470", metal:"#4C5DC4" },
-  { n:"CHAMPION",             min:1500, gem:"#C58AFF", dark:"#3D1273", metal:"#7B41C4" },
-  { n:"MASTER",               min:1700, gem:"#FF7A7A", dark:"#6E0F0F", metal:"#C33636" },
-  { n:"LÉGENDE",              min:1900, gem:"#F4F8FF", dark:"#5C6BA8", metal:"#AFC0E6" }
-];
-const ROMAN = ["I","II","III"];
-
-const SCHEMA = 5;
-const SAVE_KEY = "pushup_rivals_save";
-
-const Idb = {
-  db:null,
-  open(){
-    if(this.db) return Promise.resolve(this.db);
-    return new Promise(res => {
-      try{
-        const rq = indexedDB.open("pushup_rivals", 1);
-        rq.onupgradeneeded = () => rq.result.createObjectStore("kv");
-        rq.onsuccess = () => { this.db = rq.result; res(this.db); };
-        rq.onerror = () => res(null);
-        setTimeout(() => res(this.db), 1500);
-      }catch{ res(null); }
-    });
-  },
-  async get(k){
-    const db = await this.open(); if(!db) return null;
-    return new Promise(res => {
-      try{
-        const rq = db.transaction("kv").objectStore("kv").get(k);
-        rq.onsuccess = () => res(rq.result ?? null);
-        rq.onerror = () => res(null);
-      }catch{ res(null); }
-    });
-  },
-  async set(k, v){
-    const db = await this.open(); if(!db) return;
-    return new Promise(res => {
-      try{
-        const tx = db.transaction("kv","readwrite");
-        tx.objectStore("kv").put(v, k);
-        tx.oncomplete = () => res(true);
-        tx.onerror = tx.onabort = () => res(false);
-        setTimeout(() => res(false), 1200);
-      }catch{ res(false); }
-    });
-  },
-  async del(k){
-    const db = await this.open(); if(!db) return;
-    try{ db.transaction("kv","readwrite").objectStore("kv").delete(k); }catch{}
-  }
-};
-
-const Save = {
-  data:{ account:null, profile:null, session:null },
-  backends:[], label:"aucun", ready:null, dirty:false, timer:null, diag:"",
-
-  async verify(){
-    const ok = [], tag = "__pr_probe", val = "v" + Date.now();
-    try{
-      localStorage.setItem(tag, val);
-      if(localStorage.getItem(tag) === val) ok.push("local");
-      localStorage.removeItem(tag);
-    }catch{}
-
-    if(typeof window.storage?.set === "function"){
-      try{
-        await window.storage.set(tag, val);
-        const r = await window.storage.get(tag);
-        if(r?.value === val) ok.push("app");
-        await window.storage.delete(tag);
-      }catch{}
-    }
-
-    if(typeof indexedDB !== "undefined"){
-      try{
-        await Idb.set(tag, val);
-        if(await Idb.get(tag) === val) ok.push("idb");
-        await Idb.del(tag);
-      }catch{}
-    }
-
-    try{
-      document.cookie = `${tag}=${val};path=/;max-age=60;SameSite=Lax`;
-      if(document.cookie.includes(`${tag}=${val}`)) ok.push("cookie");
-      document.cookie = `${tag}=;path=/;max-age=0`;
-    }catch{}
-
-    this.backends = ok;
-    this.label = ok.includes("local") ? "localStorage"
-               : ok.includes("app")   ? "stockage applicatif"
-               : ok.includes("idb")   ? "IndexedDB"
-               : ok.includes("cookie")? "cookie (réduit)"
-               : "aucun";
-
-    const file = location.protocol === "file:";
-    const safari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent);
-    if(ok.length === 0){
-      this.diag = file
-        ? "Le fichier est ouvert directement depuis l'appareil (file://). Safari interdit toute sauvegarde dans ce mode."
-        : safari
-        ? "Safari bloque le stockage ici : navigation privée, ou page affichée dans un cadre isolé."
-        : "Aucun stockage autorisé par ce navigateur.";
-    }else if(safari && !file){
-      this.diag = "Safari efface les données d'un site non visité pendant 7 jours. Ajoute le jeu à l'écran d'accueil pour y échapper.";
-    }else this.diag = "";
-    return ok;
-  },
-
-  compact(){
-    const p = this.data.profile || {}, a = this.data.account || {};
-    return JSON.stringify({
-      c:1,
-      a:{ name:a.name, mail:a.mail, salt:a.salt, hash:a.hash,
-          avatar:(a.avatar && a.avatar.t === "p") ? a.avatar : { t:"p", i:0 } },
-      p:{ elo:p.elo, wins:p.wins, losses:p.losses, best:p.best, totalReps:p.totalReps,
-          xp:p.xp, coins:p.coins, gems:p.gems, crowns:p.crowns, tier:p.tier,
-          stickers:p.stickers, deck:p.deck, flame:p.flame, placement:p.placement,
-          tutoDone:p.tutoDone, renamed:p.renamed, nameStyle:p.nameStyle }
-    });
-  },
-  expand(raw){
-    try{
-      const o = JSON.parse(raw);
-      if(!o || o.c !== 1) return null;
-      return { account:o.a, profile:o.p, session:o.a?.mail ? { mail:o.a.mail } : null };
-    }catch{ return null; }
-  },
-  readCookie(){
-    try{
-      const m = document.cookie.match(/(?:^|;\s*)pr_save=([^;]+)/);
-      return m ? decodeURIComponent(m[1]) : null;
-    }catch{ return null; }
-  },
-
-  async load(){
-    await this.verify();
-    let raw = null;
-    if(this.backends.includes("local")){ try{ raw = localStorage.getItem(SAVE_KEY); }catch{} }
-    if(!raw && this.backends.includes("app")){
-      try{ const r = await window.storage.get(SAVE_KEY); raw = r?.value || null; }catch{}
-    }
-    if(!raw && this.backends.includes("idb")){ raw = await Idb.get(SAVE_KEY); }
-
-    if(raw){ try{ this.data = Object.assign(this.data, JSON.parse(raw)); return; }catch{} }
-
-    const ck = this.readCookie();
-    if(ck){
-      const ex = this.expand(ck);
-      if(ex){ this.data = Object.assign(this.data, ex); this.flush(true); return; }
-    }
-
-    const old = {};
-    for(const k of ["account","profile","session"]){
-      try{ const v = localStorage.getItem(k); if(v) old[k] = JSON.parse(v); }catch{}
-      if(!old[k] && typeof window.storage?.get === "function"){
-        try{ const r = await window.storage.get(k); if(r?.value) old[k] = JSON.parse(r.value); }catch{}
-      }
-    }
-    if(old.account || old.profile){ this.data = Object.assign(this.data, old); this.flush(true); }
-  },
-
-  flush(now = false){
-    this.dirty = true;
-    clearTimeout(this.timer);
-    if(now) return this.write();
-    this.timer = setTimeout(() => this.write(), 250);
-  },
-  write(){
-    if(!this.dirty) return;
-    this.dirty = false;
-    const raw = JSON.stringify(this.data);
-    if(this.backends.includes("local")){ try{ localStorage.setItem(SAVE_KEY, raw); }catch{} }
-    if(this.backends.includes("app")){ try{ window.storage.set(SAVE_KEY, raw); }catch{} }
-    if(this.backends.includes("idb")){ Idb.set(SAVE_KEY, raw); }
-    if(this.backends.includes("cookie")){
-      try{
-        const c = encodeURIComponent(this.compact());
-        if(c.length < 3800) document.cookie = `pr_save=${c};path=/;max-age=31536000;SameSite=Lax`;
-      }catch{}
-    }
-  },
-  async wipe(){
-    this.data = { account:null, profile:null, session:null };
-    try{ localStorage.removeItem(SAVE_KEY); }catch{}
-    try{ await window.storage?.delete(SAVE_KEY); }catch{}
-    try{ document.cookie = "pr_save=;path=/;max-age=0"; }catch{}
-    await Idb.del(SAVE_KEY);
-  }
-};
-
-Save.ready = Save.load();
-addEventListener("pagehide", () => Save.write());
-addEventListener("beforeunload", () => Save.write());
-document.addEventListener("visibilitychange", () => { if(document.hidden) Save.write(); });
-
-const Store = {
-  async get(k, d){ await Save.ready; return Save.data[k] ?? d; },
-  async set(k, v){ await Save.ready; Save.data[k] = v; Save.flush(); },
-  async del(k){    await Save.ready; Save.data[k] = null; Save.flush(); }
-};
-
-function freshProfile(keep = {}){
-  return Object.assign({
-    schema:SCHEMA, elo:1000, wins:0, losses:0, best:0, totalReps:0, streak:0,
-    facing:"user", history:[], xp:0, coins:0, gems:0, crowns:0, tier:0,
-    daily:{ d:"", reps:0, done:false },
-    flame:{ cur:0, best:0, last:"" },
-    days:{},
-    stickers:["s01","s02","s03"],
-    deck:["s01","s02","s03"],
-    nameStyle:{ font:"baloo", color:"blanc" },
-    renamed:false, sfx:true,
-    placement:{ done:0, wins:0, active:true },
-    tutoDone:false
-  }, keep);
-}
-
-function migrateProfile(saved){
-  const base = freshProfile();
-  const out = Object.assign({}, base, saved || {});
-  for(const k of ["daily","flame","nameStyle"])
-    out[k] = Object.assign({}, base[k], (saved && saved[k]) || {});
-  for(const k of ["history","stickers","deck"])
-    if(!Array.isArray(out[k])) out[k] = base[k].slice();
-  if(typeof out.days !== "object" || !out.days) out.days = {};
-  out.deck = out.deck.filter(id => out.stickers.includes(id)).slice(0, 6);
-  out.schema = SCHEMA;
-  return out;
-}
-
-let account = null;
-let profile = freshProfile();
-
-const Sfx = {
-  ctx:null, on:true,
-  init(){
-    if(this.ctx) return;
-    try{ this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }catch{}
-  },
-  note(freq, dur = .09, type = "square", vol = .16, delay = 0){
-    if(!this.on || !this.ctx) return;
-    const t = this.ctx.currentTime + delay;
-    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(freq, t);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vol, t + .012);
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.connect(g); g.connect(this.ctx.destination);
-    o.start(t); o.stop(t + dur + .02);
-  },
-  play(kind){
-    if(!this.on) return;
-    this.init();
-    if(!this.ctx) return;
-    if(this.ctx.state === "suspended") this.ctx.resume();
-    switch(kind){
-      case "click":  this.note(660, .07, "square", .14); break;
-      case "nav":    this.note(420, .06, "triangle", .12); this.note(560, .06, "triangle", .09, .05); break;
-      case "back":   this.note(380, .08, "triangle", .12); break;
-      case "reward": [523,659,784,1047].forEach((f,i) => this.note(f, .16, "triangle", .17, i*.075)); break;
-      case "unlock": [392,523,659,880,1175].forEach((f,i) => this.note(f, .20, "sawtooth", .12, i*.065)); break;
-      case "rep":    this.note(880, .05, "square", .10); break;
-      case "fail":   this.note(180, .16, "sawtooth", .13); break;
-      case "level":  [523,659,784,1047,1319].forEach((f,i) => this.note(f, .22, "square", .13, i*.09)); break;
-      case "start":  [330,440,660].forEach((f,i) => this.note(f, .18, "square", .16, i*.12)); break;
-    }
-  }
-};
-
-document.addEventListener("pointerdown", e => {
-  const el = e.target.closest("button, .avpick, .navbtn, .stk, .slot");
-  if(!el || el.disabled) return;
-  Sfx.play(el.classList.contains("navbtn") ? "nav" : "click");
-}, true);
-
-const RARITY = {
-  commun:     { n:"Commun",     c:"#A8C0E0", d:"#54688A", g:"rgba(168,192,224,.5)" },
-  rare:       { n:"Rare",       c:"#4FC3FF", d:"#0E5FA8", g:"rgba(79,195,255,.65)" },
-  epique:     { n:"Épique",     c:"#C58AFF", d:"#5B2A9E", g:"rgba(197,138,255,.7)" },
-  legendaire: { n:"Légendaire", c:"#FFD166", d:"#A56A04", g:"rgba(255,209,102,.85)" }
-};
-const STICKERS = [
-  { id:"s01", e:"💪", n:"Biceps",        r:"commun" },
-  { id:"s02", e:"🔥", n:"En feu",        r:"commun" },
-  { id:"s03", e:"😤", n:"Détermination",r:"commun" },
-  { id:"s04", e:"🥵", n:"Cramé",         r:"commun" },
-  { id:"s05", e:"😮‍💨", n:"Souffle",       r:"commun" },
-  { id:"s06", e:"👏", n:"Bravo",         r:"commun" },
-  { id:"s07", e:"🫡", n:"Respect",       r:"commun" },
-  { id:"s08", e:"😴", n:"Trop lent",     r:"commun" },
-  { id:"s09", e:"🎯", n:"Précision",     r:"commun" },
-  { id:"s10", e:"🧊", n:"Sang-froid",    r:"commun" },
-  { id:"s11", e:"⚡", n:"Éclair",        r:"rare" },
-  { id:"s12", e:"😎", n:"Tranquille",    r:"rare" },
-  { id:"s13", e:"🦾", n:"Bras d'acier", r:"rare" },
-  { id:"s14", e:"🚀", n:"Décollage",     r:"rare" },
-  { id:"s15", e:"🤡", n:"Chambrage",     r:"rare" },
-  { id:"s16", e:"🥶", n:"Glacial",       r:"rare" },
-  { id:"s17", e:"🍕", n:"Pause pizza",   r:"rare" },
-  { id:"s18", e:"💀", n:"Terminé",       r:"epique" },
-  { id:"s19", e:"🤖", n:"Machine",       r:"epique" },
-  { id:"s20", e:"🐐", n:"Le GOAT",       r:"epique" },
-  { id:"s21", e:"❤️‍🔥", n:"Cœur ardent", r:"epique" },
-  { id:"s22", e:"🤯", n:"Explosé",       r:"epique" },
-  { id:"s23", e:"👑", n:"Couronne",      r:"legendaire" },
-  { id:"s24", e:"🐉", n:"Dragon",        r:"legendaire" }
-];
-const STK = Object.fromEntries(STICKERS.map(s => [s.id, s]));
-
-const PASS_TIERS = 30;
-const PASS_STICKERS = ["s04","s05","s11","s06","s12","s07","s13","s08","s14",
-                       "s18","s09","s15","s19","s10","s16","s20","s17","s21",
-                       "s22","s23","s24"];
-function passReward(t){
-  if(t % 10 === 0) return { k:"gem",  v:3 + Math.floor(t/10), i:"💎" };
-  if(t % 5  === 0) return { k:"gem",  v:1,                    i:"💎" };
-  if(t % 3  === 0){
-    const id = PASS_STICKERS[(Math.floor(t/3) - 1) % PASS_STICKERS.length];
-    return { k:"stk", v:1, id };
-  }
-  if(t % 2  === 0) return { k:"xp",   v:60 + t*8,  i:"⚡" };
-  return                    { k:"coin", v:40 + t*12, i:"🪙" };
-}
-
-const $ = s => document.querySelector(s);
-const $$ = s => document.querySelectorAll(s);
-const clamp = (v,a,b) => Math.max(a, Math.min(b,v));
-
-let toastT;
-function toast(msg, ms=2400){
-  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms);
-}
-function showView(v){
-  $("#gate").classList.toggle("on", v === "gate");
-  $("#shell").classList.toggle("on", v === "menu");
-  ["search","arena","result","pass","deck"].forEach(id =>
-    $("#"+id).classList.toggle("on", id === v));
-}
-function showTab(id){
-  $$(".tab").forEach(t => t.classList.toggle("on", t.id === id));
-  $$(".navbtn").forEach(b => b.classList.toggle("on", b.dataset.tab === id));
-}
-function rankOf(elo){
-  let i = 0;
-  for(let k=0;k<TIERS.length;k++) if(elo >= TIERS[k].min) i = k;
-  const cur = TIERS[i], next = TIERS[i+1];
-  const span = next ? next.min - cur.min : 250;
-  const prog = next ? clamp((elo - cur.min)/span, 0, 1) : 1;
-  return { idx:i, tier:cur, next, div:clamp(Math.floor(prog*3),0,2), prog };
-}
-
-async function hashPass(pass, salt){
-  const txt = salt + "::" + pass;
-  if(window.crypto?.subtle){
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
-    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,"0")).join("");
-  }
-  let h1 = 0x811c9dc5, h2 = 0x1000193;
-  for(let i=0;i<txt.length;i++){
-    h1 = Math.imul(h1 ^ txt.charCodeAt(i), 16777619) >>> 0;
-    h2 = Math.imul(h2 ^ txt.charCodeAt(txt.length-1-i), 2246822519) >>> 0;
-  }
-  return h1.toString(16).padStart(8,"0") + h2.toString(16).padStart(8,"0");
-}
-function randHex(n=8){
-  const a = new Uint8Array(n);
-  (window.crypto?.getRandomValues ? crypto : { getRandomValues:arr => arr.forEach((_,i) => arr[i] = Math.random()*256|0) })
-    .getRandomValues(a);
-  return [...a].map(b => b.toString(16).padStart(2,"0")).join("");
-}
-
-let uid = 0;
-function unrankedBadge(){
-  const u = "u" + (++uid);
-  return `
-<svg viewBox="-5 -8 110 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
-  <defs><linearGradient id="${u}" x1=".2" y1="0" x2=".8" y2="1">
-    <stop offset="0" stop-color="#C9D6EA"/><stop offset=".35" stop-color="#7E8FAE"/>
-    <stop offset=".7" stop-color="#3E4C6B"/><stop offset="1" stop-color="#0B1329"/></linearGradient></defs>
-  <path d="M50 2 L90 20 L90 62 L50 96 L10 62 L10 20 Z" fill="url(#${u})"
-        stroke="#0B1329" stroke-width="3.4" stroke-linejoin="round"/>
-  <path d="M50 9 L83 24 L83 59 L50 87 L17 59 L17 24 Z" fill="none"
-        stroke="#0B1329" stroke-width="2" stroke-opacity=".5"/>
-  <text x="50" y="60" text-anchor="middle" font-family="Baloo 2,system-ui" font-size="42"
-        font-weight="800" fill="#E8F0FF" stroke="#0B1329" stroke-width="2"
-        paint-order="stroke" opacity=".92">?</text>
-  <path d="M22 94 H78 L72 110 H28 Z" fill="#3E4C6B" stroke="#0B1329"
-        stroke-width="2.6" stroke-linejoin="round"/>
-</svg>`;
-}
-
-function rankBadge(tierIdx, div){
-  const t = TIERS[clamp(tierIdx,0,TIERS.length-1)];
-  const u = "b" + (++uid);
-  const hi = tierIdx >= 5;
-  const top = tierIdx === TIERS.length - 1;
-  const chev = [0,1,2].map(i =>
-    `<path d="M${36+i*14} 103 l5.5 -6.5 5.5 6.5 -5.5 4 z"
-       fill="${i<=div ? t.gem : "rgba(255,255,255,.18)"}" stroke="#0B1329" stroke-width="1.4"
-       stroke-linejoin="round" ${i<=div ? `filter="url(#g${u})"` : ""}/>`).join("");
-
-  return `
-<svg viewBox="-5 -8 110 130" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
-  <defs>
-    <linearGradient id="m${u}" x1=".2" y1="0" x2=".8" y2="1">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".95"/>
-      <stop offset=".18" stop-color="${t.metal}"/>
-      <stop offset=".52" stop-color="${t.dark}"/>
-      <stop offset=".78" stop-color="${t.metal}"/>
-      <stop offset="1" stop-color="#0B1329"/></linearGradient>
-    <linearGradient id="r${u}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFF4D2"/><stop offset=".5" stop-color="${t.metal}"/>
-      <stop offset="1" stop-color="${t.dark}"/></linearGradient>
-    <linearGradient id="w${u}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="${t.metal}"/><stop offset="1" stop-color="${t.dark}"/></linearGradient>
-    <radialGradient id="j${u}" cx=".36" cy=".28" r=".8">
-      <stop offset="0" stop-color="#FFFFFF"/><stop offset=".3" stop-color="${t.gem}"/>
-      <stop offset="1" stop-color="${t.dark}"/></radialGradient>
-    <filter id="g${u}" x="-70%" y="-70%" width="240%" height="240%">
-      <feGaussianBlur stdDeviation="2.6" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <filter id="glow${u}" x="-45%" y="-45%" width="190%" height="190%">
-      <feDropShadow dx="0" dy="0" stdDeviation="4.5" flood-color="${t.gem}" flood-opacity=".85"/></filter>
-    <pattern id="tx${u}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
-      <rect width="6" height="6" fill="none"/>
-      <path d="M0 0 V6" stroke="#FFFFFF" stroke-opacity=".10" stroke-width="1.6"/></pattern>
-  </defs>
-
-  ${top ? `<g opacity=".55" filter="url(#g${u})">
-    ${[0,45,90,135,180,225,270,315].map(a =>
-      `<path d="M50 50 L${(50+Math.cos(a*Math.PI/180)*46).toFixed(1)} ${(50+Math.sin(a*Math.PI/180)*46).toFixed(1)}"
-         stroke="${t.gem}" stroke-width="3" stroke-linecap="round"/>`).join("")}
-  </g>` : ""}
-
-  <g stroke="#0B1329" stroke-width="2.6" stroke-linejoin="round">
-    <path d="M24 36 L3 44 L13 50 L3 57 L24 64 Z" fill="url(#w${u})"/>
-    <path d="M24 42 L9 48 L16 52 L9 57 L24 61 Z" fill="${t.gem}" fill-opacity=".38" stroke="none"/>
-    <path d="M76 36 L97 44 L87 50 L97 57 L76 64 Z" fill="url(#w${u})"/>
-    <path d="M76 42 L91 48 L84 52 L91 57 L76 61 Z" fill="${t.gem}" fill-opacity=".38" stroke="none"/>
-  </g>
-
-  <path d="M50 2 L90 20 L90 62 L50 96 L10 62 L10 20 Z" fill="url(#r${u})"
-        stroke="#0B1329" stroke-width="3.4" stroke-linejoin="round" filter="url(#glow${u})"/>
-  <path d="M50 9 L83 24 L83 59 L50 87 L17 59 L17 24 Z" fill="url(#m${u})"
-        stroke="#0B1329" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M50 9 L83 24 L83 59 L50 87 L17 59 L17 24 Z" fill="url(#tx${u})"/>
-  <path d="M50 10 L81 25 L50 41 L19 25 Z" fill="#FFFFFF" opacity=".20"/>
-  <path d="M17 30 L83 52 L83 58 L17 36 Z" fill="#FFFFFF" opacity=".13"/>
-  <path d="M50 15 L76 27 L76 56 L50 79 L24 56 L24 27 Z" fill="none"
-        stroke="${t.gem}" stroke-opacity=".45" stroke-width="1.6"/>
-
-  <path d="M50 27 L68 40 L61 63 L39 63 L32 40 Z" fill="url(#j${u})" filter="url(#g${u})"
-        stroke="#0B1329" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M50 27 L68 40 L50 46 L32 40 Z" fill="#FFFFFF" opacity=".32"/>
-  <path d="M50 46 L61 63 L39 63 Z" fill="#000000" opacity=".22"/>
-  <path d="M43 33 L50 30 L57 33" fill="none" stroke="#FFFFFF" stroke-opacity=".6" stroke-width="1.6"/>
-
-  ${hi ? `<g stroke="#0B1329" stroke-width="2.2" stroke-linejoin="round">
-    <path d="M34 6 L40 13 L50 -1 L60 13 L66 6 L64 17 L36 17 Z" fill="url(#r${u})"/>
-    <circle cx="50" cy="4" r="2.6" fill="${t.gem}"/></g>` : ""}
-
-  <path d="M22 94 H78 L72 110 H28 Z" fill="url(#w${u})" stroke="#0B1329"
-        stroke-width="2.6" stroke-linejoin="round"/>
-  <path d="M24 96 H76 L74 100 H26 Z" fill="#FFFFFF" opacity=".16"/>
-  ${chev}
-</svg>`;
-}
-
-const AV = [
-  { c1:"#2FA8FF", c2:"#0B3D77", g:"M50 14 L30 56 h16 l-6 32 24-44H48z" },
-  { c1:"#FF8A1F", c2:"#7A3400", g:"M50 12c10 16 22 22 22 38a22 22 0 0 1-44 0c0-16 12-22 22-38z" },
-  { c1:"#9BFF57", c2:"#2C6B10", g:"M50 16 60 40 86 42 66 58 72 84 50 70 28 84 34 58 14 42 40 40z" },
-  { c1:"#C58AFF", c2:"#3D1273", g:"M50 14 82 32v36L50 86 18 68V32z" },
-  { c1:"#FF4D4D", c2:"#6E0F0F", g:"M26 30h48v26a24 24 0 0 1-24 24 24 24 0 0 1-24-24z M36 40h10v12H36z M54 40h10v12H54z" },
-  { c1:"#7DF0E4", c2:"#0E5C58", g:"M50 12l30 18v22c0 18-14 30-30 36-16-6-30-18-30-36V30z M50 34l8 16h-16z" },
-  { c1:"#FFD16A", c2:"#8A5A00", g:"M20 62 38 26l12 22 12-22 18 36z M28 70h44v10H28z" },
-  { c1:"#EAF1FB", c2:"#3B4E74", g:"M50 12a38 38 0 1 0 0 76 38 38 0 0 0 0-76zm0 14a24 24 0 1 1 0 48 24 24 0 0 1 0-48z" }
-];
-function presetAvatar(i){
-  const a = AV[i % AV.length], u = "a" + (++uid);
-  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">
-    <defs><linearGradient id="${u}" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="${a.c1}"/><stop offset="1" stop-color="${a.c2}"/></linearGradient></defs>
-    <rect width="100" height="100" fill="url(#${u})"/>
-    <rect width="100" height="50" fill="#FFFFFF" opacity=".10"/>
-    <path d="${a.g}" fill="#08111F" opacity=".82"/>
-  </svg>`;
-}
-
-function avatarHTML(av){
-  if(av?.t === "img" && av.d) return `<img src="${av.d}" alt="" />`;
-  return presetAvatar(av?.i ?? 0);
-}
-
-function fileToAvatar(file){
-  return new Promise((resolve, reject) => {
-    const fr = new FileReader();
-    fr.onerror = () => reject(new Error("lecture"));
-    fr.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("image"));
-      img.onload = () => {
-        const S = 200, c = document.createElement("canvas");
-        c.width = c.height = S;
-        const ctx = c.getContext("2d");
-        const side = Math.min(img.width, img.height);
-        ctx.drawImage(img, (img.width-side)/2, (img.height-side)/2, side, side, 0, 0, S, S);
-        resolve({ t:"img", d:c.toDataURL("image/jpeg", .82) });
-      };
-      img.src = fr.result;
-    };
-    fr.readAsDataURL(file);
-  });
-}
-
-const Gate = {
-  step:1, draft:{ name:"", avatar:{t:"p", i:0}, mail:"", pass:"" }, mode:"signup",
-
-  open(mode){
-    this.mode = mode; this.step = mode === "login" ? 0 : 1;
-    showView("gate"); this.render();
-    if(mode === "login"){
-      $("#loginWho").textContent = `Compte ${account.mail} enregistré sur cet appareil.`;
-      $("#inLogMail").value = account.mail;
-    }else{
-      $("#avGrid").innerHTML = AV.map((_,i) =>
-        `<button class="avpick ${i===0?"on":""}" data-av="${i}">${presetAvatar(i)}</button>`).join("");
-      $$("[data-av]").forEach(b => b.onclick = () => {
-        this.draft.avatar = { t:"p", i:+b.dataset.av };
-        $$(".avpick").forEach(x => x.classList.remove("on"));
-        b.classList.add("on");
-        $("#avPreview").innerHTML = avatarHTML(this.draft.avatar);
-      });
-      $("#avPreview").innerHTML = avatarHTML(this.draft.avatar);
-    }
-  },
-
-  render(){
-    ["step1","step2","step3","step4","stepLogin"].forEach(id => $("#"+id).classList.remove("on"));
-    $("#" + (this.step === 0 ? "stepLogin" : "step" + this.step)).classList.add("on");
-    $("#gateDots").style.display = this.step === 0 ? "none" : "flex";
-    $$("#gateDots i").forEach((d,i) => d.classList.toggle("on", i < this.step));
-    $("#gateSub").textContent = this.step === 0 ? "Connexion" : `Création du compte · étape ${this.step} sur 4`;
-    $("#btnBack").style.display = (this.step <= 1) ? "none" : "flex";
-    $("#btnNext").textContent = this.step === 0 ? "Se connecter" : this.step === 4 ? "Créer mon compte" : "Continuer";
-  },
-
-  async next(){
-    if(this.step === 0) return this.login();
-    if(this.step === 1){
-      const v = $("#inName").value.trim().toUpperCase();
-      if(!/^[A-Z0-9ÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ._-]{3,12}$/.test(v)){
-        return this.err("#errName", "3 à 12 caractères, sans espace ni symbole exotique.");
-      }
-      this.draft.name = v; this.ok("#errName", "Pseudo disponible.");
-    }
-    if(this.step === 2 && !this.draft.avatar) return this.err("#errPhoto", "Choisis une photo ou un emblème.");
-    if(this.step === 3){
-      const v = $("#inMail").value.trim().toLowerCase();
-      if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(v)) return this.err("#errMail", "Cette adresse ne semble pas valide.");
-      this.draft.mail = v; this.ok("#errMail", "Adresse enregistrée.");
-    }
-    if(this.step === 4){
-      const p = $("#inPass").value, p2 = $("#inPass2").value;
-      if(p.length < 6) return this.err("#errPass", "6 caractères minimum.");
-      if(p !== p2)     return this.err("#errPass", "Les deux mots de passe diffèrent.");
-      return this.create(p);
-    }
-    this.step++; this.render();
-  },
-  back(){ if(this.step > 1){ this.step--; this.render(); } },
-  err(sel, msg){ const e = $(sel); e.textContent = msg; e.className = "hint err"; if(navigator.vibrate) navigator.vibrate([30,40,30]); },
-  ok(sel, msg){ const e = $(sel); e.textContent = msg; e.className = "hint ok"; },
-
-  async create(pass){
-    const salt = randHex(8);
-    account = {
-      name:this.draft.name, mail:this.draft.mail, avatar:this.draft.avatar,
-      salt, hash:await hashPass(pass, salt), createdAt:Date.now()
-    };
-    await Store.set("account", account);
-    await Session.open(account.mail);
-    profile = freshProfile();
-    await Store.set("profile", profile);
-    paintAll(); showView("menu"); showTab("tab-duel");
-    toast(`Bienvenue, ${account.name}`);
-  },
-
-  async login(){
-    const mail = $("#inLogMail").value.trim().toLowerCase();
-    const pass = $("#inLogPass").value;
-    if(mail !== account.mail) return this.err("#errLogin", "Aucun compte avec cette adresse sur cet appareil.");
-    if(await hashPass(pass, account.salt) !== account.hash) return this.err("#errLogin", "Mot de passe incorrect.");
-    await Session.open(mail);
-    $("#inLogPass").value = "";
-    paintAll(); showView("menu"); showTab("tab-duel");
-    toast(`Content de te revoir, ${account.name}`);
-  }
-};
-
-const Session = {
-  async open(mail){ await Store.set("session", { mail, token:randHex(12), at:Date.now() }); },
-  async read(){ return await Store.get("session", null); },
-  async close(){ await Store.del("session"); }
-};
-
-const DAILY_TARGET = 50;
-const CROWNS_PER_TIER = 10;
-
-function levelOf(xp){
-  let lvl = 1, need = 120, acc = 0;
-  while(xp >= acc + need && lvl < 60){ acc += need; lvl++; need = Math.round(need * 1.16); }
-  return { lvl, into:xp - acc, need };
-}
-function tierReward(t){ return { coins:40 + t*10, gems:(t % 5 === 0) ? 1 : 0 }; }
-function todayKey(){
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
-function rollDaily(){
-  if(!profile.daily || profile.daily.d !== todayKey())
-    profile.daily = { d:todayKey(), reps:0, done:false };
-}
-
-function grantRewards(reps, won, ranked){
-  rollDaily();
-  const g = { xp:0, coins:0, crowns:0, tiers:0, gems:0, levels:0, daily:false };
-  g.xp     = reps + (ranked ? (won ? 25 : 10) : 5);
-  g.coins  = 5 + Math.round(reps/2) + (won && ranked ? 20 : 0);
-  g.crowns = ranked ? (won ? 3 : 1) : 0;
-
-  profile.daily.reps += reps;
-  if(!profile.daily.done && profile.daily.reps >= DAILY_TARGET){
-    profile.daily.done = true; g.coins += 60; g.daily = true;
-  }
-  const before = levelOf(profile.xp).lvl;
-  profile.xp += g.xp;
-  g.levels = levelOf(profile.xp).lvl - before;
-
-  profile.crowns += g.crowns;
-  const target = Math.min(PASS_TIERS, Math.floor(profile.crowns / CROWNS_PER_TIER));
-  g.unlocked = [];
-  while(profile.tier < target){
-    profile.tier++; g.tiers++;
-    const r = passReward(profile.tier);
-    if(r.k === "coin") g.coins += r.v;
-    else if(r.k === "gem") g.gems += r.v;
-    else if(r.k === "xp")  profile.xp += r.v;
-    else if(r.k === "stk" && !profile.stickers.includes(r.id)){
-      profile.stickers.push(r.id); g.unlocked.push(r.id);
-    }
-  }
-  profile.coins += g.coins;
-  profile.gems  += g.gems;
-
-  g.flame = bumpFlame();
-  const dk = todayKey();
-  profile.days[dk] = (profile.days[dk] || 0) + reps;
-  const keys = Object.keys(profile.days).sort();
-  while(keys.length > 60) delete profile.days[keys.shift()];
-  return g;
-}
-
-function paintAll(){
-  const r = rankOf(profile.elo);
-  rollDaily();
-
-  const lv = levelOf(profile.xp);
-  $("#lvlNum").textContent = lv.lvl;
-  $("#xpFill").style.width = (lv.into / lv.need * 100).toFixed(1) + "%";
-  $("#coinVal").textContent = profile.coins.toLocaleString("fr-FR");
-  $("#gemVal").textContent  = profile.gems;
-
-  const plc = inPlacement(), pDone = profile.placement.done;
-  $("#pcAvatar").innerHTML = avatarHTML(account?.avatar);
-  $("#pcBadge").innerHTML  = plc ? unrankedBadge() : rankBadge(r.idx, r.div);
-  $("#pcName").textContent = account?.name || "JOUEUR";
-  $("#pcRank").textContent = plc ? `Non classé · ${pDone}/${PLACEMENT_GAMES}` : `${r.tier.n} ${ROMAN[r.div]}`;
-  $("#pcElo").textContent  = plc ? "—" : Math.round(profile.elo);
-
-  $("#dailyFill").style.width = (clamp(profile.daily.reps / DAILY_TARGET, 0, 1)*100).toFixed(0) + "%";
-  $("#dailyLab").textContent  = profile.daily.done ? "FAIT" : `${profile.daily.reps}/${DAILY_TARGET}`;
-  $("#btnDaily").classList.toggle("done", profile.daily.done);
-
-  const inTier = profile.crowns % CROWNS_PER_TIER;
-  $("#passTier").textContent = profile.tier + 1;
-  $("#passFill").style.width = (inTier / CROWNS_PER_TIER * 100).toFixed(0) + "%";
-  $("#passVal").textContent  = `${inTier}/${CROWNS_PER_TIER}`;
-  $("#saveBackend").textContent = Save.label;
-  $("#saveWhen").textContent = Save.backends.length
-    ? (Save.diag || "Progression enregistrée automatiquement après chaque duel.")
-    : (Save.diag || "Aucun support disponible : la progression sera perdue à la fermeture.");
-  paintFlame();
-  paintChart();
-  applyNameStyle();
-
-  $("#pfAvatar").innerHTML = avatarHTML(account?.avatar);
-  $("#pfName").textContent = account?.name || "JOUEUR";
-  $("#pfMail").textContent = account?.mail || "—";
-  paintDeck();
-
-  if(plc){
-    $("#heroBadge").innerHTML  = unrankedBadge();
-    $("#heroTier").textContent = "NON CLASSÉ";
-    $("#heroDiv").textContent  = `${PLACEMENT_GAMES - pDone} duel${PLACEMENT_GAMES-pDone>1?"s":""} pour être classé`;
-    $("#heroFill").style.width = (pDone / PLACEMENT_GAMES * 100).toFixed(0) + "%";
-    $("#heroFrom").textContent = `${pDone}/${PLACEMENT_GAMES} joués`;
-    $("#heroTo").textContent   = `${profile.placement.wins} victoire${profile.placement.wins>1?"s":""}`;
-    $("#btnRanked").innerHTML  = `Placement<small>${pDone}/${PLACEMENT_GAMES} · 60 s</small>`;
-  }else{
-    $("#heroBadge").innerHTML = rankBadge(r.idx, r.div);
-    $("#heroTier").textContent = r.tier.n;
-    $("#heroDiv").textContent  = "Division " + ROMAN[r.div];
-    $("#heroFill").style.width = (r.prog*100).toFixed(1) + "%";
-    $("#heroFrom").textContent = r.tier.min;
-    $("#heroTo").textContent   = r.next ? `${r.next.n} · ${r.next.min}` : "Sommet atteint";
-    $("#btnRanked").innerHTML  = `Duel<small>Classé · 60 s</small>`;
-  }
-
-  $("#curBadge").innerHTML = plc ? unrankedBadge() : rankBadge(r.idx, r.div);
-  $("#curTier").textContent = r.tier.n;
-  $("#curDiv").textContent  = "Division " + ROMAN[r.div];
-  $("#curDivRow").innerHTML = [0,1,2].map(i => `<i class="${i<=r.div?"on":""}"></i>`).join("");
-  $("#ladder").innerHTML = TIERS.map((t,i) => {
-    const hi = TIERS[i+1] ? TIERS[i+1].min - 1 : "∞";
-    return `<div class="rung ${i===r.idx?"cur":""}">
-      <div class="b">${rankBadge(i, i===r.idx ? r.div : 2)}</div>
-      <div class="t"><div class="nm">${t.n}</div><div class="rg mono">${t.min} – ${hi}</div></div>
-      ${i===r.idx ? `<span class="you">TOI</span>` : ""}</div>`;
-  }).join("");
-
-  $("#stW").textContent = profile.wins;
-  $("#stL").textContent = profile.losses;
-  $("#stR").textContent = (profile.wins + profile.losses) ? (profile.wins/Math.max(1,profile.losses)).toFixed(2) : "—";
-  $("#stB").textContent = profile.best;
-  $("#stT").textContent = profile.totalReps;
-  $("#stX").textContent = profile.streak;
-  paintHistory();
-}
-
-function paintTiers(){
-  let html = "";
-  for(let t = 1; t <= 10; t++){
-    const r = tierReward(t), got = profile.tier >= t;
-    html += `<div class="tier ${got?"got":""}"><div class="n">${t}</div>
-      <div class="r">${r.coins} pièces${r.gems ? ` + ${r.gems} gemme` : ""}</div>
-      <div class="s">${got ? "OBTENU" : t*CROWNS_PER_TIER + " couronnes"}</div></div>`;
-  }
-  $("#tierList").innerHTML = html;
-}
-function paintHistory(){
-  const h = profile.history || [];
-  $("#hvP").textContent = h.length;
-  $("#hvA").textContent = h.length ? Math.round(h.reduce((s,x)=>s+x.me,0)/h.length) : 0;
-  const week = h.filter(x => Date.now()-x.at < 7*864e5).reduce((s,x)=>s+(x.d||0),0);
-  $("#hvE").textContent = (week>0?"+":"") + week;
-  $("#histList").innerHTML = h.length ? h.map(x => {
-    const cls = x.r === "win" ? "w" : x.r === "loss" ? "l" : "d";
-    const ltr = x.r === "win" ? "V" : x.r === "loss" ? "D" : "N";
-    const dcl = x.d > 0 ? "up" : x.d < 0 ? "down" : "flat";
-    const mode = x.m === "ranked" || (x.m === "bot" && x.k) ? "Classé"
-                 : x.m === "private" ? "Privé" : "Entraînement";
-    return `<div class="hrow"><div class="res ${cls}">${ltr}</div>
-      <div class="mid"><div class="a">${x.op}</div><div class="b">${mode} · ${new Date(x.at).toLocaleDateString("fr-FR",{day:"2-digit",month:"short"})}</div></div>
-      <div class="sc mono">${x.me}<span style="color:var(--dim)">–</span>${x.opS<0?"—":x.opS}</div>
-      <div class="dl ${dcl} mono">${x.d>0?"+":""}${x.d||0}</div></div>`;
-  }).join("") : `<div class="empty">Aucun duel enregistré.<br>Lance ta première recherche depuis l'onglet Duel.</div>`;
-}
-
-const PLACEMENT_GAMES = 10;
-function inPlacement(){ return profile.placement && profile.placement.active; }
-
-function placementElo(wins){ return clamp(780 + wins * 62, 700, 1500); }
-
-function placementTarget(){
-  const w = profile.placement.wins;
-  let base = 8 + w * 2.4;
-  if(profile.best > 0) base = base * .7 + profile.best * .3;
-  return clamp(Math.round(base * (.94 + Math.random() * .12)), 4, 70);
-}
-function finishPlacement(){
-  const w = profile.placement.wins;
-  profile.elo = placementElo(w);
-  profile.placement.active = false;
-  const r = rankOf(profile.elo);
-  return { wins:w, tier:r.tier.n, div:ROMAN[r.div] };
-}
-
-function rewardLabel(r){
-  if(r.k === "coin") return { ico:"🪙", t:`${r.v} pièces`,  s:"Monnaie de jeu" };
-  if(r.k === "gem")  return { ico:"💎", t:`${r.v} gemme${r.v>1?"s":""}`, s:"Monnaie premium" };
-  if(r.k === "xp")   return { ico:"⚡", t:`${r.v} XP`,      s:"Progression de niveau" };
-  const st = STK[r.id];
-  return { ico:st.e, t:st.n, s:"Sticker " + RARITY[st.r].n.toLowerCase(), r:st.r };
-}
-function openPass(){
-  Sfx.play("nav");
-  const cur = profile.tier, inTier = profile.crowns % CROWNS_PER_TIER;
-  $("#phTier").textContent   = cur + 1;
-  $("#phCrowns").textContent = profile.crowns;
-  $("#pfFill").style.width   = (inTier / CROWNS_PER_TIER * 100).toFixed(0) + "%";
-  $("#pfVal").textContent    = `${inTier}/${CROWNS_PER_TIER}`;
-
-  let html = "";
-  for(let t = 1; t <= PASS_TIERS; t++){
-    const r = rewardLabel(passReward(t));
-    const got = cur >= t, next = (cur + 1) === t;
-    html += `<div class="prow ${got?"got":next?"next":"lock"}">
-      <div class="pnum">${t}</div>
-      <div class="pcard">
-        <div class="pico" ${r.r?`data-r="${r.r}" style="box-shadow:inset 0 0 0 3px ${RARITY[r.r].c}"`:""}>${r.ico}</div>
-        <div class="ptxt"><div class="pt">${r.t}</div><div class="ps">${r.s}</div></div>
-        ${got ? `<span class="pchk">OBTENU</span>`
-              : `<span class="ps">${t*CROWNS_PER_TIER} 👑</span>`}
-      </div></div>`;
-  }
-  $("#passScroll").innerHTML = html;
-  showView("pass");
-  requestAnimationFrame(() => {
-    const el = $("#passScroll").querySelectorAll(".prow")[Math.max(0, cur - 1)];
-    if(el) el.scrollIntoView({ block:"center" });
-  });
-}
-
-function stickerHTML(id, owned, equipped){
-  const st = STK[id];
-  return `<button class="stk ${owned?"":"off"} ${equipped?"eq":""}" data-r="${st.r}" data-id="${id}"
-    title="${st.n} · ${RARITY[st.r].n}">${owned ? st.e : "🔒"}
-    <span class="rlab" style="color:${RARITY[st.r].c}">${RARITY[st.r].n}</span></button>`;
-}
-function paintDeck(){
-  const slots = [];
-  for(let i = 0; i < 6; i++){
-    const id = profile.deck[i];
-    slots.push(id
-      ? `<button class="slot full" data-slot="${i}">${STK[id].e}</button>`
-      : `<button class="slot" data-slot="${i}">+</button>`);
-  }
-  $("#deckSlots").innerHTML = slots.join("");
-  $("#invCount").textContent = profile.stickers.length;
-  $("#deckInv").innerHTML = STICKERS.map(st =>
-    stickerHTML(st.id, profile.stickers.includes(st.id), profile.deck.includes(st.id))).join("");
-
-  $("#deckSlots").querySelectorAll("[data-slot]").forEach(b => b.onclick = async () => {
-    const i = +b.dataset.slot;
-    if(profile.deck[i]){ profile.deck.splice(i,1); await Store.set("profile", profile); paintDeck(); }
-    else toast("Choisis un sticker dans la collection");
-  });
-  $("#deckInv").querySelectorAll("[data-id]").forEach(b => b.onclick = async () => {
-    const id = b.dataset.id;
-    if(!profile.stickers.includes(id)){
-      toast(`${STK[id].n} se débloque dans la passe de combat`); return;
-    }
-    const at = profile.deck.indexOf(id);
-    if(at >= 0) profile.deck.splice(at, 1);
-    else if(profile.deck.length >= 6) { toast("Deck complet : retire d'abord un sticker"); return; }
-    else profile.deck.push(id);
-    Sfx.play("click");
-    await Store.set("profile", profile); paintDeck();
-  });
-}
-
-function paintStkBar(){
-  $("#stkBar").innerHTML = profile.deck.map(id =>
-    `<button class="stk" data-r="${STK[id].r}" data-send="${id}">${STK[id].e}</button>`).join("")
-    || `<div style="color:#BFD6F5;font-size:13px;grid-column:1/-1;text-align:center">Deck vide</div>`;
-  $("#stkBar").querySelectorAll("[data-send]").forEach(b => b.onclick = () => {
-    flySticker(b.dataset.send, true);
-    Net.send({ t:"stk", id:b.dataset.send });
-    $("#stkBar").classList.remove("on");
-  });
-}
-function flySticker(id, mine){
-  const st = STK[id]; if(!st) return;
-  const el = document.createElement("div");
-  el.className = "fly"; el.textContent = st.e;
-  el.style.left = mine ? "14%" : "auto";
-  el.style.right = mine ? "auto" : "14%";
-  el.style.bottom = "34%";
-  $("#stkFly").appendChild(el);
-  Sfx.play("click");
-  setTimeout(() => el.remove(), 2000);
-}
-
-function bumpFlame(){
-  const t = todayKey(), f = profile.flame;
-  if(f.last === t) return 0;
-  const y = new Date(); y.setDate(y.getDate() - 1);
-  const yk = `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,"0")}-${String(y.getDate()).padStart(2,"0")}`;
-  f.cur = (f.last === yk) ? f.cur + 1 : 1;
-  f.last = t;
-  if(f.cur > f.best) f.best = f.cur;
-  return f.cur;
-}
-function paintFlame(){
-  const f = profile.flame, alive = f.last === todayKey();
-  $("#flameNum").textContent = f.cur;
-  $("#flameChip").classList.toggle("cold", f.cur === 0 || !alive);
-  $("#stFlame").textContent = f.cur;
-  $("#stFlameBest").textContent = f.best;
-  $("#stToday").textContent = profile.days[todayKey()] || 0;
-}
-
-function paintChart(){
-  const days = [];
-  for(let i = 13; i >= 0; i--){
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    days.push({ k, v:profile.days[k] || 0, lab:String(d.getDate()) });
-  }
-  const max = Math.max(10, ...days.map(d => d.v));
-  const W = 320, H = 132, base = H - 18, bw = W / days.length;
-  let g = `<line class="base" x1="0" y1="${base}" x2="${W}" y2="${base}"/>`;
-  days.forEach((d, i) => {
-    const h = d.v === 0 ? 0 : Math.max(4, (d.v / max) * (base - 20));
-    const x = i * bw + bw*.18, w = bw*.64;
-    if(h > 0) g += `<rect class="bar ${d.v === max ? "top" : ""}" x="${x.toFixed(1)}" y="${(base-h).toFixed(1)}"
-        width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="3"/>`;
-    if(d.v > 0) g += `<text class="val" x="${(x+w/2).toFixed(1)}" y="${(base-h-4).toFixed(1)}" text-anchor="middle">${d.v}</text>`;
-    g += `<text class="lab" x="${(x+w/2).toFixed(1)}" y="${H-5}" text-anchor="middle">${d.lab}</text>`;
-  });
-  $("#chart").innerHTML = g;
-}
-
-const NAME_FONTS  = [["baloo","Baloo"],["fredoka","Fredoka"],["lucky","Cartoon"],["mono","Console"]];
-const NAME_COLORS = [["blanc","#FFFFFF"],["or","#F5B71E"],["lime","#7DD321"],
-                     ["cyan","#5FE0FF"],["rose","#FF7BC0"],["feu","linear-gradient(180deg,#FFE066,#FF6B1A)"]];
-function nameClass(){
-  const st = profile.nameStyle || { font:"baloo", color:"blanc" };
-  return `nf-${st.font} nm-${st.color}`;
-}
-function applyNameStyle(){
-  const cls = nameClass();
-  ["#nameShow","#pcName","#namePrev"].forEach(sel => {
-    const el = $(sel); if(!el) return;
-    el.className = el.id === "pcName" ? "pc-name " + cls
-                 : (el.id === "namePrev" ? "nameprev " + cls : "nameprev " + cls);
-    el.textContent = account?.name || "JOUEUR";
-  });
-}
-function openNameStyle(){
-  $("#fontPick").innerHTML = NAME_FONTS.map(([k,l]) =>
-    `<button class="pick nf-${k} ${profile.nameStyle.font===k?"on":""}" data-font="${k}">${l}</button>`).join("");
-  $("#colorPick").innerHTML = NAME_COLORS.map(([k,c]) =>
-    `<button class="pick swatch ${profile.nameStyle.color===k?"on":""}" data-color="${k}"
-      style="background:${c}"></button>`).join("");
-  $("#fontPick").querySelectorAll("[data-font]").forEach(b => b.onclick = async () => {
-    profile.nameStyle.font = b.dataset.font; await Store.set("profile", profile);
-    applyNameStyle(); openNameStyle();
-  });
-  $("#colorPick").querySelectorAll("[data-color]").forEach(b => b.onclick = async () => {
-    profile.nameStyle.color = b.dataset.color; await Store.set("profile", profile);
-    applyNameStyle(); openNameStyle();
-  });
-  applyNameStyle();
-  $("#sheetName").classList.add("on");
-}
-
-async function exportSave(){
-  const blob = new Blob([JSON.stringify({ v:SCHEMA, account, profile, at:Date.now() }, null, 2)],
-                        { type:"application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `pushup-rivals-${todayKey()}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  toast("Sauvegarde exportée");
-}
-async function importSave(file){
-  try{
-    const data = JSON.parse(await file.text());
-    if(!data.profile) throw new Error("format");
-    profile = migrateProfile(data.profile);
-    if(data.account) { account = data.account; await Store.set("account", account); }
-    await Store.set("profile", profile);
-    paintAll(); Sfx.play("reward"); toast("Sauvegarde restaurée");
-  }catch{ toast("Fichier de sauvegarde illisible"); }
-}
-
-const Tuto = {
-  step:0, typing:null, steps:[],
-
-  build(){
-    this.steps = [
-      { t:"Salut, moi c'est Rival. Je vais te montrer l'arène en trente secondes.",
-        tab:"tab-duel" },
-      { t:"Ici, ton emblème. Tu démarres NON CLASSÉ : dix duels de placement décident de ton rang.",
-        el:"#heroBadge", tab:"tab-duel" },
-      { t:"Chaque victoire durcit l'adversaire suivant. Les dix gagner, et tu entres direct en Diamant.",
-        el:"#btnRanked", tab:"tab-duel" },
-      { t:"Ta carte de joueur : avatar, rang, et le trophée qui affiche ton Elo une fois classé.",
-        el:".profcard", tab:"tab-duel" },
-      { t:"La flamme monte d'un cran par jour où tu joues. Un jour sauté, elle repart à zéro.",
-        el:"#flameChip", tab:"tab-duel" },
-      { t:"À gauche, l'objectif du jour. À droite, la passe : chaque duel donne une couronne.",
-        el:".passrow", tab:"tab-duel" },
-      { t:"Pièces, gemmes et niveau s'accumulent en haut à chaque séance.",
-        el:"#topbar", tab:"tab-duel" },
-      { t:"Pose le téléphone au sol, de profil ou face à toi, tout le corps dans le cadre.",
-        tab:"tab-drill" },
-      { t:"Une pompe compte dès que tu descends au tiers de ta course. Le corps doit rester aligné.",
-        tab:"tab-drill" },
-      { t:"Dans le profil, tu règles ton pseudo, ton deck de stickers et ta sauvegarde.",
-        tab:"tab-profil" },
-      { t:"C'est tout. Mets-toi en position, on se retrouve dans l'arène.",
-        tab:"tab-duel" }
-    ];
-  },
-
-  start(force){
-    if(profile.tutoDone && !force) return;
-    this.build(); this.step = 0;
-    $("#tuto").classList.add("on");
-    Sfx.play("nav");
-    this.render();
-  },
-
-  render(){
-    const s = this.steps[this.step];
-    if(!s) return this.end();
-    if(s.tab) showTab(s.tab);
-
-    const spot = $("#tutoSpot");
-    const el = s.el ? document.querySelector(s.el) : null;
-    $("#tuto").classList.toggle("nospot", !el);
-    if(el){
-      const r = el.getBoundingClientRect();
-      const pad = 10;
-      spot.style.display = "block";
-      spot.style.left   = (r.left - pad) + "px";
-      spot.style.top    = (r.top - pad) + "px";
-      spot.style.width  = (r.width + pad*2) + "px";
-      spot.style.height = (r.height + pad*2) + "px";
-    }else spot.style.display = "none";
-
-    $("#tutoStep").textContent = `${this.step + 1} / ${this.steps.length}`;
-    $("#tutoNext").textContent = this.step === this.steps.length - 1 ? "C'est parti" : "Suivant";
-    this.type(s.t);
-  },
-
-  type(txt){
-    clearInterval(this.typing);
-    const el = $("#tutoText");
-    el.textContent = ""; let i = 0;
-    this.typing = setInterval(() => {
-      el.textContent = txt.slice(0, ++i);
-      if(i % 3 === 0) Sfx.play("rep");
-      if(i >= txt.length) clearInterval(this.typing);
-    }, 18);
-    this.full = txt;
-  },
-  skipType(){
-    if(!this.full) return false;
-    if($("#tutoText").textContent.length < this.full.length){
-      clearInterval(this.typing);
-      $("#tutoText").textContent = this.full;
-      return true;
-    }
-    return false;
-  },
-
-  next(){
-    if(this.skipType()) return;
-    this.step++;
-    if(this.step >= this.steps.length) return this.end();
-    Sfx.play("click");
-    this.render();
-  },
-
-  async end(){
-    clearInterval(this.typing);
-    $("#tuto").classList.remove("on");
-    profile.tutoDone = true;
-    await Store.set("profile", profile);
-    showTab("tab-duel");
-    Sfx.play("reward");
-  }
-};
-
-const Vision = {
-  landmarker:null, stream:null, running:false, lastVideoTime:-1, raf:0,
-  reps:0, refused:0, phase:"up",
-  topRef:1, botRef:.55, armed:true, lastRepAt:0, lost:0, flash:null,
-  torsoRef:0, side:null,
-  active:false, onRep:null,
-  sE:1, sV:1, ext:1, frontality:0,
-  base:{ span:0, hip:0, n:0 }, calibrating:false, calibrated:false,
-
-  async load(){
-    if(this.landmarker) return;
-    const fs = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
-    const opts = {
-      baseOptions:{
-        modelAssetPath:"https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
-        delegate:"GPU"
-      },
-      runningMode:"VIDEO", numPoses:1,
-      minPoseDetectionConfidence:.35, minPosePresenceConfidence:.35, minTrackingConfidence:.30
-    };
-    try{ this.landmarker = await PoseLandmarker.createFromOptions(fs, opts); }
-    catch{ opts.baseOptions.delegate = "CPU"; this.landmarker = await PoseLandmarker.createFromOptions(fs, opts); }
-  },
-
-  async startCamera(){
-    if(this.stream) this.stream.getTracks().forEach(t => t.stop());
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:profile.facing, width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:30} }, audio:false });
-    const v = $("#cam"); v.srcObject = this.stream;
-    const mir = profile.facing === "user";
-    v.classList.toggle("mirror", mir); $("#overlay").classList.toggle("mirror", mir);
-    await v.play();
-  },
-  async switchCamera(){
-    profile.facing = profile.facing === "user" ? "environment" : "user";
-    Store.set("profile", profile);
-    try{ await this.startCamera(); this.beginCalibration(); }catch{ toast("Cette caméra n'est pas disponible"); }
-  },
-
-  reset(){
-    this.reps = 0; this.refused = 0; this.phase = "up";
-    this.topRef = 1; this.botRef = 1 - RANGE_INIT; this.armed = true;
-    this.lastRepAt = 0; this.lost = 0;
-    this.flash = null; this.torsoRef = 0; this.side = null;
-    this.sE = this.sV = this.ext = 1; this.frontality = 0;
-    this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = false;
-    this.active = false;
-  },
-  flashMsg(txt, ms=1300){ this.flash = { txt, until:performance.now() + ms }; },
-  beginCalibration(){ this.base = { span:0, hip:0, n:0 }; this.calibrated = false; this.calibrating = true; },
-  anchor(){
-    this.topRef = clamp(this.ext, .4, 1);
-    this.botRef = this.topRef - RANGE_INIT;
-    this.armed = true; this.lastRepAt = 0;
-  },
-  endCalibration(){ this.calibrating = false; },
-  stop(){
-    this.running = false; cancelAnimationFrame(this.raf);
-    if(this.stream){ this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
-  },
-
-  loop(){
-    this.running = true;
-    const v = $("#cam"), c = $("#overlay"), ctx = c.getContext("2d");
-    const step = () => {
-      if(!this.running) return;
-      this.raf = requestAnimationFrame(step);
-      if(v.readyState < 2) return;
-      if(c.width !== v.videoWidth){ c.width = v.videoWidth; c.height = v.videoHeight; }
-      if(v.currentTime === this.lastVideoTime) return;
-      this.lastVideoTime = v.currentTime;
-
-      const res = this.landmarker.detectForVideo(v, performance.now());
-      ctx.clearRect(0,0,c.width,c.height);
-      if(res.landmarks?.length){
-        const lm = res.landmarks[0];
-        const wl = res.worldLandmarks?.[0] || lm;
-        const st = this.analyse(lm, wl);
-        this.draw(ctx, lm, c.width, c.height, st);
-        this.hud(st);
-      }else this.hud({ ok:false, held:this.active && this.phase === "down",
-                       depth:clamp(1 - this.ext, 0, 1), msg:"Recherche du corps…" });
-    };
-    step();
-  },
-
-  angle(a,b,c){
-    const v1 = {x:a.x-b.x, y:a.y-b.y, z:(a.z||0)-(b.z||0)};
-    const v2 = {x:c.x-b.x, y:c.y-b.y, z:(c.z||0)-(b.z||0)};
-    const m1 = Math.hypot(v1.x,v1.y,v1.z), m2 = Math.hypot(v2.x,v2.y,v2.z);
-    if(!m1 || !m2) return 180;
-    return Math.acos(clamp((v1.x*v2.x + v1.y*v2.y + v1.z*v2.z)/(m1*m2), -1, 1)) * 180/Math.PI;
-  },
-  mid(a,b){ return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 }; },
-  d2(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); },
-
-  analyse(lm, wl){
-    const vis = i => lm[i]?.visibility ?? 0;
-    const armL = (vis(11)+vis(13)+vis(15))/3;
-    const armR = (vis(12)+vis(14)+vis(16))/3;
-    const q    = Math.max(armL, armR);
-    const hipV = Math.max(vis(23), vis(24));
-
-    if(q < MIN_VIS){
-      this.lost++;
-      const held = this.active && this.phase === "down";
-      return { ok:false, held, depth:clamp(1 - this.ext, 0, 1),
-               msg:held ? "Comptée — remonte" : "Cadre épaules, bras et bassin" };
-    }
-    this.lost = 0;
-    const trust = q > TRUST_VIS;
-
-    if(this.side === null) this.side = armL >= armR;
-    else if(this.side && armR > armL + .12) this.side = false;
-    else if(!this.side && armL > armR + .12) this.side = true;
-    const L = this.side;
-    const S=L?11:12, H=L?23:24, K=L?25:26;
-
-    const shMid = this.mid(lm[11], lm[12]);
-    const hpMid = this.mid(lm[23], lm[24]);
-    const wrMid = this.mid(lm[15], lm[16]);
-    const shW   = this.d2(lm[11], lm[12]);
-
-    if(hipV > .5){
-      const t = Math.max(this.d2(shMid, hpMid), 1e-3);
-      this.torsoRef = this.torsoRef ? this.torsoRef + (t - this.torsoRef)*.10 : t;
-    }
-    const torso = this.torsoRef || Math.max(this.d2(shMid, hpMid), 1e-3);
-
-    const front = clamp((shW/torso - .42) / (.85 - .42), 0, 1);
-    this.frontality += (front - this.frontality) * .12;
-
-    const spanN = (wrMid.y - shMid.y) / torso;
-    const hipN  = (hpMid.y - shMid.y) / torso;
-
-    const eL = this.angle(wl[11], wl[13], wl[15]);
-    const eR = this.angle(wl[12], wl[14], wl[16]);
-    const wL = armL + .01, wR = armR + .01;
-    const elbowNow = (eL*wL + eR*wR) / (wL + wR);
-
-    const sE = clamp((elbowNow - 55) / (170 - 55), 0, 1);
-    this.sE += (sE - this.sE) * (sE < this.sE ? .78 : .55);
-    let sV = 1;
-    if(this.calibrated && this.base.span > .05){
-      sV = clamp((spanN / this.base.span - .18) / (1 - .18), 0, 1.1);
-      this.sV += (sV - this.sV) * (sV < this.sV ? .74 : .50);
-    }else this.sV = this.sE;
-
-    const wV = this.calibrated ? .70 * this.frontality : 0;
-    this.ext = this.sE * (1 - wV) + this.sV * wV;
-    const depth = clamp(1 - this.ext, 0, 1);
-
-    let aligned = true, alignCheck = true;
-    if(this.frontality < .55 && vis(K) > .45 && hipV > .5){
-      aligned = this.angle(wl[S], wl[H], wl[K]) >= ANGLE_BODY;
-    }else if(this.calibrated && hipV > .5){
-      aligned = Math.abs(hipN - this.base.hip) < .38;
-    }else alignCheck = false;
-
-    const now = performance.now();
-    let event = null;
-
-    if(this.ext > this.topRef) this.topRef += (this.ext - this.topRef) * .40;
-    else this.topRef = Math.max(.35, this.topRef - .0016);
-    if(this.ext < this.botRef) this.botRef += (this.ext - this.botRef) * .40;
-    else this.botRef = Math.min(this.topRef - .05, this.botRef + .00012);
-
-    const range   = Math.max(.12, this.topRef - this.botRef);
-    const countAt = Math.min(this.topRef - MIN_DROP, Math.max(EXT_DOWN, this.topRef - DROP_F * range));
-    const armAt   = this.topRef - ARM_F * range;
-
-    if(this.active){
-      if(this.armed && this.ext < countAt && now - this.lastRepAt > MIN_GAP_MS){
-        if(!trust || aligned){ this.reps++; event = "valid"; }
-        else { this.refused++; event = "refused"; this.flashMsg("Corps cassé"); }
-        this.armed = false; this.lastRepAt = now;
-        if(this.onRep) this.onRep(event, this.reps);
-      }
-      if(!this.armed && this.ext > armAt) this.armed = true;
-    }
-    this.phase = this.armed ? "up" : "down";
-
-    if(spanN > .12 && spanN < 1.8 && this.ext > this.topRef - .06){
-      if(!this.calibrated){
-        this.base.n++;
-        this.base.span += (spanN - this.base.span) / this.base.n;
-        this.base.hip  += (hipN  - this.base.hip ) / this.base.n;
-        if(this.base.n >= 4) this.calibrated = true;
-      }else{
-        this.base.span += (spanN - this.base.span) * .05;
-        this.base.hip  += (hipN  - this.base.hip ) * .05;
-      }
-    }
-
-    const depthRel = clamp((this.topRef - this.ext) / range, 0, 1);
-    const hit = this.ext < countAt || !this.armed;
-    let msg = "Bras tendus, prêt";
-    if(!alignCheck) msg = "Position détectée";
-    else if(!aligned) msg = this.frontality > .55 ? "Bassin décalé" : "Aligne épaules, hanches, genoux";
-    else if(this.phase === "down") msg = "Comptée — remonte";
-    else if(depthRel > .10) msg = "Descends";
-
-    return { ok:true, aligned, depth:depthRel, hit, msg, event,
-             front:this.frontality, calibrated:this.calibrated };
-  },
-
-  draw(ctx, lm, w, h, st){
-    const color = !st.ok ? "#9FB4D6" : (st.aligned ? "#7DFF3A" : "#FF5A5A");
-    const seg = [];
-    for(const cn of PoseLandmarker.POSE_CONNECTIONS){
-      if(cn.start < 11 || cn.end < 11) continue;
-      const a = lm[cn.start], b = lm[cn.end];
-      if(!a || !b) continue;
-      if((a.visibility ?? 1) < .3 || (b.visibility ?? 1) < .3) continue;
-      seg.push([a.x*w, a.y*h, b.x*w, b.y*h]);
-    }
-    const trace = () => {
-      ctx.beginPath();
-      for(const [x1,y1,x2,y2] of seg){ ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); }
-      ctx.stroke();
-    };
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.strokeStyle = "#0E1A3C"; ctx.lineWidth = Math.max(9, w/52); trace();
-    ctx.strokeStyle = color;     ctx.lineWidth = Math.max(5, w/95);  trace();
-
-    const r = Math.max(5, w/78);
-    ctx.lineWidth = Math.max(3, w/160); ctx.strokeStyle = "#0E1A3C"; ctx.fillStyle = "#FFFFFF";
-    for(let i = 11; i < lm.length; i++){
-      const p = lm[i];
-      if(!p || (p.visibility ?? 1) < .4) continue;
-      ctx.beginPath(); ctx.arc(p.x*w, p.y*h, r, 0, 6.283); ctx.fill(); ctx.stroke();
-    }
-  },
-
-  hud(st){
-    const f = $("#formMsg"), g = $("#depthGauge"), v = $("#viewTag");
-    const flashing = this.flash && performance.now() < this.flash.until;
-    f.textContent = flashing ? this.flash.txt : (st.msg || "");
-    f.classList.toggle("bad", flashing || (st.ok === true && st.aligned === false));
-    f.classList.toggle("ok",  !flashing && st.ok === true && st.aligned === true && st.hit === true);
-    $("#depthFill").style.height = ((st.depth||0)*100).toFixed(0) + "%";
-    g.classList.toggle("bad", st.ok === true && st.aligned === false);
-    g.classList.toggle("hit", st.hit === true || st.held === true);
-    if(st.ok){
-      const face = st.front > .55;
-      v.innerHTML = st.calibrated
-        ? `Vue <b>${face ? "de face" : "de profil"}</b> · référence calée`
-        : `Vue <b>${face ? "de face" : "de profil"}</b> · calibration en cours`;
-      v.classList.toggle("calib", !st.calibrated);
-    }else if(st.held){
-      v.innerHTML = `Suivi partiel · <b>descente acquise</b>`;
-      v.classList.remove("calib");
-    }else{ v.textContent = "Corps hors cadre"; v.classList.add("calib"); }
-  }
-};
-
-const HANDLES = ["Maxou","LeaFit","Kev_","Tommy","NicoP","SarahK","Yanis","Mehdi",
-                 "LucasR","Clara","Rayan","JulesM","Enzo","Amine","Theo","InesB",
-                 "NoahD","Sofia","HugoL","Manon","Bastien","Oceane","Driss","Camille",
-                 "Antoine","Farid","Elodie","Quentin","Samir","Marine","Ryan","Nawel"];
-const TAGS = ["","","","","_","77","06","93","xx","21","99","07","2b","_off","13"];
-const Bot = {
-  active:false, score:0, target:0, timers:[], elo:1000, name:"", avatar:{t:"p", i:4},
-  configure(level="auto"){
-    if(level === "placement"){
-      this.target = placementTarget();
-      this.elo = placementElo(profile.placement.wins);
-      const h = HANDLES[Math.floor(Math.random()*HANDLES.length)];
-      this.name = (h + TAGS[Math.floor(Math.random()*TAGS.length)]).slice(0,12);
-      this.avatar = { t:"p", i:Math.floor(Math.random()*AV.length) };
-      this.score = 0;
-      return this;
-    }
-    let base = 7 + (profile.elo - 800)/50;
-    if(profile.best > 0){
-      base = base*.65 + profile.best*.35;
-      base = Math.min(base, profile.best*.90 + 2);
-    }
-    const mult = level === "easy" ? .70 : level === "hard" ? 1.20 : 1;
-    const slump = profile.streak <= -2 ? .85 : 1;
-    this.target = clamp(Math.round(base * mult * slump * (.92 + Math.random()*.14)), 4, 70);
-    this.elo = level === "auto" ? Math.round(profile.elo + (Math.random()*70 - 35))
-                                : Math.round(profile.elo * (level === "easy" ? .9 : level === "hard" ? 1.1 : 1));
-    const h = HANDLES[Math.floor(Math.random()*HANDLES.length)];
-    this.name = (h + TAGS[Math.floor(Math.random()*TAGS.length)]).slice(0,12);
-    this.avatar = { t:"p", i:Math.floor(Math.random()*AV.length) };
-    this.score = 0;
-    return this;
-  },
-  start(onScore){
-    this.active = true; this.score = 0; this.timers = [];
-    const restAt = Math.floor(this.target * (.45 + Math.random()*.35));
-    const restS  = 1 + Math.random()*2.5;
-    for(let i = 1; i <= this.target; i++){
-      const f = Math.pow(i/this.target, .80);
-      let t = f*(MATCH_SECONDS-2.5) + (Math.random()-.5)*.9;
-      if(i > restAt) t += restS;
-      t = clamp(t, .9, MATCH_SECONDS-.4)*1000;
-      this.timers.push(setTimeout(() => { this.score = i; onScore(i); }, t));
-    }
-  },
-  stop(){ this.timers.forEach(clearTimeout); this.timers = []; this.active = false; }
-};
-
-const Net = {
-  peer:null, conn:null, isHost:false, searching:false, matched:false, userCancel:false,
-  deadline:0, opponent:{ name:"ADVERSAIRE", elo:1000, avatar:{t:"p",i:1} },
-  onData:null, onClose:null,
-
-  slot(b,i){ return `${NS}-b${b}-s${i}`; },
-  bucketOf(elo){ return Math.max(0, Math.floor(elo/BUCKET)); },
-  wait(ms){ return new Promise(r => setTimeout(r, ms)); },
-  expired(){ return this.deadline > 0 && Date.now() > this.deadline; },
-  card(){
-    const av = account?.avatar;
-    return { name:account?.name || "JOUEUR", elo:profile.elo,
-             av:(av?.t === "img" && av.d.length > 30000) ? { t:"p", i:0 } : av };
-  },
-  destroy(){ try{ this.conn?.close(); }catch{} try{ this.peer?.destroy(); }catch{} this.conn = null; this.peer = null; },
-
-  makePeer(id){
-    return new Promise(resolve => {
-      let done = false;
-      const p = id ? new Peer(id, {debug:0}) : new Peer({debug:0});
-      const fin = v => { if(!done){ done = true; resolve(v); } };
-      p.on("open", () => fin(p));
-      p.on("error", e => {
-        if(["unavailable-id","network","server-error","socket-error"].includes(e.type)){ try{ p.destroy(); }catch{} fin(null); }
-      });
-      setTimeout(() => { if(!done){ try{ p.destroy(); }catch{} fin(null); } }, 8000);
-    });
-  },
-  take(d){ this.opponent = { name:d.name || "ADVERSAIRE", elo:d.elo ?? 1000, avatar:d.av || {t:"p",i:1} }; },
-
-  tryJoin(peer, target){
-    return new Promise(resolve => {
-      let done = false;
-      const onErr = e => { if(e.type === "peer-unavailable") fin(null); };
-      const fin = v => { if(!done){ done = true; peer.off("error", onErr); resolve(v); } };
-      peer.on("error", onErr);
-      const conn = peer.connect(target, { reliable:true, metadata:{ name:account?.name, elo:profile.elo } });
-      conn.on("open", () => conn.send(Object.assign({t:"hello"}, this.card())));
-      conn.on("data", d => {
-        if(d?.t === "welcome"){ this.take(d); fin(conn); }
-        else if(d?.t === "busy"){ try{ conn.close(); }catch{} fin(null); }
-      });
-      conn.on("error", () => fin(null));
-      setTimeout(() => { if(!done){ try{ conn.close(); }catch{} fin(null); } }, PROBE_MS);
-    });
-  },
-
-  hostAndWait(bucket, ms){
-    return new Promise(async resolve => {
-      let peer = null;
-      for(let i = 0; i < SLOTS && this.searching && !this.expired(); i++){
-        peer = await this.makePeer(this.slot(bucket, i));
-        if(peer) break;
-      }
-      if(!peer || !this.searching || this.expired()){ try{ peer?.destroy(); }catch{} resolve(null); return; }
-      this.peer = peer;
-      let done = false;
-      const fin = v => { if(!done){ done = true; clearInterval(watch); resolve(v); } };
-      const watch = setInterval(() => {
-        if(!this.searching || this.expired()){ try{ peer.destroy(); }catch{} this.peer = null; fin(null); }
-      }, 300);
-      peer.on("connection", conn => {
-        if(done){ conn.on("open", () => { conn.send({t:"busy"}); setTimeout(() => conn.close(), 200); }); return; }
-        conn.on("data", d => {
-          if(d?.t === "hello" && !done){
-            this.take(d); conn.send(Object.assign({t:"welcome"}, this.card())); fin(conn);
-          }
-        });
-      });
-      setTimeout(() => { if(!done){ try{ peer.destroy(); }catch{} this.peer = null; fin(null); } }, ms);
-    });
-  },
-
-  async findMatch(log){
-    this.searching = true; this.matched = false; this.userCancel = false;
-    this.deadline = Date.now() + QUEUE_MS;
-    const myB = this.bucketOf(profile.elo);
-    let widen = 0;
-    while(this.searching && !this.expired()){
-      const buckets = [myB];
-      for(let d = 1; d <= widen; d++) buckets.push(myB+d, myB-d);
-      const range = Math.round((widen+1)*BUCKET/2);
-      log(`ELO ±${range}`, `Analyse de ${buckets.length*SLOTS} salons…`);
-
-      const probe = await this.makePeer(null);
-      if(!probe){ log(`ELO ±${range}`, "Signalisation indisponible, nouvelle tentative…"); await this.wait(1200); continue; }
-      this.peer = probe;
-      for(const b of buckets){
-        if(b < 0) continue;
-        for(let i = 0; i < SLOTS; i++){
-          if(!this.searching || this.expired()){ this.destroy(); return null; }
-          const conn = await this.tryJoin(probe, this.slot(b,i));
-          if(conn){ this.conn = conn; this.isHost = false; this.matched = true; this.bind(); return conn; }
-        }
-      }
-      try{ probe.destroy(); }catch{} this.peer = null;
-      if(!this.searching || this.expired()) return null;
-
-      log(`ELO ±${range}`, "Salon ouvert, en attente d'un adversaire…");
-      const hosted = await this.hostAndWait(myB, HOST_WAIT_MS + widen*1500);
-      if(hosted){ this.conn = hosted; this.isHost = true; this.matched = true; this.bind(); return hosted; }
-      widen = Math.min(widen+1, 6);
-    }
-    this.destroy(); return null;
-  },
-
-  async hostPrivate(code){
-    const peer = await this.makePeer(`${NS}-priv-${code}`);
-    if(!peer) return null;
-    this.peer = peer; this.isHost = true;
-    return new Promise(resolve => {
-      peer.on("connection", conn => {
-        conn.on("data", d => {
-          if(d?.t === "hello"){
-            this.take(d); conn.send(Object.assign({t:"welcome"}, this.card()));
-            this.conn = conn; this.matched = true; this.bind(); resolve(conn);
-          }
-        });
-      });
-    });
-  },
-  async joinPrivate(code){
-    const peer = await this.makePeer(null);
-    if(!peer) return null;
-    this.peer = peer; this.isHost = false;
-    const conn = await this.tryJoin(peer, `${NS}-priv-${code}`);
-    if(conn){ this.conn = conn; this.matched = true; this.bind(); }
-    return conn;
-  },
-  bind(){
-    this.searching = false; this.deadline = 0;
-    this.conn.on("data", d => this.onData && this.onData(d));
-    this.conn.on("close", () => this.onClose && this.onClose());
-    this.peer?.on("disconnected", () => { try{ this.peer.reconnect(); }catch{} });
-  },
-  send(o){ try{ if(this.conn?.open) this.conn.send(o); }catch{} },
-  cancel(){ this.userCancel = true; this.searching = false; this.deadline = 0; this.destroy(); }
-};
-
-const Game = {
-  mode:"ranked", myScore:0, opScore:0, opFinal:null, timeLeft:MATCH_SECONDS,
-  timer:null, running:false, startedAt:0, botLevel:"auto", botRanked:false,
-
-  async enter(mode, opts={}){
-    this.mode = mode; this.botLevel = opts.level || "auto";
-    this.botRanked = opts.ranked === true;
-    this.placement = opts.placement === true; this.placedAs = null;
-    this.myScore = 0; this.opScore = 0; this.opFinal = null; this.running = false;
-    Vision.reset(); Bot.stop();
-    const solo = mode === "solo";
-    if(mode === "bot"){ Bot.configure(this.botLevel); Net.opponent = { name:Bot.name, elo:Bot.elo, avatar:Bot.avatar }; }
-
-    $("#avMe").innerHTML = avatarHTML(account?.avatar);
-    $("#avOp").innerHTML = solo ? "" : avatarHTML(Net.opponent.avatar);
-    $("#nameMe").textContent = (account?.name || "TOI").toUpperCase();
-    $("#nameOp").textContent = solo ? "OBJECTIF" : (Net.opponent.name || "ADVERSAIRE").toUpperCase();
-    $("#scoreMe").textContent = "0"; $("#scoreOp").textContent = "0";
-    $("#tug").style.width = "50%";
-    $("#stkBar").classList.remove("on");
-    $("#stkFly").innerHTML = "";
-    $("#clock").textContent = this.fmt(MATCH_SECONDS);
-    $("#clock").classList.remove("low");
-    $("#repBig").textContent = "0";
-    $("#btnQuit").textContent = solo ? "Terminer" : "Abandonner";
-    showView("arena");
-
-    try{
-      $("#countdown").classList.add("on");
-      $("#cdNum").textContent = "…";
-      $("#cdHint").textContent = "Chargement du modèle de détection…";
-      $("#cdCal").textContent = "";
-      await Vision.load();
-      await Vision.startCamera();
-      Vision.loop();
-    }catch{
-      $("#countdown").classList.remove("on");
-      Net.destroy(); Bot.stop(); toast("Caméra refusée ou indisponible"); showView("menu"); return;
-    }
-
-    Vision.onRep = (ev, reps) => this.onRep(ev, reps);
-    if(mode !== "solo" && mode !== "bot" && Net.isHost) Net.send({t:"go"});
-    await this.countdown();
-    Vision.endCalibration();
-    this.start();
-  },
-
-  countdown(){
-    return new Promise(resolve => {
-      const el = $("#cdNum"), box = $("#countdown"), cal = $("#cdCal");
-      box.classList.add("on");
-      $("#cdHint").textContent = "Position de planche, bras tendus, sans bouger : c'est ta référence.";
-      Vision.beginCalibration();
-      const calTick = setInterval(() => {
-        cal.textContent = Vision.calibrated ? "Référence enregistrée ✓" : "Calibration de la position haute…";
-        cal.style.color = Vision.calibrated ? "var(--lime)" : "var(--gold)";
-      }, 200);
-      let n = 5;
-      const tick = () => {
-        el.textContent = n > 0 ? String(n) : "GO";
-        el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop");
-        if(navigator.vibrate) navigator.vibrate(n > 0 ? 18 : 60);
-        Sfx.play(n > 0 ? "click" : "start");
-        if(n < 0){ clearInterval(calTick); box.classList.remove("on"); resolve(); return; }
-        n--; setTimeout(tick, 1000);
-      };
-      tick();
-    });
-  },
-
-  start(){
-    this.running = true; Vision.anchor(); Vision.active = true; this.startedAt = Date.now();
-    $("#formMsg").textContent = "Go";
-    if(this.mode === "bot") Bot.start(v => this.setOpScore(v));
-    this.timer = setInterval(() => {
-      this.timeLeft = Math.max(0, MATCH_SECONDS - Math.round((Date.now()-this.startedAt)/1000));
-      $("#clock").textContent = this.fmt(this.timeLeft);
-      $("#clock").classList.toggle("low", this.timeLeft <= 10);
-      if(this.timeLeft <= 0) this.finish();
-    }, 250);
-  },
-
-  splash(){
-    const box = $("#drops");
-    if(!box) return;
-    for(let i = 0; i < 6; i++){
-      const d = document.createElement("i");
-      d.className = "drop";
-      d.style.left = (34 + Math.random()*32) + "%";
-      d.style.setProperty("--dx", (Math.random()*120 - 60).toFixed(0) + "px");
-      d.style.setProperty("--dy", (60 + Math.random()*70).toFixed(0) + "px");
-      d.style.animationDelay = (Math.random()*.09).toFixed(2) + "s";
-      box.appendChild(d);
-      setTimeout(() => d.remove(), 900);
-    }
-  },
-
-  onRep(ev, reps){
-    const f = $("#flash");
-    f.style.background = ev === "valid" ? "var(--blue)" : "var(--red)";
-    f.style.animation = "none"; void f.offsetWidth; f.style.animation = "fl .45s ease-out";
-    if(navigator.vibrate) navigator.vibrate(ev === "valid" ? 30 : [20,40,20]);
-    Sfx.play(ev === "valid" ? "rep" : "fail");
-    if(ev !== "valid") return;
-    this.splash();
-    this.myScore = reps;
-    $("#scoreMe").textContent = reps;
-    const big = $("#repBig");
-    big.textContent = reps;
-    big.classList.remove("tick"); void big.offsetWidth; big.classList.add("tick");
-    this.paintTug();
-    if(this.mode === "ranked" || this.mode === "private") Net.send({t:"score", v:reps});
-  },
-  setOpScore(v){ this.opScore = v; $("#scoreOp").textContent = v; this.paintTug(); },
-  paintTug(){
-    const tot = this.myScore + this.opScore;
-    $("#tug").style.width = clamp(tot === 0 ? 50 : (this.myScore/tot)*100, 5, 95) + "%";
-  },
-  fmt(s){ return s + "S"; },
-
-  async finish(forfeit=false){
-    if(!this.running) return;
-    this.running = false; Vision.active = false;
-    clearInterval(this.timer); Vision.stop(); Bot.stop();
-    if(this.mode === "ranked" || this.mode === "private"){
-      Net.send({t:"final", v:this.myScore});
-      if(!forfeit && this.opFinal === null){
-        $("#formMsg").textContent = "Score adverse…";
-        const t0 = Date.now();
-        while(this.opFinal === null && Date.now()-t0 < 4000) await Net.wait(200);
-      }
-    }
-    this.report(forfeit);
-  },
-
-  async report(forfeit){
-    const me = this.myScore;
-    const op = forfeit ? -1 : (this.mode === "bot" ? Bot.score : (this.opFinal ?? this.opScore));
-    let delta = 0, outcome = "draw";
-    const scored = (this.mode === "ranked" || (this.mode === "bot" && this.botRanked)) && !this.placement;
-
-    if(this.mode === "solo"){
-      $("#resMode").textContent = "Entraînement";
-      $("#verdict").textContent = "SÉANCE TERMINÉE";
-    }else{
-      outcome = forfeit ? "win" : me > op ? "win" : me < op ? "loss" : "draw";
-      $("#resMode").textContent = this.placement
-        ? `Placement ${Math.min(profile.placement.done, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}`
-        : (this.mode === "ranked" || (this.mode === "bot" && this.botRanked))
-        ? "Duel classé" : this.mode === "bot" ? "Entraînement" : "Duel privé";
-      $("#verdict").textContent = forfeit ? "VICTOIRE PAR FORFAIT"
-        : outcome === "win" ? "VICTOIRE" : outcome === "loss" ? "DÉFAITE" : "ÉGALITÉ";
-      if(this.placement){
-        profile.placement.done++;
-        if(outcome === "win") profile.placement.wins++;
-        if(outcome === "win") profile.wins++; else if(outcome === "loss") profile.losses++;
-        if(profile.placement.done >= PLACEMENT_GAMES) this.placedAs = finishPlacement();
-      }else if(scored){
-        const S = outcome === "win" ? 1 : outcome === "loss" ? 0 : .5;
-        const E = 1/(1 + Math.pow(10, (Net.opponent.elo - profile.elo)/400));
-        delta = Math.round(K_RANKED * (S - E));
-        profile.elo = Math.max(100, profile.elo + delta);
-        if(outcome === "win"){ profile.wins++; profile.streak = Math.max(1, profile.streak+1); }
-        else if(outcome === "loss"){ profile.losses++; profile.streak = Math.min(-1, profile.streak-1); }
-      }
-    }
-
-    if(me > profile.best) profile.best = me;
-    profile.totalReps += me;
-    const gain = grantRewards(me, outcome === "win", scored);
-    profile.history = [{ at:Date.now(), m:this.mode, op:(this.mode === "solo" ? "SÉANCE LIBRE" : (Net.opponent.name||"ADVERSAIRE")).toUpperCase(),
-                         me, opS:this.mode === "solo" ? -1 : op, d:delta, r:outcome, k:scored },
-                       ...(profile.history || [])].slice(0,20);
-    await Store.set("profile", profile);
-
-    const r = rankOf(profile.elo);
-    $("#verdict").className = "verdict " + outcome;
-    $("#resMe").textContent = me;
-    $("#resOp").textContent = (this.mode === "solo" || op < 0) ? "—" : op;
-    $("#resElo").textContent = Math.round(profile.elo);
-    $("#resTier").textContent = `${r.tier.n} ${ROMAN[r.div]}`;
-    $("#resBadge").innerHTML = rankBadge(r.idx, r.div);
-    const d = $("#resDelta");
-    d.textContent = delta === 0 ? "±0" : (delta > 0 ? "+" : "") + delta;
-    d.className = "delta " + (delta > 0 ? "up" : delta < 0 ? "down" : "flat");
-    $("#resRefused").textContent = `${Vision.refused} répétition${Vision.refused>1?"s":""} refusée${Vision.refused>1?"s":""} pour forme incorrecte`;
-    const ICO = {
-      coin:'<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="13" fill="#F5B71E" stroke="#14224C" stroke-width="3"/><path d="M11 13h3v6h-3zM18 13h3v6h-3zM13 15h6v2h-6z" fill="#A56A04"/></svg>',
-      xp:'<svg viewBox="0 0 32 32"><path d="M17 3 8 18h6l-2 11 11-16h-7z" fill="#7DE3C8" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/></svg>',
-      crown:'<svg viewBox="0 0 32 32"><path d="M4 24 6 9l7 6 3-8 3 8 7-6 2 15z" fill="#FFDF80" stroke="#14224C" stroke-width="3" stroke-linejoin="round"/></svg>'
-    };
-    const chips = [`${ICO.coin}+${gain.coins}`, `${ICO.xp}+${gain.xp}`];
-    if(gain.crowns) chips.push(`${ICO.crown}+${gain.crowns}`);
-    $("#resGains").innerHTML = chips.map(c => `<div class="gain">${c}</div>`).join("");
-
-    Net.destroy(); paintAll(); showView("result");
-
-    const news = [];
-    if(!Save.backends.length) news.push("Sauvegarde impossible : exporte ta progression");
-    if(this.placedAs) news.push(`Placement terminé · ${this.placedAs.wins}/10 victoires → ${this.placedAs.tier} ${this.placedAs.div}`);
-    else if(this.placement) news.push(`Placement ${profile.placement.done}/${PLACEMENT_GAMES}`);
-    if(gain.levels) news.push(`Niveau ${levelOf(profile.xp).lvl} atteint`);
-    if(gain.tiers)  news.push(`Palier de passe ${profile.tier}`);
-    (gain.unlocked || []).forEach(id => news.push(`Sticker débloqué · ${STK[id].e} ${STK[id].n}`));
-    if(gain.daily)  news.push("Objectif du jour rempli · +60 pièces");
-    if(gain.flame === 1) news.push("Série lancée · reviens demain");
-    else if(gain.flame > 1) news.push(`Série de ${gain.flame} jours`);
-    if(gain.levels || gain.tiers || (gain.unlocked||[]).length) Sfx.play("unlock");
-    else Sfx.play("reward");
-    news.forEach((m,i) => setTimeout(() => toast(m), 700 + i*1900));
-  },
-
-  quit(){
-    if(this.mode === "solo" || this.mode === "bot"){
-      this.running = false; Vision.active = false;
-      clearInterval(this.timer); Vision.stop(); Bot.stop();
-      paintAll(); showView("menu"); toast("Séance interrompue"); return;
-    }
-    Net.send({t:"quit"});
-    this.running = false; Vision.active = false;
-    clearInterval(this.timer); Vision.stop();
-    if(this.mode === "ranked"){
-      const E = 1/(1 + Math.pow(10, (Net.opponent.elo - profile.elo)/400));
-      profile.elo = Math.max(100, profile.elo + Math.round(K_RANKED*(0-E)));
-      profile.losses++; profile.streak = Math.min(-1, profile.streak-1);
-      Store.set("profile", profile);
-    }
-    Net.destroy(); paintAll(); showView("menu"); toast("Duel abandonné");
-  }
-};
-
-Net.onData = d => {
-  if(!d) return;
-  if(d.t === "stk"){ flySticker(d.id, false); return; }
-  if(d.t === "score") Game.setOpScore(d.v);
-  else if(d.t === "final"){ Game.opFinal = d.v; Game.setOpScore(d.v); }
-  else if(d.t === "quit"){ if(Game.running) Game.finish(true); }
-};
-Net.onClose = () => { if(Game.running) Game.finish(true); };
-
-let queueTimer = null;
-function startQueueUI(){
-  const t0 = Date.now();
-  $("#qArc").style.strokeDashoffset = "0";
-  clearInterval(queueTimer);
-  queueTimer = setInterval(() => {
-    const left = Math.max(0, QUEUE_MS - (Date.now()-t0));
-    $("#qTime").textContent = Math.ceil(left/1000);
-    $("#qArc").style.strokeDashoffset = String(703.7*(1 - left/QUEUE_MS));
-    if(left <= 0) clearInterval(queueTimer);
-  }, 100);
-}
-async function launchRanked(){
-  if(inPlacement()){
-    Bot.configure("placement");
-    toast(`Placement ${profile.placement.done + 1}/${PLACEMENT_GAMES} — ${Bot.name}`);
-    Game.enter("bot", { level:"placement", ranked:true, placement:true });
-    return;
-  }
-  if(!window.Peer){ toast("PeerJS n'a pas pu être chargé"); return; }
-  showView("search"); startQueueUI();
-  const log = (a,b) => { $("#qRange").textContent = a; $("#searchLog").textContent = b; };
-  log("ELO ±50", "Ouverture du canal pair-à-pair…");
-  const conn = await Net.findMatch(log);
-  clearInterval(queueTimer);
-  if(Net.userCancel) return;
-  if(conn){
-    toast(`Adversaire trouvé — ${Net.opponent.name} (${Math.round(Net.opponent.elo)})`);
-    Game.enter("ranked");
-  }else{
-    $("#searchLog").textContent = "Adversaire trouvé.";
-    Bot.configure("auto");
-    toast(`Adversaire trouvé — ${Bot.name} (${Bot.elo})`);
-    await Net.wait(700); Game.enter("bot", { level:"auto", ranked:true });
-  }
-}
-
-/* =====================================================================
-   CONNEXION OFFICIELLE AVEC LE COMPTE HEYE (SSO BRIDGE)
-   ===================================================================== */
-async function loginWithHeyeAccount() {
-  try {
-    const heyeDbRaw = localStorage.getItem('heye_database');
-    if (!heyeDbRaw) {
-      alert("Aucun compte Heye trouvé sur cet appareil. Créez-le d'abord dans le Launcher.");
-      return;
-    }
-    const heyeDb = JSON.parse(heyeDbRaw);
-    if (!heyeDb.currentUser || !heyeDb.users[heyeDb.currentUser]) {
-      alert("Veuillez vous connecter à votre compte Heye dans le Launcher.");
-      return;
-    }
-
-    const hUser = heyeDb.users[heyeDb.currentUser];
-    const pseudoClean = (hUser.prenom || "JOUEUR").slice(0, 12).toUpperCase();
-
-    // Détermine l'avatar d'après Heye (si URL photo ou preset)
-    let av = { t: "p", i: 0 };
-    if (hUser.avatar && hUser.avatar.startsWith('http')) {
-      av = { t: "img", d: hUser.avatar };
-    }
-
-    // Création du compte Pushup avec Heye
-    account = {
-      name: pseudoClean,
-      mail: hUser.email,
-      avatar: av,
-      salt: "heye_sso",
-      hash: "heye_sso",
-      createdAt: Date.now()
-    };
-
-    await Store.set("account", account);
-    await Session.open(account.mail);
-    profile = freshProfile();
-    await Store.set("profile", profile);
-
-    paintAll();
-    showView("menu");
-    showTab("tab-duel");
-    toast(`Connecté avec Heye : ${account.name}`);
-  } catch (err) {
-    toast("Erreur lors de la synchronisation Heye");
-  }
-}
-
-// Écouteur d'action pour le bouton Heye
-$("#btnHeyeAuth").onclick = loginWithHeyeAccount;
-
-$("#btnNext").onclick = () => Gate.next();
-$("#btnBack").onclick = () => Gate.back();
-$$("#gate input").forEach(i => i.addEventListener("keydown", e => { if(e.key === "Enter") Gate.next(); }));
-$("#btnPhoto").onclick = () => $("#filePhoto").click();
-$("#filePhoto").onchange = async e => {
-  const f = e.target.files?.[0]; if(!f) return;
-  try{
-    Gate.draft.avatar = await fileToAvatar(f);
-    $("#avPreview").innerHTML = avatarHTML(Gate.draft.avatar);
-    $$(".avpick").forEach(x => x.classList.remove("on"));
-    Gate.ok("#errPhoto", "Photo enregistrée sur cet appareil.");
-  }catch{ Gate.err("#errPhoto", "Impossible de lire cette image."); }
-};
-$("#btnForget").onclick = async () => {
-  await Store.del("account"); await Store.del("profile"); await Session.close();
-  account = null; toast("Compte supprimé"); Gate.open("signup");
-};
-
-$$(".navbtn").forEach(b => b.onclick = () => { showTab(b.dataset.tab); if(navigator.vibrate) navigator.vibrate(8); });
-$$("[data-close]").forEach(b => b.onclick = () => b.closest(".sheet").classList.remove("on"));
-
-$("#btnChangePhoto").onclick = () => $("#filePhoto2").click();
-$("#filePhoto2").onchange = async e => {
-  const f = e.target.files?.[0]; if(!f) return;
-  try{ account.avatar = await fileToAvatar(f); await Store.set("account", account); paintAll(); toast("Photo mise à jour"); }
-  catch{ toast("Impossible de lire cette image"); }
-};
-$("#btnCamFront").onclick = async () => { profile.facing = "user"; await Store.set("profile", profile); toast("Caméra avant"); };
-$("#btnCamBack").onclick  = async () => { profile.facing = "environment"; await Store.set("profile", profile); toast("Caméra arrière"); };
-$("#btnLogout").onclick = async () => {
-  if(!confirm("Changer de compte effacera la progression enregistrée sur cet appareil. Exporte-la d'abord si tu veux la garder.")) return;
-  await Save.wipe(); account = null; profile = freshProfile();
-  toast("Compte effacé"); Gate.open("signup");
-};
-$("#btnReset").onclick = async () => {
-  profile = freshProfile({ facing:profile.facing });
-  await Store.set("profile", profile); paintAll(); toast("Progression remise à zéro");
-};
-
-$("#btnRanked").onclick = launchRanked;
-const _solo = $("#btnSolo"); if(_solo) _solo.onclick = () => Game.enter("solo");
-$("#btnSolo2").onclick  = () => Game.enter("solo");
-$$("[data-bot]").forEach(b => b.onclick = () => Game.enter("bot", { level:b.dataset.bot }));
-$("#btnPrivate").onclick = () => $("#sheetPrivate").classList.add("on");
-$("#btnPass").onclick    = () => openPass();
-$("#btnDaily").onclick   = () => toast(profile.daily.done
-  ? "Objectif du jour déjà rempli. Reviens demain."
-  : `Encore ${DAILY_TARGET - profile.daily.reps} pompes aujourd'hui pour 60 pièces.`);
-$("#btnCancel").onclick = () => { clearInterval(queueTimer); Net.cancel(); showView("menu"); };
-$("#btnBotNow").onclick = () => { clearInterval(queueTimer); Net.cancel(); Bot.configure("auto"); Game.enter("bot", { level:"auto", ranked:true }); };
-
-$("#btnHost").onclick = async () => {
-  const code = Math.random().toString(36).slice(2,7).toUpperCase();
-  $("#privateInfo").textContent = `Code du salon : ${code} — en attente…`;
-  const conn = await Net.hostPrivate(code);
-  if(conn){ $("#sheetPrivate").classList.remove("on"); Game.enter("private"); }
-  else $("#privateInfo").textContent = "Impossible d'ouvrir le salon. Réessaie.";
-};
-$("#btnJoin").onclick = async () => {
-  const code = $("#joinCode").value.trim().toUpperCase();
-  if(code.length < 4){ $("#privateInfo").textContent = "Saisis le code à 5 caractères de l'hôte."; return; }
-  $("#privateInfo").textContent = "Connexion au salon…";
-  const conn = await Net.joinPrivate(code);
-  if(conn){ $("#sheetPrivate").classList.remove("on"); Game.enter("private"); }
-  else $("#privateInfo").textContent = "Aucun salon actif avec ce code.";
-};
-
-$("#passBack").onclick = () => { showView("menu"); Sfx.play("back"); };
-$("#deckBack").onclick = () => { showView("menu"); Sfx.play("back"); };
-$("#btnDeck").onclick  = () => { paintDeck(); showView("deck"); Sfx.play("nav"); };
-$("#btnNameStyle").onclick = () => openNameStyle();
-$("#tutoNext").onclick = () => Tuto.next();
-$("#tutoSkip").onclick = () => Tuto.end();
-$("#tutoText").onclick = () => Tuto.next();
-$("#btnTuto").onclick  = () => Tuto.start(true);
-
-const RENAME_COST = 100;
-$("#btnRename").onclick = () => {
-  const free = !profile.renamed;
-  $("#renameInfo").className = "hint";
-  $("#renameInfo").textContent = free ? "Premier changement offert."
-    : `Coût : ${RENAME_COST} gemmes. Tu en as ${profile.gems}.`;
-  $("#newName").value = account.name;
-  $("#sheetRename").classList.add("on");
-};
-$("#btnRenameGo").onclick = async () => {
-  const v = ($("#newName").value || "").trim().toUpperCase().slice(0,12);
-  if(!/^[A-Z0-9ÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ._-]{3,12}$/.test(v)){
-    $("#renameInfo").className = "hint err";
-    $("#renameInfo").textContent = "3 à 12 caractères, sans espace."; Sfx.play("fail"); return;
-  }
-  const free = !profile.renamed;
-  if(!free && profile.gems < RENAME_COST){
-    $("#renameInfo").className = "hint err";
-    $("#renameInfo").textContent = `Il te manque ${RENAME_COST - profile.gems} gemmes.`;
-    Sfx.play("fail"); return;
-  }
-  if(!free) profile.gems -= RENAME_COST;
-  profile.renamed = true; account.name = v;
-  await Store.set("account", account); await Store.set("profile", profile);
-  $("#sheetRename").classList.remove("on");
-  paintAll(); Sfx.play("reward");
-  toast(free ? "Pseudo changé" : `Pseudo changé · -${RENAME_COST} gemmes`);
-};
-
-$("#btnExport").onclick = () => exportSave();
-$("#swExport").onclick  = () => exportSave();
-$("#swClose").onclick   = () => $("#saveWarn").classList.remove("on");
-$("#btnImport").onclick = () => $("#fileSave").click();
-$("#fileSave").onchange = e => { const f = e.target.files?.[0]; if(f) importSave(f); e.target.value = ""; };
-$("#btnSfxOn").onclick  = async () => { Sfx.on = true;  profile.sfx = true;  await Store.set("profile", profile); Sfx.play("click"); toast("Sons activés"); };
-$("#btnSfxOff").onclick = async () => { Sfx.on = false; profile.sfx = false; await Store.set("profile", profile); toast("Sons coupés"); };
-
-$("#btnStk").onclick = () => { paintStkBar(); $("#stkBar").classList.toggle("on"); };
-
-$("#btnSwitchCam").onclick = () => Vision.switchCamera();
-$("#btnQuit").onclick = () => Game.quit();
-$("#btnAgain").onclick = () => {
-  Net.destroy();
-  if(Game.mode === "solo") Game.enter("solo");
-  else if(Game.mode === "bot") Game.enter("bot", { level:Game.botLevel, ranked:Game.botRanked });
-  else launchRanked();
-};
-$("#btnHome").onclick = () => { Net.destroy(); showView("menu"); showTab("tab-duel"); };
-document.addEventListener("visibilitychange", () => { if(document.hidden && !Game.running) Vision.stop(); });
-
-(function fog(){
-  const box = document.getElementById("fog");
-  if(!box) return;
-  let h = "";
-  for(let i = 0; i < 14; i++){
-    const sz = 6 + Math.random()*22;
-    h += `<i style="left:${(Math.random()*100).toFixed(1)}%;bottom:-${sz}px;
-      width:${sz.toFixed(0)}px;height:${sz.toFixed(0)}px;
-      animation-duration:${(14 + Math.random()*16).toFixed(1)}s;
-      animation-delay:-${(Math.random()*22).toFixed(1)}s"></i>`;
-  }
-  box.innerHTML = h;
-})();
-
-(function touchIcon(){
-  const ico = document.querySelector('link[rel="icon"]');
-  if(!ico) return;
-  const l = document.createElement("link");
-  l.rel = "apple-touch-icon"; l.href = ico.href;
-  document.head.appendChild(l);
-})();
-
-function hideSplash(){
-  const sp = document.getElementById("splash");
-  if(!sp || sp.classList.contains("off")) return;
-  sp.classList.add("off");
-  setTimeout(() => sp.remove(), 500);
-}
-
-setTimeout(hideSplash, 4500);
-
-(async function boot(){
-  account = await Store.get("account", null);
-  profile = migrateProfile(await Store.get("profile", null));
-  Sfx.on = profile.sfx !== false;
-  setTimeout(hideSplash, Math.max(0, 1200 - performance.now()));
-  document.getElementById("splash")?.addEventListener("click", hideSplash);
-
-  // VÉRIFICATION AUTO-SSO : si le jeu est ouvert depuis Heye OS, on connecte direct
-  const heyeDbRaw = localStorage.getItem('heye_database');
-  if (!account && heyeDbRaw) {
-    try {
-      const hDb = JSON.parse(heyeDbRaw);
-      if (hDb.currentUser && hDb.users[hDb.currentUser]) {
-        const u = hDb.users[hDb.currentUser];
-        account = {
-          name: (u.prenom || "JOUEUR").slice(0, 12).toUpperCase(),
-          mail: u.email,
-          avatar: u.avatar && u.avatar.startsWith('http') ? { t:"img", d:u.avatar } : { t:"p", i:0 },
-          salt: "heye_sso",
-          hash: "heye_sso",
-          createdAt: Date.now()
-        };
-        await Store.set("account", account);
-        await Session.open(account.mail);
-        profile = freshProfile();
-        await Store.set("profile", profile);
-      }
-    } catch(e) {}
-  }
-
-  if(!account){ Gate.open("signup"); return; }
-  if(!(await Session.read())) await Session.open(account.mail);
-  paintAll(); showView("menu"); showTab("tab-duel");
-  if(!profile.tutoDone) setTimeout(() => Tuto.start(), 900);
-  if(Save.backends.length === 0){
-    $("#swWhy").textContent = Save.diag;
-    setTimeout(() => $("#saveWarn").classList.add("on"), 1400);
-  }
-})();
-</script>
-</body>
-</html>
+/* ---------- Fond d'arène : profondeur, faisceaux, poussières ---------- */
+#bg{background:
+  /* halo de projecteur au-dessus de l'arène */
+  radial-gradient(58vw 34vh at 50% 20%, rgba(160,225,255,.38), transparent 66%),
+  /* collines lointaines, deux plans */
+  radial-gradient(75vw 22vh at 12% 62%, #17507F 0 99%, transparent 100%),
+  radial-gradient(85vw 26vh at 88% 66%, #12406B 0 99%, transparent 100%),
+  /* eau et vignettage */
+  radial-gradient(120vw 46vh at 50% 112%, rgba(6,16,40,.95), transparent 74%),
+  linear-gradient(180deg,#1B5FA0 0%,#17508A 30%,#0F3163 62%,#0A1D40 100%)}
+#bg::before{content:'';position:absolute;inset:-20% -30% auto;height:110%;left:-30%;right:-30%;
+  width:auto;border-radius:0;background:repeating-conic-gradient(from 196deg at 50% -14%,
+    rgba(190,235,255,.09) 0deg 3deg, transparent 3deg 13deg);
+  box-shadow:none;opacity:.9;animation:none;
+  mask-image:linear-gradient(#000 6%,transparent 62%);
+  -webkit-mask-image:linear-gradient(#000 6%,transparent 62%)}
+#bg::after{content:'';position:absolute;left:0;right:0;bottom:0;height:100%;transform:none;
+  background:
+    radial-gradient(2px 2px at 14% 30%, rgba(255,255,255,.55), transparent),
+    radial-gradient(2px 2px at 72% 18%, rgba(255,255,255,.40), transparent),
+    radial-gradient(3px 3px at 38% 62%, rgba(255,255,255,.30), transparent),
+    radial-gradient(2px 2px at 88% 54%, rgba(255,255,255,.45), transparent),
+    radial-gradient(2px 2px at 26% 82%, rgba(255,255,255,.30), transparent),
+    radial-gradient(60vw 40vh at 50% 100%, rgba(0,0,0,.45), transparent 70%);
+  mask-image:none;-webkit-mask-image:none;
+  animation:motes 14s ease-in-out infinite alternate}
+@keyframes motes{to{transform:translateY(-16px)}}
+
+/* ---------- Barre de ressources ---------- */
+#topbar{gap:8px;padding:calc(var(--safe-t) + 8px) 11px 10px;
+  background:linear-gradient(180deg,rgba(9,22,50,.96),rgba(9,22,50,.72));
+  border-bottom:3px solid var(--ink)}
+.res{display:flex;align-items:center;gap:7px;height:34px;padding:0 11px 0 4px;
+  border:3px solid var(--ink);border-radius:20px;
+  background:linear-gradient(180deg,#2C4A8E,#1B3168);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.22),0 3px 0 rgba(9,18,42,.9)}
+.res .v{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:16px;color:#fff;
+  text-shadow:0 2px 0 rgba(20,34,76,.7);font-variant-numeric:tabular-nums}
+.res svg{width:26px;height:26px;flex:0 0 26px;display:block}
+.res.grow{flex:1;min-width:0;padding-right:8px}
+/* niveau : pastille dorée + jauge d'expérience */
+.lvlbadge{width:30px;height:30px;flex:0 0 30px;border:3px solid var(--ink);border-radius:50%;
+  display:grid;place-items:center;background:linear-gradient(180deg,var(--gold-hi),var(--gold));
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:14px;color:var(--ink);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
+.xp{flex:1;min-width:34px;height:11px;border:2px solid var(--ink);border-radius:7px;overflow:hidden;
+  background:rgba(9,18,42,.75)}
+.xp i{display:block;height:100%;width:0%;border-radius:5px;
+  background:linear-gradient(180deg,#9BE6FF,#2FA8FF);box-shadow:inset 0 2px 0 rgba(255,255,255,.5);
+  transition:width .6s cubic-bezier(.2,1.2,.4,1)}
+
+/* ---------- Carte de profil ---------- */
+.profcard{display:flex;align-items:center;gap:11px;padding:10px 12px}
+.profcard .pc-av{width:52px;height:52px;flex:0 0 52px;border:3px solid var(--ink);border-radius:15px;
+  overflow:hidden;background:#fff;box-shadow:0 3px 0 rgba(9,18,42,.7)}
+.profcard .pc-av svg,.profcard .pc-av img{width:100%;height:100%;display:block;object-fit:cover}
+.profcard .pc-txt{flex:1;min-width:0}
+.profcard .pc-name{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:19px;color:#fff;
+  text-shadow:0 2px 0 rgba(20,34,76,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profcard .pc-rank{font-size:12px;font-weight:600;color:var(--gold-hi);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.profcard .pc-badge{width:34px;height:39px;flex:0 0 34px}
+.profcard .pc-elo{display:flex;align-items:center;gap:5px;padding:4px 10px 4px 5px;
+  border:3px solid var(--ink);border-radius:16px;background:rgba(9,18,42,.55)}
+.profcard .pc-elo svg{width:20px;height:20px}
+.profcard .pc-elo span{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:15px;color:#fff}
+
+/* ---------- Piste de saison ---------- */
+.passrow{display:flex;gap:9px;align-items:stretch}
+.daily{flex:0 0 78px;border:3px solid var(--ink);border-radius:18px;padding:6px 5px 7px;cursor:pointer;
+  background:linear-gradient(180deg,#3E63C4,#22397C);color:#fff;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.22),0 5px 0 var(--royal-dk);
+  display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;
+  transition:transform .09s cubic-bezier(.3,1.4,.5,1),box-shadow .09s}
+.daily:active{transform:translateY(5px);box-shadow:inset 0 3px 0 rgba(255,255,255,.2),0 0 0 var(--royal-dk)}
+.daily.done{background:linear-gradient(180deg,#A0E85C,#5FA518);box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 5px 0 var(--lime-dk)}
+.daily svg{width:30px;height:30px}
+.daily .lab{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:11px;
+  text-transform:uppercase;text-shadow:0 1px 0 rgba(20,34,76,.6)}
+.daily .mini{width:100%;height:8px;border:2px solid var(--ink);border-radius:6px;overflow:hidden;
+  background:rgba(9,18,42,.7)}
+.daily .mini i{display:block;height:100%;width:0%;background:var(--gold);transition:width .6s}
+
+.passbar{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:8px 9px;
+  border:3px solid var(--ink);border-radius:18px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#3E63C4,#22397C);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.22),0 5px 0 var(--royal-dk)}
+.passbar::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.07) 0 10px,transparent 10px 24px)}
+.passbar>*{position:relative}
+.pass-left{flex:1;min-width:0}
+.pass-ttl{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;color:var(--gold-hi);
+  text-transform:uppercase;line-height:1.1}
+.pass-track{height:16px;margin-top:4px;border:2px solid var(--ink);border-radius:9px;overflow:hidden;
+  background:rgba(9,18,42,.75);position:relative}
+.pass-track i{display:block;height:100%;width:0%;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.5);transition:width .7s cubic-bezier(.2,1.2,.4,1)}
+.pass-track b{position:absolute;inset:0;display:grid;place-items:center;
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:11px;color:#fff;
+  text-shadow:var(--stroke)}
+.pass-tier{width:38px;height:38px;flex:0 0 38px;border:3px solid var(--ink);border-radius:11px;
+  display:grid;place-items:center;background:linear-gradient(180deg,#8FD0FF,#2F7FD0);
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:17px;color:#fff;
+  text-shadow:0 2px 0 rgba(20,34,76,.6);box-shadow:inset 0 3px 0 rgba(255,255,255,.4)}
+.pass-cta{flex:0 0 62px;border:3px solid var(--ink);border-radius:14px;cursor:pointer;padding:6px 4px;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:var(--ink);
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;line-height:1.05;
+  text-transform:uppercase;box-shadow:inset 0 3px 0 rgba(255,255,255,.55),0 4px 0 var(--gold-dk);
+  transition:transform .09s cubic-bezier(.3,1.4,.5,1),box-shadow .09s}
+.pass-cta:active{transform:translateY(4px);box-shadow:inset 0 3px 0 rgba(255,255,255,.5),0 0 0 var(--gold-dk)}
+
+/* ---------- Scène centrale : podium et blason ---------- */
+.stage{position:relative;flex:1;min-height:210px;display:grid;place-items:center;margin:2px 0}
+.stage svg.podium{position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:min(94%,340px);height:auto;filter:drop-shadow(0 14px 18px rgba(6,14,34,.6))}
+.stage .halo{position:absolute;top:6%;left:50%;transform:translateX(-50%);width:74%;height:74%;
+  border-radius:50%;background:radial-gradient(closest-side,rgba(150,220,255,.42),transparent 72%);
+  pointer-events:none}
+.stage .crest{position:relative;width:152px;height:174px;margin-bottom:44px;
+  filter:drop-shadow(0 8px 0 rgba(9,18,42,.45));animation:hover 4.2s ease-in-out infinite}
+@keyframes hover{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.stage .caption{position:absolute;bottom:12px;left:0;right:0;text-align:center}
+.stage .caption .t{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:23px;color:#fff;
+  text-shadow:var(--stroke),0 4px 0 rgba(20,34,76,.45);text-transform:uppercase}
+.stage .caption .d{font-size:13px;font-weight:600;color:var(--gold-hi);
+  text-shadow:0 2px 3px rgba(9,18,42,.8)}
+
+/* ---------- Boutons de lancement ---------- */
+.launch{display:grid;grid-template-columns:1.35fr 1fr;gap:11px}
+.launch .btn{font-size:23px;padding:16px 10px 19px;border-radius:20px;border-width:4px;flex-direction:column;gap:0}
+.launch .btn small{display:block;font-family:'Fredoka';font-weight:500;font-size:11px;
+  text-transform:none;opacity:.85;margin-top:1px;text-shadow:none}
+
+/* ---------- Navigation basse ---------- */
+#navbar{background:linear-gradient(180deg,#1B3168,#0C1C42)}
+.navbtn{position:relative}
+.navbtn.on::before{content:'';position:absolute;inset:2px 6px;border-radius:14px;
+  background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 2px rgba(255,255,255,.18)}
+.navbtn.main.on::before{display:none}
+.navbtn>*{position:relative}
+
+/* ---------- Feuille de la saison ---------- */
+.tierlist{display:flex;flex-direction:column;gap:7px;max-height:44vh;overflow-y:auto;padding-right:2px}
+.tier{display:flex;align-items:center;gap:10px;padding:8px 10px;border:3px solid var(--ink);
+  border-radius:14px;background:#FFFDF6;box-shadow:0 3px 0 var(--cream-dk)}
+.tier.got{background:linear-gradient(180deg,#D6F5AE,#AEE882);box-shadow:0 3px 0 var(--lime-dk)}
+.tier .n{width:30px;height:30px;flex:0 0 30px;border:2px solid var(--ink);border-radius:9px;
+  display:grid;place-items:center;background:var(--royal);color:#fff;
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:14px}
+.tier.got .n{background:var(--lime-dk)}
+.tier .r{flex:1;font-size:14px;font-weight:600;color:var(--ink)}
+.tier .s{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;color:#7C6A44}
+
+/* ============================================================
+   ARÈNE — bandeau unique en haut, compteur géant au centre,
+   pastille d'abandon pleine largeur en bas.
+   ============================================================ */
+.hud{position:absolute;top:calc(var(--safe-t) + 10px);left:10px;right:10px;z-index:3;
+  padding:9px 11px 11px;border:3px solid var(--ink);border-radius:24px;
+  background:rgba(11,24,54,.72);backdrop-filter:blur(7px);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.14),0 6px 18px rgba(6,14,34,.5)}
+.hud-row{display:flex;align-items:center;gap:6px}
+.fighter{flex:0 0 62px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.fav{width:50px;height:50px;border:3px solid var(--ink);border-radius:50%;overflow:hidden;background:#fff}
+.fav.me{box-shadow:0 0 0 3px #6BE84A}
+.fav.op{box-shadow:0 0 0 3px #FF5FA8}
+.fav svg,.fav img{width:100%;height:100%;display:block;object-fit:cover}
+.fname{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;color:#fff;
+  max-width:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;
+  text-shadow:0 2px 0 rgba(20,34,76,.8)}
+.fsc{flex:1;text-align:center;font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;
+  font-size:36px;line-height:1;font-variant-numeric:tabular-nums;text-shadow:var(--stroke)}
+.fsc.me{color:#8CFF5A}
+.fsc.op{color:#FF5FA8}
+.htime{flex:0 0 80px;text-align:center}
+.htime .tl{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:11px;
+  color:#A8C4E8;text-transform:uppercase;letter-spacing:.06em}
+.htime .tv{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:28px;color:#fff;
+  line-height:1.05;font-variant-numeric:tabular-nums;text-shadow:0 2px 0 rgba(20,34,76,.8)}
+.htime .tv.low{color:#FF9A9A;animation:tick 1s steps(2) infinite}
+.hud-bar{position:relative;height:22px;margin-top:9px;border:3px solid var(--ink);
+  border-radius:13px;overflow:hidden;background:linear-gradient(180deg,#FF7FBC,#D9327E);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.32)}
+.hud-bar>span{position:absolute;inset:0 auto 0 0;width:50%;
+  background:linear-gradient(180deg,#B4FF7A,#5FD41C);border-right:3px solid var(--ink);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.45);
+  transition:width .35s cubic-bezier(.2,1.2,.4,1)}
+
+/* Compteur central */
+.counter{position:absolute;left:0;right:0;top:45%;transform:translateY(-50%);z-index:3;
+  text-align:center;pointer-events:none}
+.counter .clab{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:15px;
+  letter-spacing:.34em;color:#fff;text-transform:uppercase;opacity:.92;
+  text-shadow:0 2px 6px rgba(6,14,34,.9)}
+.counter .cnum{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:33vw;
+  line-height:.92;color:#fff;font-variant-numeric:tabular-nums;
+  text-shadow:-4px -4px 0 var(--ink),4px -4px 0 var(--ink),-4px 4px 0 var(--ink),4px 4px 0 var(--ink),
+               0 -5px 0 var(--ink),0 5px 0 var(--ink),-5px 0 0 var(--ink),5px 0 0 var(--ink),
+               -3px -5px 0 var(--ink),3px -5px 0 var(--ink),0 10px 0 rgba(20,34,76,.35)}
+.counter .cnum.tick{animation:count .34s cubic-bezier(.2,1.7,.4,1)}
+@keyframes count{0%{transform:scale(1)}42%{transform:scale(1.22)}100%{transform:scale(1)}}
+.counter .formmsg{position:static;bottom:auto;margin-top:6px;font-size:17px}
+
+/* Jauge de profondeur et étiquette de suivi */
+.depth{right:10px;width:20px;height:30vh}
+.viewtag{top:auto;bottom:calc(var(--safe-b) + 90px)}
+
+/* Abandon en pastille pleine largeur */
+.arena-actions{gap:9px;align-items:center}
+.giveup{flex:1;border-radius:34px;font-size:21px;padding:14px 16px 17px}
+.giveup svg{width:22px;height:22px;flex:0 0 22px}
+.icon-btn{flex:0 0 54px;height:54px;border-radius:50%;font-size:21px}
+
+/* ---------- Gains de fin de duel ---------- */
+.gains{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.gain{display:flex;align-items:center;gap:6px;padding:6px 13px;border:3px solid var(--ink);
+  border-radius:16px;background:linear-gradient(180deg,#FFFDF6,var(--cream));
+  box-shadow:0 4px 0 var(--cream-dk);color:var(--ink);
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:16px;
+  animation:pop .5s cubic-bezier(.2,1.6,.4,1) backwards}
+.gain:nth-child(2){animation-delay:.10s}
+.gain:nth-child(3){animation-delay:.20s}
+.gain svg{width:21px;height:21px;flex:0 0 21px}
+
+/* ---------- Reprises de contraste : le fond est redevenu sombre ---------- */
+.tab>.eyebrow{color:var(--gold-hi)}
+.tab>.empty{color:#DCE9FF;text-shadow:0 2px 3px rgba(9,18,42,.7)}
+
+
+/* ============================================================ */
+/* ============================================================
+   PASSE DE COMBAT — piste verticale
+   ============================================================ */
+#pass,#deck{background:
+  radial-gradient(60vw 34vh at 50% 0%, rgba(120,205,255,.28), transparent 66%),
+  linear-gradient(180deg,#123A6B 0%,#12365F 50%,#0B1E42 100%);
+  padding:calc(var(--safe-t) + 12px) 12px calc(var(--safe-b) + 12px);gap:10px}
+.pass-head{display:flex;align-items:center;gap:11px;flex:0 0 auto}
+.pass-head .icon-btn{flex:0 0 46px;height:46px;font-size:22px}
+.ph-txt{flex:1;min-width:0}
+.ph-t{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:22px;color:#fff;
+  text-shadow:var(--stroke)}
+.ph-s{font-size:12px;font-weight:600;color:var(--gold-hi)}
+.ph-tier{width:48px;height:48px;flex:0 0 48px;border:3px solid var(--ink);border-radius:14px;
+  display:grid;place-items:center;background:linear-gradient(180deg,var(--gold-hi),var(--gold));
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:21px;color:var(--ink);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.55),0 4px 0 var(--gold-dk)}
+
+.pass-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;position:relative;
+  padding:6px 2px 10px;display:flex;flex-direction:column-reverse;gap:0}
+/* rail vertical qui relie les paliers */
+.prow{position:relative;display:flex;align-items:center;gap:12px;padding:7px 4px;min-height:76px}
+.prow::before{content:'';position:absolute;left:35px;top:0;bottom:0;width:8px;
+  background:rgba(9,18,42,.75);border-left:3px solid var(--ink);border-right:3px solid var(--ink)}
+.prow.got::before{background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+.prow:first-child::before{bottom:50%}
+.prow:last-child::before{top:50%}
+.pnum{position:relative;width:46px;height:46px;flex:0 0 46px;border:3px solid var(--ink);
+  border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(180deg,#3E63C4,#22397C);color:#fff;
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:18px;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.28),0 3px 0 rgba(9,18,42,.8)}
+.prow.got .pnum{background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:var(--ink)}
+.prow.next .pnum{animation:pulse 1.8s ease-in-out infinite;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 0 0 4px rgba(255,223,128,.5)}
+.pcard{position:relative;flex:1;display:flex;align-items:center;gap:11px;padding:9px 12px;
+  border:3px solid var(--ink);border-radius:18px;
+  background:linear-gradient(180deg,#FFFDF6,var(--cream));box-shadow:0 4px 0 var(--cream-dk)}
+.prow.got .pcard{background:linear-gradient(180deg,#D6F5AE,#AEE882);box-shadow:0 4px 0 var(--lime-dk)}
+.prow.lock .pcard{filter:saturate(.5) brightness(.86)}
+.pcard .pico{width:46px;height:46px;flex:0 0 46px;border:3px solid var(--ink);border-radius:13px;
+  display:grid;place-items:center;font-size:24px;background:#fff}
+.pcard .ptxt{flex:1;min-width:0}
+.pcard .pt{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:17px;color:var(--ink);
+  line-height:1.1}
+.pcard .ps{font-size:12px;font-weight:600;color:#7C6A44}
+.pcard .pchk{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;
+  color:#fff;background:var(--lime-dk);border:2px solid var(--ink);border-radius:20px;padding:2px 9px}
+
+.pass-foot{flex:0 0 auto;text-align:center}
+.pf-bar{position:relative;height:22px;border:3px solid var(--ink);border-radius:13px;overflow:hidden;
+  background:rgba(9,18,42,.75)}
+.pf-bar i{display:block;height:100%;width:0%;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold));
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.5);transition:width .7s cubic-bezier(.2,1.2,.4,1)}
+.pf-bar b{position:absolute;inset:0;display:grid;place-items:center;color:#fff;
+  font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:13px;text-shadow:var(--stroke)}
+.pf-lab{font-size:12px;font-weight:600;color:#BFD6F5;margin-top:5px}
+
+/* ============================================================
+   STICKERS — vignette, rareté, deck
+   ============================================================ */
+.stk{position:relative;aspect-ratio:1;border:3px solid var(--ink);border-radius:16px;cursor:pointer;
+  display:grid;place-items:center;font-size:clamp(20px,7vw,30px);padding:0;
+  background:linear-gradient(180deg,#FFFDF6,var(--cream));
+  box-shadow:0 4px 0 var(--cream-dk);transition:transform .12s cubic-bezier(.3,1.5,.5,1)}
+.stk:active{transform:translateY(4px) scale(.97)}
+.stk[data-r="commun"]    {box-shadow:0 4px 0 #54688A, inset 0 0 0 3px #A8C0E0}
+.stk[data-r="rare"]      {box-shadow:0 4px 0 #0E5FA8, inset 0 0 0 3px #4FC3FF}
+.stk[data-r="epique"]    {box-shadow:0 4px 0 #5B2A9E, inset 0 0 0 3px #C58AFF}
+.stk[data-r="legendaire"]{box-shadow:0 4px 0 #A56A04, inset 0 0 0 3px #FFD166,0 0 18px rgba(255,209,102,.6)}
+.stk.off{filter:grayscale(1) brightness(.62);cursor:default}
+.stk .rlab{position:absolute;bottom:-2px;left:0;right:0;font-family:'Baloo 2',system-ui,sans-serif;
+  font-weight:800;font-size:8px;text-transform:uppercase;color:#fff;text-shadow:var(--stroke)}
+.stk.eq::after{content:'✓';position:absolute;top:-6px;right:-6px;width:20px;height:20px;
+  border:2px solid var(--ink);border-radius:50%;background:var(--lime);color:var(--ink);
+  font-size:12px;font-weight:800;display:grid;place-items:center}
+
+.slots{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-top:9px}
+.slot{aspect-ratio:1;border:3px dashed rgba(255,255,255,.35);border-radius:14px;cursor:pointer;
+  display:grid;place-items:center;font-size:clamp(17px,5.4vw,24px);background:rgba(9,18,42,.4);
+  color:rgba(255,255,255,.4);padding:0}
+.slot.full{border-style:solid;border-color:var(--ink);background:linear-gradient(180deg,#FFFDF6,var(--cream))}
+.invgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;padding:3px 2px 6px;flex:1}
+
+/* Stickers envoyés pendant le duel */
+.stkbar{position:absolute;left:12px;right:12px;bottom:calc(var(--safe-b) + 78px);z-index:5;
+  display:none;grid-template-columns:repeat(6,1fr);gap:7px;padding:9px;
+  border:3px solid var(--ink);border-radius:20px;background:rgba(11,24,54,.9);backdrop-filter:blur(6px)}
+.stkbar.on{display:grid;animation:tab-in .2s cubic-bezier(.2,1.3,.4,1)}
+#stkFly{position:absolute;inset:0;z-index:6;pointer-events:none}
+.fly{position:absolute;font-size:64px;filter:drop-shadow(0 5px 0 rgba(20,34,76,.5));
+  animation:flyup 1.9s cubic-bezier(.2,.9,.4,1) forwards}
+@keyframes flyup{
+  0%{opacity:0;transform:translateY(30px) scale(.4)}
+  18%{opacity:1;transform:translateY(0) scale(1.15)}
+  30%{transform:translateY(0) scale(1)}
+  80%{opacity:1;transform:translateY(-14px) scale(1)}
+  100%{opacity:0;transform:translateY(-40px) scale(.85)}}
+
+/* ============================================================
+   FLAMME, GRAPHIQUE, STYLE DE PSEUDO
+   ============================================================ */
+.flame{display:inline-flex;align-items:center;gap:5px;padding:3px 12px 4px 8px;
+  border:3px solid var(--ink);border-radius:20px;margin-bottom:5px;
+  background:linear-gradient(180deg,#FFAE4D,#F2620E);
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.4),0 4px 0 #8A3200}
+.flame svg{width:19px;height:19px}
+.flame span{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:16px;color:#fff;
+  text-shadow:0 2px 0 rgba(20,34,76,.6)}
+.flame.cold{background:linear-gradient(180deg,#9FB4D6,#5A6B8C);box-shadow:inset 0 3px 0 rgba(255,255,255,.3),0 4px 0 #35435E}
+
+.chart{width:100%;height:132px;display:block;margin-top:10px}
+.chart .bar{fill:var(--blue);stroke:var(--ink);stroke-width:2}
+.chart .bar.top{fill:var(--lime)}
+.chart .lab{font-family:'Fredoka';font-size:7px;fill:#7C6A44;font-weight:600}
+.chart .val{font-family:'Baloo 2',system-ui,sans-serif;font-size:9px;font-weight:800;fill:var(--ink)}
+.chart .base{stroke:rgba(20,34,76,.25);stroke-width:2}
+
+.nameprev{text-align:center;font-size:30px;padding:14px 10px;border:3px solid var(--ink);
+  border-radius:16px;background:rgba(9,18,42,.5);word-break:break-all}
+.pickrow{display:flex;gap:8px;flex-wrap:wrap}
+.pick{flex:1;min-width:64px;padding:9px 6px;border:3px solid var(--ink);border-radius:14px;
+  cursor:pointer;background:#FFFDF6;color:var(--ink);font-size:15px;box-shadow:0 4px 0 var(--cream-dk)}
+.pick.on{background:linear-gradient(180deg,var(--gold-hi),var(--gold));box-shadow:0 4px 0 var(--gold-dk)}
+.swatch{flex:0 0 44px;height:44px;min-width:0;border-radius:50%;padding:0}
+.nm-blanc{color:#fff;text-shadow:var(--stroke)}
+.nm-or{color:var(--gold);text-shadow:var(--stroke)}
+.nm-lime{color:var(--lime);text-shadow:var(--stroke)}
+.nm-cyan{color:#5FE0FF;text-shadow:var(--stroke)}
+.nm-rose{color:#FF7BC0;text-shadow:var(--stroke)}
+.nm-feu{background:linear-gradient(180deg,#FFE066,#FF6B1A);-webkit-background-clip:text;
+  background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(20,34,76,.85))}
+.nf-baloo{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800}
+.nf-fredoka{font-family:'Fredoka',system-ui,sans-serif;font-weight:600}
+.nf-lucky{font-family:'Luckiest Guy',system-ui,sans-serif;font-weight:400;letter-spacing:.03em}
+.nf-mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-weight:800}
+
+
+/* ============================================================
+   TUTORIEL — halo découpé et boîte de dialogue
+   ============================================================ */
+#tuto{position:fixed;inset:0;z-index:40;display:none}
+#tuto.on{display:block;animation:tab-in .3s cubic-bezier(.2,1.3,.4,1)}
+#tutoSpot{position:absolute;display:none;border-radius:20px;pointer-events:none;
+  border:3px solid var(--gold-hi);
+  box-shadow:0 0 0 9999px rgba(6,14,34,.80),0 0 26px 6px rgba(255,223,128,.75),
+             inset 0 0 20px rgba(255,223,128,.35);
+  transition:all .38s cubic-bezier(.2,1.2,.4,1);animation:spot 2s ease-in-out infinite}
+@keyframes spot{0%,100%{box-shadow:0 0 0 9999px rgba(6,14,34,.80),0 0 22px 4px rgba(255,223,128,.65),inset 0 0 20px rgba(255,223,128,.3)}
+                50%{box-shadow:0 0 0 9999px rgba(6,14,34,.80),0 0 34px 10px rgba(255,223,128,.9),inset 0 0 26px rgba(255,223,128,.45)}}
+
+#tutoBox{position:absolute;left:12px;right:12px;bottom:calc(var(--safe-b) + 14px);
+  display:flex;align-items:flex-end;gap:10px}
+#tutoFace{width:96px;height:65px;flex:0 0 96px;border:4px solid var(--ink);border-radius:20px;
+  box-shadow:0 6px 0 var(--royal-dk),0 0 30px rgba(120,205,255,.5);
+  animation:bob 2.6s ease-in-out infinite}
+.tb-body{flex:1;min-width:0;border:4px solid var(--ink);border-radius:22px;padding:11px 13px 12px;
+  background:linear-gradient(180deg,#FFFDF6,var(--cream));
+  box-shadow:0 7px 0 var(--cream-dk),0 16px 26px -12px rgba(6,14,34,.8)}
+.tb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.tb-name{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:16px;color:var(--royal)}
+.tb-step{font-family:'Baloo 2',system-ui,sans-serif;font-weight:800;font-size:12px;color:#9A8659}
+.tb-body p{margin:0 0 10px;font-size:15px;line-height:1.4;color:var(--ink);font-weight:500;min-height:62px}
+.tb-act{display:flex;gap:8px}
+.tb-act .btn{flex:1}
+.tb-act .btn:first-child{flex:0 0 92px}
+
+/* ============================================================ */
+/* ============================================================
+   PASSE VISUELLE — matière, lumière, profondeur
+   ============================================================ */
+
+/* ---------- Boutons : vernis, grain et lueur au repos ---------- */
+.btn{position:relative;overflow:hidden;isolation:isolate}
+/* reflet vitré sur la moitié haute, comme un bouton moulé */
+.btn::before{content:'';position:absolute;left:3%;right:3%;top:4%;height:42%;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(255,255,255,0));
+  pointer-events:none;z-index:-1}
+/* balayage lumineux lent sur les boutons d'action principaux */
+.btn.gold::after,.btn.danger::after{content:'';position:absolute;top:-60%;left:-30%;width:26%;height:220%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:rotate(18deg);animation:sheen 4.5s ease-in-out infinite;pointer-events:none;z-index:-1}
+@keyframes sheen{0%{left:-30%}55%{left:120%}100%{left:120%}}
+.btn.gold{box-shadow:inset 0 4px 0 rgba(255,255,255,.55),inset 0 -6px 0 rgba(120,75,0,.28),
+  0 6px 0 var(--gold-dk),0 12px 16px -8px rgba(165,106,4,.6),0 0 26px -6px rgba(255,199,74,.75)}
+.btn:not(.steel){text-shadow:0 2px 0 rgba(20,34,76,.55),0 0 12px rgba(255,255,255,.25)}
+
+/* ---------- Plaques : grain fin et liseré lumineux ---------- */
+.plate{overflow:hidden}
+.plate::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.30;
+  background-image:radial-gradient(rgba(255,255,255,.16) 1px, transparent 1px);
+  background-size:5px 5px}
+.plate.cream::after{opacity:.22;
+  background-image:radial-gradient(rgba(120,90,30,.14) 1px, transparent 1px)}
+.plate>*{position:relative;z-index:1}
+
+/* ---------- Emblèmes : halo coloré et vernis animé ---------- */
+.crest,.pc-badge,#curBadge,#resBadge,#topMini{position:relative}
+.crest::after{content:'';position:absolute;inset:6% 12%;border-radius:50%;z-index:-1;
+  background:radial-gradient(closest-side,rgba(180,225,255,.55),transparent 72%);
+  filter:blur(10px);animation:breathe 3.6s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.95;transform:scale(1.12)}}
+.rung .b{filter:drop-shadow(0 3px 0 rgba(9,18,42,.5))}
+.rung.cur .b{filter:drop-shadow(0 3px 0 rgba(9,18,42,.5)) drop-shadow(0 0 12px rgba(255,240,190,.95))}
+
+/* ---------- Barres de progression : reflet et pulsation ---------- */
+.progress .fill,.pass-track i,.pf-bar i,.xp i,.daily .mini i{position:relative;overflow:hidden}
+.progress .fill::after,.pass-track i::after,.pf-bar i::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);
+  animation:flow 2.6s linear infinite}
+@keyframes flow{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* ---------- Ressources : éclat sur la pastille de niveau ---------- */
+.lvlbadge{position:relative;overflow:hidden}
+.lvlbadge::after{content:'';position:absolute;top:-40%;left:-60%;width:40%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);
+  transform:rotate(20deg);animation:sheen 5.5s ease-in-out infinite}
+.res{position:relative}
+.chip,.res svg{filter:drop-shadow(0 2px 0 rgba(9,18,42,.55))}
+
+/* ---------- Navigation : lueur sous l'onglet actif ---------- */
+.navbtn.on::after{content:'';position:absolute;bottom:2px;left:26%;right:26%;height:4px;border-radius:3px;
+  background:var(--gold-hi);box-shadow:0 0 12px 2px rgba(255,223,128,.85)}
+.navbtn.main.on::after{display:none}
+.navbtn.main .disc{position:relative;overflow:hidden}
+.navbtn.main .disc::after{content:'';position:absolute;top:-40%;left:-60%;width:38%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);
+  transform:rotate(20deg);animation:sheen 4s ease-in-out infinite}
+
+/* ---------- Scène : sol lumineux sous le podium ---------- */
+.stage .halo{background:
+  radial-gradient(closest-side,rgba(190,235,255,.55),rgba(120,190,255,.18) 55%,transparent 74%)}
+.stage::after{content:'';position:absolute;bottom:14px;left:22%;right:22%;height:16px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(150,220,255,.55),transparent 72%);
+  filter:blur(5px);pointer-events:none}
+
+/* ---------- Arrière-plan : brume, rayons, bokeh ---------- */
+#bg{background:
+  radial-gradient(52vw 30vh at 50% 16%, rgba(190,240,255,.42), transparent 68%),
+  radial-gradient(70vw 20vh at 10% 60%, #1A5687 0 99%, transparent 100%),
+  radial-gradient(82vw 24vh at 90% 64%, #14446F 0 99%, transparent 100%),
+  radial-gradient(46vw 1
